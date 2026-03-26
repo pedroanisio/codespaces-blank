@@ -16,22 +16,7 @@ def get_orientation(width, height):
         return "Square"
 
 
-def verify_pdf_orientation(pdf_path):
-    try:
-        import pypdf
-    except ImportError:
-        print("pypdf not found. Install it with: pip install pypdf")
-        sys.exit(1)
-
-    try:
-        reader = pypdf.PdfReader(pdf_path)
-    except FileNotFoundError:
-        print(f"Error: File not found: {pdf_path}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error reading PDF: {e}")
-        sys.exit(1)
-
+def verify_pdf_orientation(reader, pdf_path: str) -> None:
     total_pages = len(reader.pages)
     print(f"File: {pdf_path}")
     print(f"Total pages: {total_pages}\n")
@@ -61,9 +46,29 @@ def verify_pdf_orientation(pdf_path):
     print(f"\nOverall orientation: {dominant}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     if len(sys.argv) != 2:
         print(f"Usage: python {sys.argv[0]} <path_to_pdf>")
         sys.exit(1)
 
-    verify_pdf_orientation(sys.argv[1])
+    try:
+        import pypdf
+    except ImportError:
+        print("pypdf not found. Install it with: pip install pypdf")
+        sys.exit(1)
+
+    pdf_path = sys.argv[1]
+    try:
+        reader = pypdf.PdfReader(pdf_path)
+    except FileNotFoundError:
+        print(f"Error: File not found: {pdf_path}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error reading PDF: {e}")
+        sys.exit(1)
+
+    verify_pdf_orientation(reader, pdf_path)
+
+
+if __name__ == "__main__":
+    main()

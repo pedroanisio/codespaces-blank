@@ -6,7 +6,11 @@
       "Bash(playwright install-deps:*)",
       "Bash(sudo apt-get:*)",
       "Bash(python /workspaces/codespaces-blank/playwright_pipeline.py --help)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(find /workspaces/codespaces-blank -not -path */.git/* -type d)",
+      "Bash(wc -l /workspaces/codespaces-blank/session-01/assets/*.ts)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:support.whapi.cloud)"
     ]
   }
 }

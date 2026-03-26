@@ -153,6 +153,50 @@ _CONTENT_EXTRACTOR = """() => {
 }"""
 
 
+async def _extract_meta(page) -> dict:
+    """Extract description, og:title, and canonical URL from the current page."""
+    return await page.evaluate("""() => {
+        const q = (sel) => {
+            const el = document.querySelector(sel);
+            return el ? (el.getAttribute('content') || el.getAttribute('href') || '') : '';
+        };
+        return {
+            description: q('meta[name="description"]') || q('meta[property="og:description"]'),
+            og_title:    q('meta[property="og:title"]'),
+            canonical:   q('link[rel="canonical"]'),
+        };
+    }""")
+
+
+async def _save_screenshot(page, entry: SourceEntry, screenshots_dir: Path) -> str:
+    """Take a screenshot and return the saved path."""
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    safe_id = re.sub(r"[^\w-]", "_", entry.id)
+    shot_path = screenshots_dir / f"{safe_id}.png"
+    await page.screenshot(path=str(shot_path), full_page=False)
+    return str(shot_path)
+
+
+async def _save_content(
+    page, entry: SourceEntry, checked_at: str, content_dir: Path
+) -> tuple[str, int]:
+    """Extract page text, write it to disk, and return (path, char_count)."""
+    content_dir.mkdir(parents=True, exist_ok=True)
+    safe_id = re.sub(r"[^\w-]", "_", entry.id)
+    raw_text = await page.evaluate(_CONTENT_EXTRACTOR)
+    header = (
+        f"SOURCE ID : {entry.id}\n"
+        f"TITLE     : {entry.title}\n"
+        f"URL       : {entry.url}\n"
+        f"PUBLISHER : {entry.publisher}\n"
+        f"RETRIEVED : {checked_at}\n"
+        f"{'─' * 60}\n\n"
+    )
+    content_path = content_dir / f"{safe_id}.txt"
+    content_path.write_text(header + (raw_text or ""), encoding="utf-8")
+    return str(content_path), len(raw_text or "")
+
+
 async def verify_source(
     context,
     entry: SourceEntry,
@@ -180,19 +224,14 @@ async def verify_source(
     for attempt in range(1, retry + 2):  # retry+1 total attempts
         result.attempts = attempt
         page = await context.new_page()
-
-        # Block heavy resources on every page
         await page.route("**/*", _block_resources)
 
-        # Start tracing on this page if enabled
         if traces:
             await context.tracing.start(screenshots=True, snapshots=True, sources=False)
 
         try:
             response = await page.goto(
-                entry.url,
-                timeout=timeout,
-                wait_until="domcontentloaded",
+                entry.url, timeout=timeout, wait_until="domcontentloaded"
             )
 
             result.http_status = response.status if response else None
@@ -200,18 +239,7 @@ async def verify_source(
             result.redirected = page.url.rstrip("/") != entry.url.rstrip("/")
             result.page_title = await page.title()
 
-            # Rich meta extraction in one evaluate call
-            meta = await page.evaluate("""() => {
-                const q = (sel) => {
-                    const el = document.querySelector(sel);
-                    return el ? (el.getAttribute('content') || el.getAttribute('href') || '') : '';
-                };
-                return {
-                    description: q('meta[name="description"]') || q('meta[property="og:description"]'),
-                    og_title:    q('meta[property="og:title"]'),
-                    canonical:   q('link[rel="canonical"]'),
-                };
-            }""")
+            meta = await _extract_meta(page)
             result.meta_description = (meta.get("description") or "")[:300]
             result.og_title         = (meta.get("og_title") or "")[:200]
             result.canonical_url    = (meta.get("canonical") or "")[:300]
@@ -219,32 +247,13 @@ async def verify_source(
             result.status = "ok" if (result.http_status or 0) < 400 else "error"
 
             if screenshots and result.status == "ok":
-                screenshots_dir.mkdir(parents=True, exist_ok=True)
-                safe_id = re.sub(r"[^\w-]", "_", entry.id)
-                shot_path = screenshots_dir / f"{safe_id}.png"
-                await page.screenshot(path=str(shot_path), full_page=False)
-                result.screenshot_path = str(shot_path)
+                result.screenshot_path = await _save_screenshot(page, entry, screenshots_dir)
 
             if content and result.status == "ok":
-                content_dir.mkdir(parents=True, exist_ok=True)
-                safe_id = re.sub(r"[^\w-]", "_", entry.id)
-                raw_text = await page.evaluate(_CONTENT_EXTRACTOR)
-                # Prepend a header with source metadata
-                header = (
-                    f"SOURCE ID : {entry.id}\n"
-                    f"TITLE     : {entry.title}\n"
-                    f"URL       : {entry.url}\n"
-                    f"PUBLISHER : {entry.publisher}\n"
-                    f"RETRIEVED : {result.checked_at}\n"
-                    f"{'─' * 60}\n\n"
+                result.content_path, result.content_length = await _save_content(
+                    page, entry, result.checked_at, content_dir
                 )
-                full_text = header + (raw_text or "")
-                content_path = content_dir / f"{safe_id}.txt"
-                content_path.write_text(full_text, encoding="utf-8")
-                result.content_path = str(content_path)
-                result.content_length = len(raw_text or "")
 
-            # Stop trace — discard on success
             if traces:
                 await context.tracing.stop()
 
@@ -255,7 +264,6 @@ async def verify_source(
             last_exc = exc
             msg = str(exc)
 
-            # Save trace on failure
             if traces:
                 traces_dir.mkdir(parents=True, exist_ok=True)
                 safe_id = re.sub(r"[^\w-]", "_", entry.id)
@@ -296,7 +304,6 @@ async def run_pipeline(
 ) -> list[VerificationResult]:
     from playwright.async_api import async_playwright
 
-    results: list[VerificationResult] = []
     semaphore = asyncio.Semaphore(concurrency)
     total = len(entries)
     lock = asyncio.Lock()
@@ -312,7 +319,7 @@ async def run_pipeline(
             ignore_https_errors=True,
         )
 
-        async def process(idx: int, entry: SourceEntry):
+        async def process(idx: int, entry: SourceEntry) -> VerificationResult:
             async with semaphore:
                 async with lock:
                     print(f"  [{idx:>3}/{total}] {entry.id:<10} {entry.url[:65]}")
@@ -328,7 +335,6 @@ async def run_pipeline(
                     traces_dir=traces_dir,
                     retry=retry,
                 )
-                results.append(r)
 
                 icon = {"ok": "✓", "error": "✗", "timeout": "⏱", "blocked": "⊘"}.get(r.status, "?")
                 extra = f"  [retry x{r.attempts-1}]" if r.attempts > 1 else ""
@@ -336,7 +342,9 @@ async def run_pipeline(
                 async with lock:
                     print(f"         {icon} {r.status:<8} HTTP {r.http_status}{extra}{trace_note}")
 
-        await asyncio.gather(*[process(i + 1, e) for i, e in enumerate(entries)])
+                return r
+
+        results = list(await asyncio.gather(*[process(i + 1, e) for i, e in enumerate(entries)]))
         await context.close()
         await browser.close()
 
