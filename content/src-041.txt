@@ -1,0 +1,51 @@
+SOURCE ID : src-041
+TITLE     : Timeline: The Human Genome Project
+URL       : https://www.yourgenome.org/theme/timeline-the-human-genome-project/
+PUBLISHER : Wellcome Genome Campus
+RETRIEVED : 2026-03-26T14:04:45.606285+00:00
+────────────────────────────────────────────────────────────
+
+Explore Genomics   Methods and Technology  
+
+Timeline: the Human Genome Project 
+Image credit: National Institutes for Health, Flickr
+The Human Genome Project, which began officially in 1990, was the largest international collaboration ever undertaken in biology and involved thousands of scientists. 
+Timeline: The Human Genome Project
+1985
+Robert Sinsheimer holds first meetings to propose sequencing the human genome with potential funders: the US Department of Energy, the US National Institutes of Health and the UK Medical Research Council.
+1988
+The Human Genome Organisation (HUGO) – an international organisation of scientists involved in human genetics – is founded.
+1990
+The Human Genome Project launches in the US, with an initial target completion date of 2005.
+1992
+John Sulston submits a grant application to the Wellcome Trust and Medical Research Council, proposing that they fund the completion of his nematode worm sequencing project. This kickstarts the UK’s contribution to the Human Genome Project.
+James Watson leaves his position as director of the Human Genome Project after conflicts of interest with the director of the National Institutes of Health.
+1993
+The Sanger Centre is officially opened with funding from the Wellcome Trust and Medical Research Council. The UK arm of the Human Genome Project launches at the Sanger Centre under the leadership of John Sulston.
+Francis Collins steps into the role of director of the Human Genome Project.
+1994
+Scientists finish a major mapping stage of the Human Genome Project, one year ahead of schedule.
+1996
+Representatives from sequencing centres around the world meet in Bermuda to draft a set of principles for free and rapid access to Human Genome Project data. These become known as the 'Bermuda Principles'.
+1997
+The US Department of Energy’s Joint Genome Institute is opened in California. The institute consolidates genome research activities at the Department of Energy’s centres at Lawrence Berkeley National Laboratory, Lawrence Livermore National Laboratory and Los Alamos National Laboratory.
+1998
+Celera Genomics launches a private venture to finish sequencing the human genome in three years.
+The Wellcome Trust releases more funding allowing the Sanger Centre to raise their contribution to the Human Genome Project from sequencing one-sixth of the human genome to sequencing one-third.
+The Human Genome Project reaches its midpoint. A new five-year plan for the project is published.
+1999
+Large-scale DNA sequencing of the human genome begins.
+The Sanger Centre finishes the sequence of the first human chromosome, chromosome 22.
+The ENSEMBL genome browser is launched by the Sanger Centre and EMBL-European Bioinformatics Institute.
+2000
+The University of California, Santa Cruz (UCSC) launches its Human Genome Browser.
+2001
+The Human Genome Project and Celera Genomics both publish an account of their draft sequences in Nature and Science magazines, respectively.
+The Sanger Centre is renamed the Wellcome Trust Sanger Institute to reflect more closely the size of the institute and its relationship with the Wellcome Trust.
+2003
+The Human Genome Project is completed, confirming humans have approx. 20,000 to 25,000 genes.
+It read and recorded more than 92% of the genome – as much as was technologically possible at the time. This marks the official end of the Human Genome Project, two years ahead of schedule.
+2022
+The entirety of the human genome sequence is completed. Various projects have slowly filled the remaining gaps since the first 92% was published in 2003.
+Find out more about the how the Human Genome Project came about with our Human Genome Project Series
+Explore our Human Genome Project series

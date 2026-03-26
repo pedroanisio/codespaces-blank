@@ -1,0 +1,114 @@
+SOURCE ID : src-046
+TITLE     : The Birth of the Web
+URL       : https://home.cern/science/computing/birth-web
+PUBLISHER : CERN Official
+RETRIEVED : 2026-03-26T14:04:49.167801+00:00
+────────────────────────────────────────────────────────────
+
+(Image: CERN)
+science
+computing
+birth web
+The birth of the Web
+The birth of the Web
+
+The World Wide Web was invented by British scientist Tim Berners-Lee in 1989 while working at CERN
+
+science
+computing
+birth web
+The birth of the Web
+The birth of the Web
+
+The World Wide Web was invented by British scientist Tim Berners-Lee in 1989 while working at CERN
+
+science
+computing
+birth web
+The birth of the Web
+The birth of the Web
+
+The World Wide Web was invented by British scientist Tim Berners-Lee in 1989 while working at CERN
+
+science
+computing
+birth web
+The birth of the Web
+The birth of the Web
+
+The World Wide Web was invented by British scientist Tim Berners-Lee in 1989 while working at CERN
+
+science
+computing
+birth web
+The birth of the Web
+The birth of the Web
+
+The World Wide Web was invented by British scientist Tim Berners-Lee in 1989 while working at CERN
+
+prev
+next
+
+Tim Berners-Lee, a British scientist, invented the World Wide Web (WWW) in 1989, while working at CERN. The web was originally conceived and developed to meet the demand for automated information-sharing between scientists in universities and institutes around the world.
+
+Screenshot of the recreated page of the first website (Image: CERN)
+
+The first website at CERN – and in the world – was dedicated to the World Wide Web project itself and was hosted on Berners-Lee's NeXT computer. In 2013, CERN launched a project to restore this first ever website: info.cern.ch.
+
+On 30 April 1993, CERN put the World Wide Web software in the public domain. Later, CERN made a release available with an open licence, a more sure way to maximise its dissemination. These actions allowed the web to flourish.
+
+A short history of the Web
+Licensing the Web
+Browse the first website
+Discover the World Wide Web’s humble beginnings with this earliest incarnation
+The WorldWideWeb browser
+Surf the Web using a recreation the first browser that was written in 1990
+The line-mode browser
+The line-mode browser, launched in 1992, was the first readily accessible browser for the Web
+Opinions
+The CERN effect
+Computing
+Opinion
+Sijbrand de Jong
+19 April, 2016
+Internet prehistory at CERN
+Computing
+Opinion
+Ben Segal
+9 April, 2014
+Minimising the muddle
+Computing
+Opinion
+Peggie Rimmer
+12 March, 2014
+Good old Bitnet, and the rise of the World Wi...
+Computing
+Opinion
+Richard Jacobsson
+12 March, 2014
+On the open internet and the free web
+Computing
+Opinion
+David Foster
+12 March, 2014
+Not at all vague and much more than exciting
+Computing
+Opinion
+Maria Dimou
+12 March, 2014
+Why bring back the line-mode browser?
+Computing
+Opinion
+Dan Noyes
+19 September, 2013
+How the internet came to CERN
+Computing
+Opinion
+François Flückiger
+27 June, 2013
+Twenty years of a free and open www
+Computing
+Opinion
+Robert Cailliau
+30 April, 2013
+View all opinions

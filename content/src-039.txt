@@ -1,0 +1,72 @@
+SOURCE ID : src-039
+TITLE     : 1990: Launch of the Human Genome Project
+URL       : https://www.genome.gov/25520329/online-education-kit-1990-launch-of-the-human-genome-project
+PUBLISHER : National Human Genome Research Institute (NIH)
+RETRIEVED : 2026-03-26T14:04:44.526316+00:00
+────────────────────────────────────────────────────────────
+
+1990: Launch of the Human Genome Project
+1990: Launch of the Human Genome Project
+
+The Human Genome Project officialy began in 1990. Beginning in December 1984, the U.S. Department of Energy (DOE), National Institutes of Health (NIH) and international groups had sponsored meetings to consider the feasibility and usefulness of mapping and sequencing the human genome. The DOE had become interested in studying the human genome as a way of aiding the detection of mutations that nuclear radiation might cause. Groups like the NIH and the Wellcome Trust in Britain had longstanding interest in understanding biology for the sake of advancing medicine.
+
+In 1987, DOE proposed a Human Genome Initiative to Congress. Meanwhile, NIH had started funding occasional grants for genome projects. In 1988, an influential National Research Council report recommended a concerted program to map and sequence the human genome. Later that year, the U.S. Congress held hearings on the idea, and DOE and NIH joined forces on the project.
+
+In 1990, DOE and NIH published a plan for the first five years of what was projected to be a 15-year project. The goals of the project included: mapping the human genome and eventually determining the sequence of all 3.2 billion letters in it; mapping and sequencing the genomes of other organisms important to the study of biology; developing technology for analyzing DNA; and studying the ethical, legal and social implications of genome research.
+
+ 
+
+More Information
+Reference:
+
+Watson, J.D., Jordan, E. The Human Genome Program at the National Institutes of Health. Genomics, 5: 654-56. 1989. [PubMed]
+
+Goals of the Human Genome Project:
+
+1. Map and sequence the human genome
+
+Build genetic and physical maps spanning the human genome.
+Determine the sequence of the estimated 3 billion letters of human DNA, to 99.99% accuracy.
+Chart variations in DNA spelling among human beings.
+Map all the human genes.
+Begin to label the functions of genes and other parts of the genome.
+
+2. Map and sequence the genomes of model organisms
+(The approximate number of base pairs in each species' genome is given in parentheses.)
+
+The bacterium E. coli (4.6 million)
+The yeast S. cerevisiae (12 million)
+The roundworm C. elegans (100 million)
+The fruitfly D. melanogaster (180 million)
+The mouse M. musculus (3 billion)
+
+3. Collect and distribute data
+
+Distribute genomic information and the tools for using it to the research community.
+Release all sequence data that spans more than 2000 base pairs within 24 hours.
+Create and run databases.
+Develop software for large-scale DNA analysis.
+Develop tools for comparing and interpreting genome information.
+Share information with the wider public.
+
+4. Study the ethical, legal and social implications of genetic research
+
+5. Train researchers
+
+6. Develop technologies
+
+Make large-scale sequencing faster and cheaper.
+Develop technology for finding sequence variations.
+Develop ways to study functions of genes on a genomic scale.
+
+7. Transfer technology to the private sector
+
+« Previous Event | Next Event »
+
+ 
+
+ 
+
+2013
+
+Last updated: May 06, 2013

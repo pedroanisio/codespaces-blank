@@ -1,0 +1,12 @@
+SOURCE ID : src-089
+TITLE     : HIV Data and Statistics: Global
+URL       : https://www.who.int/teams/global-hiv-hepatitis-and-stis-programmes/hiv/strategic-information/hiv-data-and-statistics
+PUBLISHER : World Health Organization (WHO)
+RETRIEVED : 2026-03-26T14:05:21.094534+00:00
+────────────────────────────────────────────────────────────
+
+HIV statistics, globally and by WHO region
+
+Epidemiological fact sheet – July 2025 | This fact sheet provides global and regional data on the HIV epidemic; trends in people acquiring HIV and people dying from HIV-related causes; and progress towards achieving the HIV testing, treatment and viral load suppression cascades targets.
+
+Download information sheet (PDF, 300 kB)

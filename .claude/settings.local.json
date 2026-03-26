@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(playwright install:*)",
+      "Bash(playwright install-deps:*)",
+      "Bash(sudo apt-get:*)",
+      "Bash(python /workspaces/codespaces-blank/playwright_pipeline.py --help)",
+      "Bash(python -c \":*)"
+    ]
+  }
+}

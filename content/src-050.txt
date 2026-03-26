@@ -1,0 +1,199 @@
+SOURCE ID : src-050
+TITLE     : 1990 Manjil-Rudbar Earthquake
+URL       : https://en.wikipedia.org/wiki/1990_Manjil%E2%80%93Rudbar_earthquake
+PUBLISHER : Wikipedia
+RETRIEVED : 2026-03-26T14:04:52.571509+00:00
+────────────────────────────────────────────────────────────
+
+Toggle the table of contents
+1990 Manjil–Rudbar earthquake
+ 13 languages
+العربية
+Deutsch
+Español
+فارسی
+Suomi
+گیلکی
+Bahasa Indonesia
+日本語
+한국어
+Polski
+Türkçe
+Українська
+中文
+Edit links
+Article
+Talk
+ English
+Read
+Edit
+View history
+ Tools
+Tools
+move to sidebar hide
+Actions
+Read
+Edit
+View history
+General
+What links here
+Related changes
+Upload file
+Permanent link
+Page information
+Cite this page
+Get shortened URL
+Print/export
+Download as PDF
+Printable version
+In other projects
+Wikimedia Commons
+Wikidata item
+Appearance
+move to sidebar hide
+Coordinates: 37.07°N 49.28°E
+From Wikipedia, the free encyclopedia
+
+1990 Manjil–Rudbar earthquake
+Collapsed unreinforced masonry buildings
+
+
+Strong ground motion map
+
+
+Tehran
+
+UTC time	1990-06-20 21:00:14
+ISC event	366754
+USGS-ANSS	ComCat
+Local date	21 June 1990
+Local time	00:30:14 IRST
+Magnitude	7.4 Mw[1]
+Depth	15 km (9 mi)[1]
+Epicenter	37.07°N 49.28°E[1]
+Fault	Rudbar Fault[2]
+Type	Strike-slip[3]
+Areas affected	Iran
+Total damage	$8 billion[4]
+Max. intensity	MMI X (Extreme)[5]
+Casualties	35,000–45,000 killed[4]
+60,000–105,000 injured[4]
+105,000–400,000 displaced[4]
+
+The 1990 Manjil–Rudbar earthquake (Persian: زمین‌لرزه ۱۳۶۹ رودبار و منجیل; Gilaki: زلزله رودبار) occurred on Thursday, 21 June 1990 at 00:30:14 local time in the Caspian Sea region of northern Iran. The shock had a moment magnitude of 7.4 and a Mercalli Intensity of X (Extreme). Devastation occurred in a 20,000 km2 (7,700 sq mi) area, causing extensive damage in several cities. A large aftershock also added to the destruction. Between 35,000 and 50,000 people died in the earthquake; another 60,000–105,000 were injured.
+
+Tectonic setting
+[edit]
+
+Iran is one of the most seismically active regions in the world. Northwestern Iran, lies within northern part of the complex zone of collision between the Arabian plate and Eurasian plate. The Arabian plate is moving northwards relative to the Eurasian plate and the dominant style of faulting in the western Alborz Mountains involves movement on major thrust faults, combined with subordinate left-lateral strike-slip faulting.[6]
+
+Earthquake
+[edit]
+
+The focal mechanism of the earthquake indicate that the event corresponded with left-lateral strike-slip faulting with an epicenter in Gilan province. Surface rupture of about 80 km (50 mi) was observed along three segments of the previously unknown Rudbar Fault. Displacements estimated in the field gave an average of 60 cm left lateral motion combined with 95 cm of vertical motion, much lower than would be estimated from the observed magnitude. Optical correlation techniques using SPOT satellite imagery and aerial photographs have given estimates of 220 cm left lateral movement, better matching the magnitude and suggesting that a significant proportion of the displacement may have occurred off the main fault strand.[6]
+
+On 22 July 1983, a Mw  5.5 earthquake struck Mazandaran province, killing 30 people. That earthquake although situated just southwest of the 1990 earthquake's epicenter, is unlikely a foreshock to the 1990 event. The Coulomb stress transfer from the 1983 source fault to the 1990 earthquake source fault was insufficient. Stress modelling showed the 1983 earthquake had decreased crustal stress in the epicenter area of the 1990 earthquake rather than increasing it.[7]
+
+Damage and casualties
+[edit]
+
+Widespread damage occurred to the northwest of the capital city of Tehran, including the cities of Rudbar and Manjil. The total area of devastation was measured to be 20,000 km2 (7,700 sq mi).[8] The National Geophysical Data Center estimated that $8 billion in damage occurred in the affected area. Other earthquake catalogs presented estimates of the loss of life in the range of 35,000–50,000, with a further 60,000–105,000 that were injured and 400,000 rendered homeless. The earthquake struck 30 minutes after midnight when most people were sleeping in their basic mud dwellings, a major factor contributing to the high death toll.
+
+The morning after the mainshock, a 6.5 magnitude aftershock hit the city of Rasht, causing a dam to break and creating a large flood and landslide, flooding and wiping out huge swaths of farmland. Other landslides also made many roads unusable, with one landslide next to Rudbar moving up to 20 million cubic meters of land.[9] There were at least 223 landslides recorded within a 11.3 km2 (4.4 sq mi) area with a total volume of 380,000,000 m3 (1.3×1010 cu ft).[10] The earthquake was one of the strongest recorded in the densely populated region of the Alborz mountains.[2]
+
+Damage was extreme in the cities of Manjil, and Rudbar; Khalkhal and Nowshahr also recorded significant damage. In Tehran, the damage was slight.[11] Soil liquefaction also caused extensive damage in an area of about 80 km (50 mi) to the northeast of the earthquake's epicenter, ruining irrigation canals, pipelines, and splitting pavements apart. Water wells were also filled with boiled sand.[12] In some of the smaller, hard-to-reach towns in the Alborz mountains, there were no survivors and no house was left standing.[13] Most buildings destroyed were unreinforced masonry buildings, or UMBs, buildings made out of unsupported brick, cinderblock or other masonry elements which will collapse during strong earthquakes like the Iran earthquake.[14]
+
+Tsunami
+[edit]
+
+The earthquake was accompanied by a small, localized tsunami in the Caspian Sea. The waves were reported to reach 2 meters (6.5 ft) and inundated up to 1 kilometer (0.6 miles) inland. Presumably, an underwater landslide contributed to the notable tsunami, taking place on the steep shores of the continental shelf in the area. Although there were no reported casualties or severe damage in the wake of the tsunami, it reaffirmed the existence of a tsunami in the Caspian Sea and suggested that an underwater landslide that could be caused by an earthquake near the area could cause a life-threatening and potent tsunami.[15]
+
+Aftermath and relief efforts
+[edit]
+
+The earthquake took place as Iran was recovering from the Iran-Iraq war that ended just two years prior. Due to anti-American sentiment in Iran at the time, with the earthquake taking place just 10 years after the Iranian Revolution, Iranians initially did not want to accept help from the United States and other western countries, but they were not in a position to launch an extensive relief effort on their own.[16] The Iranian government and the governments that responded to the earthquake issued over 2,900 tents for the unhoused and camps for hundreds of thousands of people affected by the disaster. 170,000 blankets were also sent in to protect Iranians from the cold.[17][18]
+
+An unusual outbreak of acute renal failure (ARF) occurred in the aftermath of the earthquake, with the number of victims needing dialysis support rising to 156, with a mortality rate of 14 percent. Patients with ARF were more severely injured and usually had nerve damage, elevated muscle enzymes, and abnormal urinalysis.[19]
+
+Use in media
+[edit]
+
+Acclaimed Iranian director Abbas Kiarostami has fictionally incorporated the earthquake and its effects on northern Iran into multiple films of his. In And Life Goes On (1992), a director and his son search for child actors from a previous Kiarostami film; Where Is the Friend's Home? (1986), which was shot in a city that, by the time of the second film's production, is recovering from the earthquake. Kiarostami's next film Through the Olive Trees (1994) follows a film crew as they shoot scenes from Life, and Nothing More...; in one of these scenes a man discusses his marriage having taken place a day after the earthquake. Critics and scholars often refer to these three films as the Koker trilogy, and rank them among the director's finest works.[20]
+
+See also
+[edit]
+	Iran portal
+List of earthquakes in 1990
+List of earthquakes in Iran
+References
+[edit]
+^ a b c ISC (19 January 2015), ISC-GEM Global Instrumental Earthquake Catalogue (1900–2009), Version 2.0, International Seismological Centre
+^ a b Berberian, Manuel; Walker, Richard (2010). "The Rudbār Mw 7.3 earthquake of 1990 June 20; seismotectonics, coseismic and geomorphic displacements, and historic earthquakes of the western 'High-Alborz', Iran". Geophysical Journal International. 182 (3): 1577–1602. Bibcode:2010GeoJI.182.1577B. doi:10.1111/j.1365-246x.2010.04705.x.
+^ Berberian et al. 1992, pp. 1752, 1753
+^ a b c d PAGER-CAT Earthquake Catalog, Version 2008_06.1, United States Geological Survey, 4 September 2009
+^ Berberian et al. 1992, p. 1731
+^ a b Ajorlou, N.; Hollingsworth, J.; Mousavi, Z.; Ghods, A.; Masoumi, Z. (2021). "Characterizing Near-Field Surface Deformation in the 1990 Rudbar Earthquake (Iran) using Optical Image Correlation" (PDF). Geochemistry, Geophysics, Geosystems. 22 (6). Bibcode:2021GGG....2209704A. doi:10.1029/2021GC009704.
+^ Sarkarinejad, Khalil; Ansari, Shoja (2015). "Did the 1983 Charazeh earthquake trigger the destructive 1990 Rudbar earthquake?". International Journal of Earth Sciences. 104 (1): 309–319. Bibcode:2015IJEaS.104..309S. doi:10.1007/s00531-014-1072-z. S2CID 128759564.
+^ This day. 1990 earthquake devastates Iran history.com Archived 1 June 2023 at the Wayback Machine
+^ "Earthquake devastates Iran | June 21, 1990". HISTORY. 13 November 2009. Retrieved 30 September 2023.
+^ Vanani, Ali Asghar Ghaedi; Shoaei, Gholamreza; Zare, Mehdi (2021). "Statistical analyses of landslide size and spatial distribution triggered by 1990 Rudbar-Manjil (Mw 7.3) earthquake, northern Iran: revised inventory, and controlling factors". Bulletin of Engineering Geology and the Environment. 80 (4): 3381–3403. Bibcode:2021BuEGE..80.3381G. doi:10.1007/s10064-021-02106-8. S2CID 231682696.
+^ "Today in Earthquake History". United States Geological Survey. Retrieved 30 September 2023.
+^ Nateghi, F. (20 June 1990). "June 20, 1990 Earthquake of Northern Iran: An Overview". International Conferences on Recent Advances in Geotechnical Earthquake Engineering and Soil Dynamics. Retrieved 30 September 2023.
+^ https://historycollection.com/today-history-earthquake-killed-thousands-iran-1990/%7CThis Day in History; An Earthquake Killed Thousands in Iran (1990)
+^ https://www.buffalo.edu/mceer/catalog.host.html/content/shared/www/mceer/publications/NCEER-90-0017.detail.html%7CReconnaissance Report on the Northern Iran Earthquake of June 21, 1990
+^ https://academic.oup.com/gji/article/201/2/621/573760?login=false%7CField survey and modelling of the Caspian Sea tsunami of 1990 June 20
+^ "Earthquake shakes Iran's view of its enemies". The Washington Post. 2 July 1990. Archived from the original on 11 March 2023. Retrieved 30 September 2023.
+^ "This Day in History; an Earthquake Killed Thousands in Iran (1990)".
+^ UN Department of Humanitarian Affairs (21 June 1990). Medical supplies and equipment sent to Iranian earthquake survivors (Report). ReliefWeb. Retrieved 1 October 2023.
+^ Atef, M. R.; Nadjatfi, I.; Boroumand, B.; Rastegar, A. (1994). "Acute renal failure in earthquake victims in Iran: epidemiology and management". Quarterly Journal of Medicine. 87 (1): 35–40. PMID 8140215.
+^ http://www.sensesofcinema.com/2003/abbas-kiarostami/kiarostami_rural_space_and_place/%7CDays in the Country: Representations of Rural Space and Place in Abbas Kiarostami’s Life and Nothing More, Through the Olive Trees and The Wind Will Carry Us
+
+Sources
+
+Berberian, M.; Qorashi, M.; Jackson, J. A.; Priestley, K.; Wallace, T. (1992), "The Rudbar-Tarom earthquake of 20 June 1990 in NW Persia: Preliminary field and seismological observations, and its tectonic significance", Bulletin of the Seismological Society of America, 82 (4): 1726–1755
+Further reading
+[edit]
+Berberian, M.; Walker, R. (2010), "The Rudbar Mw 7.3 earthquake of 1990 June 20; seismotectonics, coseismic and geomorphic displacements, and historic earthquakes of the western 'High-Alborz', Iran" (PDF), Geophysical Journal International, 182 (3): 1577–1602, Bibcode:2010GeoJI.182.1577B, doi:10.1111/j.1365-246x.2010.04705.x
+Redmond, A. D.; Watson, S.; Nightingale, P. (1991), "The South Manchester Accident Rescue Team and the Earthquake in Iran, June 1990", BMJ: British Medical Journal, 302 (6791): 1521–1523, doi:10.1136/bmj.302.6791.1521, JSTOR 29712007, PMC 1670205, PMID 1855026
+External links
+[edit]
+Wikimedia Commons has media related to 1990 Manjil–Rudbar earthquake.
+7.4 – northern Iran – United States Geological Survey
+The International Seismological Centre has a bibliography and/or authoritative data for this event.
+vte
+← Earthquakes in 1990 →
+
+
+Bohol Sea (6.8, Feb 8)Upland (5.7, Feb 28)Bishop's Castle (5.1, Apr 2)Gonghe (7.0, Apr 26) †South Sudan (7.1, May 20) †Alto Mayo (6.6, May 29) †Vrancea (6.7, 6.2, 6.1, May 30/31)Panay (7.1, Jun 14)Manjil–Rudbar (7.4, Jun 21) † ‡Lenin Peak (6.4, Jul 13) †Luzon (7.8, Jul 16) †Carlentini (5.6, Dec 13)
+
+
+† indicates earthquake resulting in at least 30 deaths
+‡ indicates the deadliest earthquake of the year
+vte
+Earthquakes in Iran
+
+Historical	
+856 Damghan893 Ardabil1667 Shamakhi1641 Tabriz1679 Yerevan1721 Tabriz1727 Tabriz1778 Kashan1780 Tabriz1840 Ahora1853 Shiraz1871–72 Quchan1879 Bozqush1893 Quchan1895 Quchan
+
+Modern	
+1909 Borujerd1923 Torbat-e Heydarieh1929 Kopet Dag1930 Salmas1947 Dustabad1948 Ashgabat1953 Torud1957 Alborz1957 Farsinaj1958 Firuzabad1968 Dasht-e Bayaz and Ferdows1972 Qir1977 Khurgu1977 Naghan1977 Bob–Tangol1978 Tabas1979 Ghaenat1981 Golbaf1981 Sirch1990 Manjil–Rudbar1997 Bojnurd1997 Ardabil1997 Qayen2002 Bou'in-Zahra2003 Bam2004 Baladeh2005 Zarand2005 Qeshm2006 Borujerd2008 QeshmJuly 2010 Iran2010 Damghan2010 Hosseinabad2012 East Azerbaijan2012 Zohan2013 Bushehr2013 Saravan2013 Borazjan2014 Murmuri2017 Kermanshah2018 Sarpol-e Zahab2019 East Azerbaijan2020 Khoy2021 Hormozgan2022 Hormozgan2022–2023 West Azerbaijan
+Retrieved from "https://en.wikipedia.org/w/index.php?title=1990_Manjil–Rudbar_earthquake&oldid=1336719880"
+Categories:
+1990 earthquakes
+Earthquakes in Iran
+1990 in Iran
+June 1990 in Iran
+History of Gilan
+1990 disasters in Asia
+1990s disasters in Iran
+Hidden categories:
+Pages using gadget WikiMiniAtlas
+Webarchive template wayback links
+Articles with short description
+Short description is different from Wikidata
+Use dmy dates from September 2023
+Articles using Mw magnitude scale
+Coordinates on Wikidata
+Articles containing Persian-language text
+Articles containing Gilaki-language text
+Commons category link from Wikidata

@@ -1,0 +1,310 @@
+SOURCE ID : src-054
+TITLE     : 1990 Luzon Earthquake
+URL       : https://en.wikipedia.org/wiki/1990_Luzon_earthquake
+PUBLISHER : Wikipedia
+RETRIEVED : 2026-03-26T14:04:53.857530+00:00
+────────────────────────────────────────────────────────────
+
+Toggle the table of contents
+1990 Luzon earthquake
+ 11 languages
+Čeština
+Español
+فارسی
+Suomi
+Bahasa Indonesia
+日本語
+한국어
+Bahasa Melayu
+Nederlands
+Tagalog
+中文
+Edit links
+Article
+Talk
+ English
+Read
+Edit
+View history
+ Tools
+Tools
+move to sidebar hide
+Actions
+Read
+Edit
+View history
+General
+What links here
+Related changes
+Upload file
+Permanent link
+Page information
+Cite this page
+Get shortened URL
+Print/export
+Download as PDF
+Printable version
+In other projects
+Wikimedia Commons
+Wikidata item
+Appearance
+move to sidebar hide
+Coordinates: 15.679°N 121.172°E
+From Wikipedia, the free encyclopedia
+
+1990 Luzon earthquake
+The collapsed Hyatt Terraces Baguio Hotel after the earthquake in Baguio
+
+
+Rizal, Nueva Ecija
+
+UTC time	1990-07-16 07:26:36
+ISC event	362868
+USGS-ANSS	ComCat
+Local date	July 16, 1990
+Local time	15:26:36 local time
+Duration	45 seconds
+Magnitude	7.7 Mw[1]
+7.8 Ms[2]
+Depth	25.1 km (15.6 mi)[1]
+Epicenter	15.679°N 121.172°E[1]
+Type	Strike-slip[3]
+Areas affected	Central Luzon
+National Capital Region
+Cordillera Administrative Region
+Bicol Region
+Philippines
+Max. intensity	MMI IX (Violent)[4]
+PEIS VIII (Very destructive)[2]
+Casualties	1,621 killed
+3,513 injured
+321 missing
+126,035 displaced[5]
+
+The 1990 Luzon earthquake occurred on July 16 at 3:26 p.m. (PST) on the densely populated island of Luzon in the Philippines. The shock had a surface-wave magnitude of 7.8 and produced a 125 km-long ground rupture that stretched from Dingalan to Kayapa. The event was a result of strike-slip movements along the Philippine Fault and the Digdig Fault within the Philippine fault system. The earthquake's epicenter was near the town of Rizal, Nueva Ecija, northeast of Cabanatuan.[6] An estimated 1,621 people were killed,[7][8] most of the fatalities located in Central Luzon and the Cordillera region.
+
+Geology
+[edit]
+
+The Philippine archipelago represents a complex plate boundary between the Philippine Sea and Eurasian plates. To the east, oceanic lithosphere subducts westwards beneath the islands along the Philippine Trench. Off the west coast of Luzon, the Manila Trench accommodates eastward subduction. To its east is the East Luzon Trench, a convergent boundary that separates the Philippine Trench by a transform fault. The left-lateral strike-slip Philippine fault system runs through the islands. It is one of the longest strike-slip faults in the world. Understanding of its geology and earthquake history is limited. It extends north–south for 1,300 km (810 mi) from Mindanao to northern Luzon. On Luzon, the fault branches into multiple splay segments including the northerly trending Digdig Fault.[9]
+
+The event was one of the largest continental strike-slip earthquakes of the century. It was associated with a 125 km (78 mi) long surface rupture on the Philippine Fault System. Rupture occurred bilaterally, extending from the hypocenter, but most of the rupture occurred northwest for 75–100 km (47–62 mi). About 25 km (16 mi) north of the epicenter, the largest slip was estimated at 10–15 m (33–49 ft). Slip gradually decreased away from the zone. The Digdig Fault displayed 5–6 m (16–20 ft) of left-lateral displacement. Aftershocks occurred along a 100 km (62 mi) length of the fault. They displayed a range of focal mechanism including strike-slip, normal and thrust faulting.[10]
+
+Impact
+[edit]
+USGS ShakeMap showing the earthquake's intensity.
+1985
+1994
+1990
+1970
+1968
+1977
+1999
+2019
+2022
+All known magnitude ≥ 7.0 Mw in Central Luzon. In 1968, 1970,[11] 1977,[12] 1985,[13] 1990, and 1999. The weaker 2019 Luzon earthquake (6.2 Mw) is included for comparison.
+
+The earthquake caused damage within an area of about 20,000 square kilometers, stretching from the mountains of the Cordillera Administrative Region and through the Central Luzon region. The earthquake was strongly felt in Metropolitan Manila, destroying many buildings and leading to panic and stampedes and ultimately three deaths in the National Capital Region,[14] one of the lowest fatalities recorded in the wake of the tremor. The ceiling of a movie theater in Pasay reportedly collapsed pinning a number of moviegoers.[15] The Southern Tagalog (nowadays Region 4A (Calabarzon), Mimaropa, and Aurora of Central Luzon) and Bicol Regions also felt the quake, but with low casualty figures.
+
+Then-president Cory Aquino, who was having a meeting with Senate leaders at Malacañang Palace in Manila, recounted that she hid under a long conference table during the earthquake. She later ordered the suspension of classes and the mobilization of relief agencies.[15]
+
+Baguio
+[edit]
+
+The popular destination of Baguio, situated over 5000 feet above sea level, was among the areas hardest hit by the Luzon earthquake. The earthquake caused 28 collapsed buildings, including hotels, factories, and government and university buildings, as well as many private homes and establishments.[16] The quake destroyed electric, water and communication lines in the city.[17] The main vehicular route to Baguio, Kennon Road, as well as other access routes to the mountain city, were shut down due to landslides and it took three days before enough landslide debris was cleared to allow access by road to the stricken city.[17]
+
+Baguio was isolated from the rest of the Philippines for the first 48 hours after the quake. Damage at Loakan Airport rendered access to the city by air limited to helicopters.[17] American and Philippine Air Force C-130s evacuated many residents from this airport. Many city residents, as well as patients confined in hospital buildings damaged by the quake, were forced to stay inside tents set up in public places, such as in Burnham Park and in the streets. Looting of department stores in the city was reported.[18] Among the first rescuers to arrive at the devastated city were miners from Benguet Corporation, who focused on rescue efforts at the collapsed Hotel Nevada.[19] Then Major Danilo A. Aquino of the Philippine Military Academy, was the ground commander under the supervision of General Arturo Enrile, mobilized cadet volunteers from day 1 of the rescue mission until the last day of the recovery mission. Miners hailed the Cadets as heroes for their act of bravery for staying in the buildings despite strong after shocks. A number of cadets were awarded the Bronze Cross for their heroic efforts. Teams sent by the Philippine government and by foreign governments and agencies likewise participated in the rescue and retrieval operations in Baguio.
+
+One of the more prominent buildings destroyed was the Hyatt Terraces Baguio Hotel, where at least eighty hotel employees and guests were killed, including at least four employees of the state-owned Philippine Amusement and Gaming Corporation which ran the casino.[20][21] Three hotel employees, however, were pulled out alive after having been buried under the rubble for nearly two weeks, and after international rescue teams had abandoned the site convinced there were no more survivors.[22] Luisa Mallorca and Arnel Calabia were extricated from the rubble 11 days after the quake, while hotel cook Pedrito Dy was recovered alive 14 days following the earthquake.[23] All three survived in part by drinking their own urine[23] and in Dy's case, rainwater.[19] At that time, Dy's 14-day ordeal was cited as a world record for entombment underneath rubble.[22]
+
+The United States Agency for International Development was sponsoring a seminar at the Hotel Nevada when the tremor struck, causing the hotel to collapse. 27 of the seminar participants, including one American USAID official, were killed in the quake.[16] Among those who were pulled out alive from the ruins of the hotel was future senatorial candidate Sonia Roco, wife of politician Raul Roco, who was pulled out from the rubble by miners after 36 hours.[24][25]
+
+Cabanatuan
+[edit]
+
+In Cabanatuan, Nueva Ecija, the tallest building in the city, a six-story concrete school building housing the Christian College of the Philippines, collapsed during the earthquake, which occurred during school hours.[15] Around 154 people were killed at the CCP building. Unlike in Baguio, local and international journalists were able to arrive at Cabanatuan within hours after the tremor, and media coverage of the quake in its immediate aftermath centered on the collapsed school, where rescue efforts were hampered by the lack of heavy equipment to cut through the steel reinforcement of fallen concrete.[14] Some of the victims who did not die in the collapse were found dead later from dehydration because they were not pulled out in time.[26]
+
+A 20-year-old high school student, Robin Garcia, was later credited with rescuing at least eight students and teachers by twice returning under the rubble to retrieve survivors. Garcia was killed by an aftershock hours after the quake while trying to rescue more survivors, and he received several posthumous tributes, including medals of honor from the Boy Scouts of the Philippines and President Corazon Aquino's[27] Grieving Heart Award for his heroic effort that brought the world's attention to the quake due to quick media coverage in the city, since most of the buildings were damaged save for the CCP building which was collapsed totally.
+
+In other areas of Nueva Ecija, a school in Guimba collapsed killing three students.[15] In neighboring Nueva Vizcaya, at least 100 motorists and commuters were buried alive in landslides along the Nueva Vizcaya-Isabela Highway.[28]
+
+Dagupan
+[edit]
+
+In Dagupan, about 90 buildings in the city were damaged, and about 20 collapsed. Some structures sustained damage because liquefaction caused buildings to sink as much as 1 metre (39 inches). The earthquake caused a decrease in the elevation of the city and several areas were flooded. The city suffered 64 casualties of which 47 survived and 17 died. Most injuries were sustained during stampedes at a university building and a theater.
+
+La Union
+[edit]
+
+Five municipalities in La Union were affected: Agoo, Aringay, Caba, Santo Tomas, and Tubao with a combined population of 132,208. Many buildings, including the Agoo Municipal hall,[29] the Museo de Iloko, the parish church of Aringay,[15] and the Basilica Minore of our Lady of Charity,[30] collapsed or were severely damaged. 100,000 families were displaced when two coastal villages sank due to liquefaction. The province suffered many casualties leaving 32 people dead.
+
+Patterns of damage
+[edit]
+Note the diagonal fault near Casiguran in this tectonic map of the Philippine fault system.
+
+Based on preliminary analysis, cases and controls were similar in age and sex distribution. Similar proportions of cases and controls were inside buildings (74% and 80%, respectively) and outside buildings (26% and 20%, respectively) during the earthquake. For persons who were inside a building, risk factors included building height, type of building material, and the floor level the person was on. Persons inside buildings with seven or more floors were 35 times more likely to be injured. Persons inside buildings constructed of concrete or mixed materials were three times more likely to sustain injuries than were those inside wooden buildings. Persons at middle levels of multistory buildings were twice as likely to be injured as those at the top or bottom levels.[17]
+
+The earthquake caused different patterns of damage in different parts of Luzon Island. The mountain resort of Baguio was most severely affected, it had a high population density and many tall concrete buildings, which were more susceptible to seismic damage. Relief efforts proved difficult as all routes of communication, roads, and airport access were severed for several days following the quake. These efforts were further hampered by daily rainfall. Baguio is home to a large mining company and a military academy; experienced miners and other disciplined volunteers played a crucial role in early rescue efforts. Rescue teams arriving from Manila and elsewhere in Luzon were able to decrease mortality from major injuries. Surgeons, anesthesiologists, and specialized equipment and supplies were brought to the area, and victims were promptly treated. Patients requiring specialized care (e.g., hemodialysis) not available in the disaster area were airlifted to tertiary hospitals. Damage was caused by landslides in the mountains and settling in coastal areas. Relief efforts in these areas were prompt and successful, partly because those areas remained accessible.[31]
+
+On July 19, three days after the earthquake, the priority of relief efforts shifted from treatment of injuries to public health concerns. For example, numerous broken pipes completely disrupted water systems, limiting the availability of potable water, and refugees who camped in open areas had no adequate toilet facilities. Early efforts at providing potable water by giving refugees chlorine granules were unsuccessful. Most potable water was distributed from fire engines, and Department of Health (DOH) sanitarians chlorinated the water before it was distributed. Surveys of refugee areas showed few latrines; these had to be dug by the DOH.[17]
+
+Aftermath
+[edit]
+
+The University of Baguio, which got struck by this earthquake, was rehabilitated, while the land where Hyatt Terraces stood remains abandoned.[32]
+
+In popular culture
+[edit]
+
+The earthquake is featured in the television documentary series by GRB Entertainment, aired on The Learning Channel and other television channels around the world, about natural disasters titled Earth's Fury (also known internationally as Anatomy of Disaster) in an episode entitled "Earthquake!",[33] the 50th anniversary special of GMA News and Public Affairs titled Limang Dekada in 2010,[34] the 50th anniversary special of ABS-CBN titled Sa Mata ng Balita in 2003,[35] and the 1996 documentary produced by Langley Productions titled The Amazing Video Collection: Natural Disasters.
+
+Scenes of the earthquake's destruction around Baguio, as well as reflections on Filipino people's capacity to endure and rebuild, also featured in a segment of 1994 collage film directed by National Artist Kidlat Tahimik titled Why is Yellow the Middle of the Rainbow?.
+
+See also
+[edit]
+	1990s portal
+	Philippines portal
+	Earth sciences portal
+List of earthquakes in 1990
+List of earthquakes in the Philippines
+1990 Bohol and 1990 Panay earthquakes – two other significant earthquakes in the Philippines the same year
+1991 eruption of Mount Pinatubo – a significant eruption that happened less than a year after this earthquake.
+2022 Luzon earthquake
+Bibliography
+[edit]
+Rantucci, Giovanni (1980). Geological Disasters In The Philippines: The July 1990 Earthquake And The June 1991 Eruption of Mount Pinatubo. Description, effects and lessons learned. Philippine Institute of Volcanology and Seismology (PHIVOLCS). ISBN 978-0-7881-2075-6. Retrieved August 15, 2009.
+References
+[edit]
+^ a b c "M 7.7 – Luzon, Philippines". United States Geological Survey. July 16, 1990. Archived from the original on August 31, 2017. Retrieved August 31, 2017.
+^ a b "1990 July 16 Ms7.8 Luzon Earthquake". Philippine Institute of Volcanology and Seismology. Archived from the original on October 1, 2019. Retrieved February 21, 2013.
+^ PAGER-CAT Earthquake Catalog, Version 2008_06.1, United States Geological Survey, September 4, 2009, archived from the original on January 15, 2018, retrieved October 24, 2018
+^ National Geophysical Data Center / World Data Service (NGDC/WDS) (1972), Significant Earthquake Database (Data Set), National Geophysical Data Center, NOAA, doi:10.7289/V5TD9V7K, archived from the original on July 21, 2017, retrieved March 11, 2016
+^ Remembering the 1990 Luzon quake. CNN Philippines. Archived from the original on January 17, 2022. Retrieved January 17, 2022 – via YouTube.
+^ "The July 16 Luzon Earthquake: A Technical Monograph". Inter-Agency Committee for Documenting and Establishing Database on the July 1990 Earthquake. Philippine Institute of Volcanology and Seismology. 2001. Archived from the original on September 7, 2008. Retrieved January 7, 2009.
+^ The World Almanac and Book of Facts 2008: 140th Anniversary Edition. United States: World Almanac Education Group Inc. 2008. p. 305. ISBN 978-1-60057-072-8.
+^ John W. Wright, ed. (2008). The New York Times 2008 Almanac. United States: Penguin Group. pp. 753. ISBN 978-0-14-311233-4.
+^ Silcock, David M.; Beavan, John (2001). "Geodetic constraints on coseismic rupture during the 1990 Ms 7.8 Luzon, Philippines, earthquake". Geochemistry, Geophysics, Geosystems. 2 (7): 1016. Bibcode:2001GGG.....2.1016S. doi:10.1029/2000GC000101. S2CID 128930684.
+^ Velasco, Aaron A.; Ammon, Charles J.; Lay, Thorne; Hagerty, Michael (1996). "Rupture process of the 1990 Luzon, Philippines Mw 7.7, earthquake". Journal of Geophysical Research: Solid Earth. 101 (B10): 22419–22434. Bibcode:1996JGR...10122419V. doi:10.1029/96JB02290.
+^ "M 7.4 – Luzon, Philippines". United States Geological Survey. Archived from the original on March 15, 2018. Retrieved March 14, 2018.
+^ "M 7.0 – Luzon, Philippines". United States Geological Survey. Archived from the original on March 15, 2018. Retrieved March 14, 2018.
+^ "M 7.0 – Luzon, Philippines". United States Geological Survey. Archived from the original on March 15, 2018. Retrieved March 14, 2018.
+^ a b "Earthquake in the Philippines Kills at Least 260, Including 50 Children in One School". The New York Times. July 17, 1990. Archived from the original on July 30, 2023. Retrieved January 8, 2009.
+^ a b c d e "Killer quake rumbles across Luzon". Manila Standard. July 17, 1990. Archived from the original on December 8, 2024. Retrieved October 10, 2021.
+^ a b "Manila Assesses Damage and High Cost of Quake". The New York Times. July 20, 1990. Retrieved January 8, 2009.
+^ a b c d e "International notes Earthquake Disaster – Luzon, Philippines". Center for Disease Control. August 31, 1990. Archived from the original on January 9, 2009. Retrieved January 8, 2009.
+^ Jomar Kho Indanan (August 22, 1990). "The Worst of Times". National Midweek. p. 46.
+^ a b Moulic, Gobleth (December 10, 2004). "How Baguio quake victim survived 15-day ordeal under rubble". Philippine Daily Inquirer. Archived from the original on April 13, 2009. Retrieved January 13, 2009.
+^ Liquicia, Rosario (July 18, 1990). "Hyatt Terraces: A crumpled ruin". Manila Standard. Archived from the original on October 10, 2021. Retrieved October 10, 2021.
+^ "Calamity in Baguio, Cabanatuan". Manila Standard. July 18, 1990.
+^ a b "Quake Update". National Midweek. August 22, 1990. p. 39.
+^ a b "A 3rd Survivor Pulled From Collapsed Hotel". Deseret News. July 30, 1990. Archived from the original on April 12, 2009. Retrieved January 8, 2009.
+^ Norman Bordadora & Michael Lim Ubac (April 17, 2007). "Roco trapped in elevator on Friday the 13th". Philippine Daily Inquirer. Archived from the original on April 13, 2009. Retrieved January 13, 2009.
+^ "Quake Deaths Reach 256". Manila Standard. July 18, 1990. Archived from the original on October 10, 2021. Retrieved October 10, 2021.
+^ "Earthquake Wreaks Havoc in the Philippines". This Day in History. Archived from the original on March 6, 2009. Retrieved January 8, 2009.
+^ Guingona, Teofisto (1993). The Gallant Filipino. Pasig: Anvil Publishing Inc. pp. 211–213. ISBN 978-971-27-0279-2.
+^ Burgos, Roberto (July 20, 1990). "Quake also buried 100 in N. Vizcaya". Manila Standard.
+^ "23 Years in La Union". The Philippine Navigators. December 12, 2015. Archived from the original on July 16, 2020. Retrieved July 16, 2020.
+^ Sals, Florent Joseph (2005). The History of Agoo: 1578-2005. La Union: Limbagan Printhouse. p. 80.
+^  This article incorporates public domain material from International notes Earthquake Disaster -- Luzon, Philippines. Centers for Disease Control and Prevention. Retrieved January 4, 2025.
+^ Baguio remembers deadly 1990 quake, July 16, 2016, retrieved August 8, 2021
+^ "Earthquake!". Anatomy of Disaster. Season 1. Episode 3. 1997. The Learning Channel. Archived from the original on December 19, 2021. Retrieved October 6, 2020 – via YouTube.
+^ Limang Dekada: The GMA News 50th Anniversary Special (Television special). Philippines: GMA News and Public Affairs. January 10, 2010. Archived from the original on December 19, 2021. Retrieved October 29, 2020 – via YouTube.
+^ Sa Mata ng Balita (Television special). Philippines: ABS-CBN News and Current Affairs. October 12, 2003. Archived from the original on August 31, 2024. Retrieved November 11, 2020.
+External links
+[edit]
+Wikimedia Commons has media related to 1990 Luzon earthquake.
+EIRD overview
+The 1990 Baguio City Earthquake (Archived 2009-10-21)
+Rapid.Org.UK – Philippines earthquake
+Steven Erlanger (July 19, 1990). "Hopes Dying in the Rubble in Philippines". The New York Times. Retrieved January 17, 2010.
+The International Seismological Centre has a bibliography and/or authoritative data for this event.
+Videos
+[edit]
+Panahon TV retrospective on the earthquake on YouTube
+ANC News Now retrospective on the earthquake on YouTube
+GMA Headline News report on the earthquake in Baguio on YouTube
+Another GMA Headline News report on the earthquake in Gabaldon, Nueva Ecija on YouTube
+vte
+← Earthquakes in 1990 →
+
+
+Bohol Sea (6.8, Feb 8)Upland (5.7, Feb 28)Bishop's Castle (5.1, Apr 2)Gonghe (7.0, Apr 26) †South Sudan (7.1, May 20) †Alto Mayo (6.6, May 29) †Vrancea (6.7, 6.2, 6.1, May 30/31)Panay (7.1, Jun 14)Manjil–Rudbar (7.4, Jun 21) † ‡Lenin Peak (6.4, Jul 13) †Luzon (7.8, Jul 16) †Carlentini (5.6, Dec 13)
+
+
+† indicates earthquake resulting in at least 30 deaths
+‡ indicates the deadliest earthquake of the year
+vte
+Earthquakes in the Philippines
+
+Historical	
+1628 Camarines1645 Luzon1863 Manila1879 Surigao1880 Southern Luzon1897 Mindanao
+
+20th century	
+1913 Sulawesi–Mindanao1918 Celebes Sea1948 Lady Caycay1955 Lanao1968 Casiguran1973 Ragay Gulf1976 Moro Gulf1983 Luzon1988 Mindoro1990 Bohol Sea1990 Panay1990 Luzon1992 Mindanao1994 Mindoro1999 Luzon
+
+21st century	
+2002 Mindanao2010 Mindanao2012 Negros2012 Samar2013 Bohol2017 Surigao2017 Batangas2017 Leyte2019 Luzon2019 Eastern SamarJuly 2019 Cotabato2019 BatanesOctober 2019 Cotabato2019 Davao del Sur2020 Masbate2021 Davao del Sur2021 Davao Oriental2022 LuzonNovember 2023 MindanaoDecember 2023 Mindanao2025 Cebu2025 Davao Oriental
+vte
+Corazon Aquino
+
+
+11th President of the Philippines (1986–1992)
+
+Presidency	
+EDSA Revolution1986–1987 provisional governmentCoup attempts November 1986January 1987April 1987August 19871989March 1990October 1990
+Policies
+and legislation	
+1987 ConstitutionExecutive ordersOperation Big BirdFamily Code of 1987Local Government CodeAdministrative Code of 1987Comprehensive Agrarian Reform ProgramCreation of Autonomous Region in Muslim MindanaoCreation of Cordillera Administrative RegionCitizen Armed Force Geographical UnitDILG Act of 1990
+
+Speeches	
+State of the Nation Address
+	
+
+
+
+
+Elections	
+1986 snap elections1992 presidential election
+
+Family	
+Ninoy Aquino (husband)Benigno Aquino III (son)Kris Aquino (daughter)Kiko Aquino Dee (grandson)Bimby Aquino Yap (grandson)José Cojuangco Sr. (father)Juan Sumulong (grandfather)Eduardo Cojuangco Jr. (cousin)Jose Cojuangco Jr. (brother)Josephine C. Reyes (sister)Mark Cojuangco (nephew)Mikee Cojuangco-Jaworski (niece)Cojuangco (clan)
+
+Life and legacy	
+Aquino Center and MuseumDeath and memorial service
+
+Related	
+8th CongressPDP–LabanUNIDOMarcos Japanese ODA scandalLaban signThe Last Journey of NinoyMaalaala Mo Kaya: The Ninoy and Cory Aquino Story ("Kalapati""Makinilya")Domestic incidents Mendiola massacreCamp Cawa-Cawa siegeDavao hostage crisisVizconde massacreHultman–Chapman double-murder caseNatural disasters Peggy (Gading)PR 206 crashBetty (Herming)Nina (Sisang)Sinking of MV Doña PazRuby (Unsang) and Sinking of MV Doña MarilynSkip (Yoning)Gordon (Goring)Angela (Rubing)Dan (Saling)Elsie (Tasing)1990 Luzon earthquakeMike (Ruping)1991 Mount Pinatubo eruptionYunya (Diding)Thelma (Uring)
+
+
+← Ferdinand MarcosFidel V. Ramos →
+← Fernando LopezSalvador LaurelJoseph Estrada →
+ Category
+Authority control databases 
+
+National	
+United StatesIsrael
+
+Other	
+Yale LUX
+Retrieved from "https://en.wikipedia.org/w/index.php?title=1990_Luzon_earthquake&oldid=1334185402"
+Categories:
+Earthquakes in the Philippines
+1990 disasters in the Philippines
+1990 earthquakes
+History of Nueva Ecija
+History of Baguio
+History of Pangasinan
+History of La Union
+July 1990 in Asia
+Strike-slip earthquakes
+Hidden categories:
+Pages using gadget WikiMiniAtlas
+Wikipedia articles incorporating text from the Centers for Disease Control and Prevention
+Articles with short description
+Short description is different from Wikidata
+Use Philippine English from January 2023
+All Wikipedia articles written in Philippine English
+Use mdy dates from October 2024
+Articles using Mw magnitude scale
+Coordinates on Wikidata
+Commons category link from Wikidata

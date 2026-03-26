@@ -1,0 +1,376 @@
+SOURCE ID : src-032
+TITLE     : Early 1990s Recession
+URL       : https://en.wikipedia.org/wiki/Early_1990s_recession
+PUBLISHER : Wikipedia
+RETRIEVED : 2026-03-26T14:04:41.132853+00:00
+────────────────────────────────────────────────────────────
+
+Toggle the table of contents
+Early 1990s recession
+ 
+7 languages
+العربية
+Español
+Euskara
+Suomi
+Français
+Հայերեն
+Русский
+Edit links
+Article
+Talk
+ 
+English
+Read
+Edit
+View history
+ 
+Tools
+Tools
+move to sidebar hide
+Actions
+Read
+Edit
+View history
+General
+What links here
+Related changes
+Upload file
+Permanent link
+Page information
+Cite this page
+Get shortened URL
+Expand all
+Edit interlanguage links
+Print/export
+Download as PDF
+Printable version
+In other projects
+Wikimedia Commons
+Wikidata item
+Appearance
+move to sidebar hide
+From Wikipedia, the free encyclopedia
+	
+This article is missing information about the cause of the recession and economic performance statistics. Please expand the article to include this information. Further details may exist on the talk page. (December 2017)
+
+The early 1990s recession describes the period of economic downturn affecting much of the Western world in the early 1990s. The impacts of the recession contributed in part to the 1992 U.S. presidential election victory of Bill Clinton over incumbent president George H. W. Bush. The recession also included the resignation of Canadian prime minister Brian Mulroney, the reduction of active companies by 15% and unemployment up to nearly 20% in Finland, civil disturbances in the United Kingdom and the growth of discount stores in the United States and beyond.
+
+Primary factors believed to have led to the recession include the following: restrictive monetary policy enacted by central banks, primarily in response to inflation concerns, the loss of consumer and business confidence as a result of the 1990 oil price shock,[1] the end of the Cold War and the subsequent decrease in defense spending,[2] the savings and loan crisis and a slump in office construction resulting from overbuilding during the 1980s.[3] The US economy returned to 1980s level growth by 1993[4] and global GDP growth by 1994.[5]
+
+North America
+[edit]
+United States
+[edit]
+Main article: Early 1990s recession in the United States
+Treasury yield spreads
+Inverted yield curve in late 1989 and early 1990
+  30 year minus 3 month
+  10 year minus 2 year
+  10 year minus 3 month
+  10 year minus Federal funds rate
+Canada
+[edit]
+%
+7
+8
+9
+10
+11
+12
+13
+1/1/1988
+12/1/1989
+11/1/1991
+10/1/1993
+%
+Unemployment rate in Canada (1988–1994)
+View source data.
+Unemployment rate in Canada (1988–1994)[6]
+
+Canada's economy is considered to have been in recession for two full years in the early 1990s, specifically from April 1990 to April 1992.[7][8][a] Canada's recession began about four months before that of the US, and was deeper, likely because of higher inflationary pressures in Canada, which prompted the Bank of Canada to raise interest rates to levels 5 to 6 percentage points higher than the corresponding rates in the US by early 1990.[10][11]
+
+Canada's economy began to weaken in the second quarter of 1989 as sharp cutbacks in manufacturing output reduced real GDP growth to about 0.3% for each of the last three quarters of the year.[8] Despite GDP growth being minimal, employment growth Canada-wide remained moderate throughout 1989 (although Ontario had a decline in employment in 1989)[12] and there was a solid growth spurt (0.8%) in the first quarter of 1990.[8] In April 1990, economic activity and employment both began substantial declines with the largest drops in real GDP, 1.2%, and employment, 1.1%, occurring in the first quarter of 1991.[8] Both real GDP and employment bounced back in the second quarter of 1991, but then for a full year there was virtually no change in real GDP while employment levels continued to drop as most industries continued to cut output.[8] Only in April 1992 did total employment begin to increase again with real GDP growing 0.4% thereby ending the recession.[8] Technically, the moderate expansion in the second quarter of 1991 would qualify the contractions from April 1990 to March 1991 and July 1991 to April 1992 as two separate recessions, but the 1991 second quarter expansion was likely the result of pent up demand from the Gulf War and the introduction of the federal Goods and Services Tax early in the year severely suppressing consumer spending in the first quarter.[8]
+
+Overall real GDP growth for Canada was 2.3% for 1989, 0.16% for 1990, −2.09% for 1991, 0.90% for 1992, before increasing to 2.66% in 1993.[13] The unemployment rate rose from 7.5% in 1989, to 10.3% in 1990, 10.3% in 1991, 11.2% in 1992, and 11.4% in 1993 before dropping to 10.3% in 1994.[13] In fact, due to unemployment remaining at higher levels until early 1994, some sources assert the early 1990s recession lasted until February 1994 in Canada, as the percentage of the working age population (15–64) being employed continued to decline until the following month.[12] The slow growth in employment following the end of the GDP contraction in April 1992 right through until 1995, is referred to as a "jobless recovery".[14]
+
+Inflation and monetary policy
+[edit]
+
+A key cause of the recession in Canada was inflation and Bank of Canada's resulting monetary policy. The inflation rate in Canada had remained in the 4% range between 1984 and 1988, but began to rise again in 1989, averaging 5.0% that year.[13] Gordon Thiesen, asserted in 2001 when he was the Bank of Canada governor, that inflationary pressures in Canada were partly fueled by Canadians having had a greater "inflation psychology" than Americans, that is a higher propensity to spend now in the belief the price for the same product will be substantially higher in short period of time.[15] To reduce inflation, the Bank of Canada raised its prime rate from 10% in 1986 and 1987, to 12.25% at the start of 1989, peaking at 14.75% in June 1990,[16][17] thereby prompting Canadians to reduce spending, reduce borrowing and begin saving sooner and more greatly than Americans.[15] Particularly hard hit were Canada's real estate markets, the building industry, especially factory construction, and consumer confidence.[11]
+
+Then in February 1991, the Bank of Canada and the Department of Finance announced their monetary policy would be governed by formal inflation targets, with a target of 3% for 1992.[10] Inflation was contained to 4.8% in 1990, 5.6% in 1991 and then decreased to 1.5% in 1992 and 1.9 in 1993, well below the target of 3%.[18] This suggests the Bank of Canada's restrictive monetary policy overshot its target, suppressing GDP and employment growth in 1992 and 1993 in what would normally have been an economic recovery period.[10] In fact, complex macro-economic modelling undertaken estimates that "excessive monetary restraint" of the Bank of Canada reduced real GDP growth by 1.5 percentage points in 1990, 2.9 percentage points in 1991 and 4.0 percentage points in 1993.[10]
+
+Tax increases
+[edit]
+
+Another cause of Canada's recession were several tax increases instituted by the federal government between 1989 and 1991.[10] These increases related to sales, excise and payroll taxes were modelled to have reduced real GDP growth by 1.6, 2.4 and 5.1 percentage points, respectively, in 1990, 1991 and 1992, although if these tax increases had not been implemented the federal government's national debt would have increased a significant amount.[10] A third, less important factor in Canada's recession was the weakness of the US economy at the time, which was calculated to have had the effect of reducing Canada's economic growth by .6, 2.2 and 1.1 percentage points in 1990, 1991 and 1992.[10]
+
+High value of the Canadian dollar and low productivity
+[edit]
+
+An additional reason for the recession, especially it being deeper and longer in Canada than in the US, was the high value of the Canadian dollar, as high as 86-cents American in 1991, which made Canada's export manufactured goods, such as automotive parts, textiles and intermediate industrial goods and materials, uncompetitive in international markets.[11] Combined with Canada's manufacturing productivity at the time being among the lowest in the G7 (caused by a lack of investment in new equipment or in research and development) and the removal of certain protective tariffs through the 1989 Canada-US Free Trade Agreement, this caused substantial job losses in the manufacturing sector with a significant number of manufacturers closing down or moving to the US, Mexico or the Caribbean.[11]
+
+Impact of recession on unemployment
+[edit]
+
+The recession severely depressed job markets throughout the country unemployment rising from a low of 7.2% in October 1989, to a high of 12.1% in November 1992; it would take 10 years before unemployment recovered a 7.2% level (it was reached in October 1999).[6] For instance, in Montreal (Quebec) unemployment affected 16.7% of the active population by December 1992 while the number of households relying on welfare increased from 88,000 to 102,000 between April 1990 and December 1992.[19]
+
+The early 1990s recession was notable for being substantially more negative for employment in Ontario than the early 1980s recession; Ontario's percentage of total age 15–64 population employed began to decline early in 1989 and only began to grow again early in 1994, five years of decline with an 8.2 percentage point drop.[12] By contrast, in the early 1980s Ontario's employment percentage decline was shorter than Canada's as a whole and only had a 4.4 percentage point contraction.[12]
+
+Comparison to early 1980s recession
+[edit]
+
+C.D, Howe Institute's Business Cycle Council classifies Canada's recession according to their severity, with Category 4 recessions being the second highest after Category 5, which is a depression.[7] It defines Category 4 recessions as having substantial declines in real GDP and employment for a year or longer.[8] The early 1990s recession in Canada is classified as a Category 4 recession, the same category as the early 1980s recession.[7] Notably, the early 1990s recession did not have as deep a contraction as the early 1980s recession, but was of longer duration as it had four years of less than 2.3% growth in real GDP (1989–92), while the early 1980s recession only had two years of less than 2.3% growth (1980 and 1982), and only the early 1990s recession actually saw a decrease in GDP per capita, that being by $29 in 1991.[20] Both recessions had high unemployment after the recessionary period had officially ended with unemployment rates of 12% and 11.4%, in 1983 and 1993, respectively.[20] Other sources describe the early 1990s recession as "the deepest in Canada since the Great Depression of the 1930s" naming it "the Great Canadian Slump of 1990–92."[21]
+
+Western Europe
+[edit]
+Finland
+[edit]
+Main article: Early 1990s depression in Finland
+
+Finland underwent severe economic depression in 1990–93. Badly managed financial deregulation of the 1980s, in particular removal of bank borrowing controls and liberation of foreign borrowing, combined with strong currency and a fixed exchange rate policy led to a foreign debt financed boom. Bank borrowing increased at its peak over 100% a year and asset prices skyrocketed. The collapse of the Soviet Union in 1991 led to a 70% drop in trade with Russia and eventually Finland was forced to devaluate, which increased the private sector's foreign currency denominated debt burden. At the same time authorities tightened bank supervision and prudential regulation, lending dropped by 25% and asset prices halved. Combined with raising savings rate and worldwide economic troubles, this led to a sharp drop of aggregate demand and a wave of bankruptcies. Credit losses mounted and a banking crisis inevitability followed. The number of companies went down by 15%, real GDP contracted about 14% and unemployment rose from 3% to nearly 20% in four years.[22]
+
+Recovery has been based on exports, after currency devaluation of 40% and reviving world economy share of exports as percentage of GDP has risen from 20% to 45%,[23] and Finland has been running consistent current account surpluses. Despite this impressive performance and strong growth mass unemployment has remained a problem.[24]
+
+France
+[edit]
+
+France, just as the rest of continental Europe, entered recession later compared to economies of anglophone countries. The economic climate started to worsen in late 1989 (first in industry) in several phases:[25]
+
+A progressive slowing of economic activity between late 1989 and Autumn 1990 due mostly to slowing exports (especially to depressed North American markets);
+A sudden slump in the latter part of 1990 as the Gulf War amplified previous tendencies;
+A stand-by situation between mid 1991 and Autumn 1992 as the end of the War in the Gulf provided for some temporary relief;
+Another slump in late 1992 as external demand dries up and the aftermaths of Black Wednesday.[26]
+
+The recession officially starts at the end of 1992 and beginning of the 1993. It is a brief but important recession: GDP drops 0.5% in the last quarter of 1992 and 0.9% in the first quarter of 1993. The drop is amplified by weak exports figures as most of France's trading partners also entered recession at the end of 1992. On a yearly basis, GDP growth was limited to 1.5% in 1992 and −0.9% in 1993, the first negative figure since 1975.[27]
+
+Industry is vastly affected by the recession: output dropped 5.3% in volume in 1993 with a catastrophic first semester and a very limited recovery in the second. The construction industry is also affected by the recession with a 3.9% decrease in volume of output.[28]
+
+All the composants of GDP were depressed in 1993:[28]
+
+Household consumption recorded its slowest increase in 30 years (+0.4% in volume);
+Investment from both households (residential investments) and enterprises decreased significantly (−4.4 and −6.8% respectively). For the latter early 1993 represents the trough of a slump started in 1990;
+Inventory levels were reduced in 1993;
+Exports decreased (−0.4%) but not as much as imports (−3.1%) meaning that external trade contributed positively to GDP growth in 1993.
+
+The weak economic climate resulted in significant increase in unemployment and public deficits. Reduced activity levels had a direct impact on public finances: social benefits grew 6.8% in 1993 whereas tax revenues only increased 2.4% despite increases in tax rates and charges throughout the year (the Generalized Social Contribution rate was increased by 1.3 points on 1 July 1993).[28]
+
+Sweden
+[edit]
+Main article: 1990–1994 Swedish financial crisis
+
+Sweden experienced a financial crisis during the early-mid 1990s.
+
+United Kingdom
+[edit]
+United Kingdom bonds
+Inverted yield curve 1988–1991
+  50 year
+  20 year
+  10 year
+  2 year
+  1 year
+  3 month
+  1 month
+
+Despite several major economies showing quarterly detraction during 1989, the British economy continued to grow until the third quarter of 1990. Economic growth was not re-established until early 1993, with the end of the recession being officially declared on 26 April that year.[29] The Conservative government which had been in power continuously since 1979 managed to achieve re-election in April 1992 after the replacement of long-serving Margaret Thatcher with John Major as prime minister in November 1990 helped fend off a strong challenge from Neil Kinnock and Labour.
+
+Asian Pacific
+[edit]
+Japan
+[edit]
+See also: Lost Decades
+Japan bonds
+Inverted yield curve in 1990
+Zero interest-rate policy starting in 1999[30]
+Negative interest policy started in 2016[31]
+  30 year
+  20 year
+  10 year
+  5 year
+  2 year
+  1 year
+See also: Lost Decades
+Japan money supply and inflation (year over year)
+  M2 money supply
+  Inflation
+
+Japan had loose monetary policy in the decades preceding, causing the Japanese asset price bubble. The Bank of Japan raised interest rates to cause an inverted yield curve and reduced M2 money supply increases to tame the property asset bubble. The decade following is known as the Lost Decade.[32]
+
+Japan property prices (year over year)
+See also: Japanese asset price bubble
+Political ramifications
+[edit]
+Canada and the United States
+[edit]
+Main article: Early 1990s recession in the United States
+
+The Progressive Conservative government of Brian Mulroney in Canada and the successful presidential election campaign of George H. W. Bush in the United States may have been aided by growth in 1988. However, neither leader could hold on to power through the last part of the recession, being challenged by political opponents running on pledges to restore the economy to health. Bush initially enjoyed great popularity after the successful Persian Gulf War, but this soon wore off as the recession worsened; his 1992 re-election bid was particularly hampered by his 1990 decision to renege on his "Read my lips: no new taxes" pledge made during his first campaign in 1988. Meanwhile, Mulroney became deeply unpopular in Canada after two failed constitutional reform attempts (the Meech Lake Accord and Charlottetown Accord) and the 1991 introduction of the Goods and Services Tax (GST). He resigned as prime minister and party leader in 1993, and the Progressive Conservatives collapsed in the election held later that year, winning only two seats.
+
+Australia
+[edit]
+Main article: Early 1990s recession in Australia
+
+In Australia, Paul Keating (then Treasurer of Australia, and future Prime Minister) referred to it as "the recession that Australia had to have".[33] This quote became a cornerstone of the opposition Liberal Party's campaign during the 1993 election, designed to underscore alleged mismanagement of the national economy by the incumbent Labor Party. Unlike the opposition parties in North America, however, the Liberal Party failed to enter government (at least, not until the 1996 election).
+
+New Zealand
+[edit]
+
+In neighbouring New Zealand, the recession came after the re-election of the reformist Lange Labour government. The impact of economic reforms (known as Rogernomics) in the recession led to deep policy divisions between the Prime Minister, David Lange, and the Minister of Finance, Roger Douglas. In response to the recession, Douglas wanted to increase the pace of reform, whereas Lange sought to prevent further reform. Douglas resigned from Cabinet in 1988, but was re-appointed to Cabinet in 1989, prompting Lange to resign. Labour lost the 1990 general elections by a landslide to the National Party, who continued with Douglas' reforms.
+
+France
+[edit]
+
+François Mitterrand was elected to a second term on 8 May 1988 and his political party, the Socialist Party, and its allies won a very narrow majority in the National Assembly the next month.
+
+Weakened by the recession and corruption scandals, the Socialist Party suffered severe defeats in the 1992 local elections (regional and cantonal) and the 1993 legislative elections (winning only 53 seats out of 577, its worst turnout until 2017) where the RPR-UDF right-wing coalition were returned to power with a massive majority of 449 seats out of 577.
+
+Influence on culture
+[edit]
+
+In the United States during the recession more people chose to shop at discount stores. This caused Kmart and Walmart (which became the country's largest retailer in 1989) to outsell the traditional stalwart Sears.[34]
+
+A need for feel-good entertainment in a time of recession was one of the reasons for changing priorities in US movie industry. So year 1993 was considered the year of the family film.[35] As production costs rose, films pitched at both adults and children offered a greater chance being profitable both at the theater and in the ensuing home video rentals. Family films encouraged repeat business and offered more opportunities to sell merchandise.[36][37] Columbia Pictures chairman Mark Canton said that PG-rated films were much more likely to make over $100 million, compared to adult-oriented fare. Among many films released that year are Free Willy, Groundhog Day, Last Action Hero, and Jurassic Park, which would go on to become the highest-grossing film to date.[38] There were blockbusters like Mrs. Doubtfire and Indecent Proposal, critical favorites such as Schindler's List and Philadelphia,[39][40][41] and future classics, like Dazed and Confused, Batman: Mask of the Phantasm, and The Nightmare Before Christmas.[41][42][43]
+
+Civil unrest
+[edit]
+
+In the United Kingdom, there was a significant wave of rioting at the height of the recession in 1991, with unemployment and social discontent being seen as major factors. Areas affected included Handsworth in Birmingham,[44] Blackbird Leys in Oxford, Kates Hill in Dudley, Meadow Well on Tyneside, Ely in Cardiff and Hartcliffe in Bristol. These were isolated communities devastated by poverty and unemployment, separated from urban centres.[45]
+
+See also
+[edit]
+Early 1980s recession
+Savings and loan crisis
+Credit crunch
+Gulf War
+List of recessions in the United States
+Lost Decades
+Notes
+[edit]
+^ The Economic Cycle Research Institute, which considers additional indicators beyond GDP growth and employment, classifies the recession to have begun in March 1990 and ended in March 1992.[9]
+References
+[edit]
+^ Walsh, Carl (1 February 1993). "What Caused the 1990–1991 Recession?". Economic Review. 2: 33–48 – via ResearchGate.
+^ "Report" (PDF). bls.gov.
+^ "Report" (PDF). bls.gov.
+^ "Real Gross Domestic Product". 26 January 2018. {{cite journal}}: Cite journal requires |journal= (help)
+^ "GDP growth (annual %) – Data". data.worldbank.org.
+^ 
+Jump up to:
+a b Statistics Canada (30 May 2018). "Labour force characteristics, monthly, seasonally adjusted and trend-cycle, last 5 months". Table 14-10-0287-01 Labour force characteristics, monthly, seasonally adjusted and trend-cycle, last 5 months. Government of Canada.
+^ 
+Jump up to:
+a b c Bonham, Mark S."Recession in Canada". The Canadian Encyclopedia.
+^ 
+Jump up to:
+a b c d e f g h Cross, Philip, and Bergevin, Philippe "Turning Points: Business Cycles in Canada Since 1926" (PDF). C.D. Howe Institute. Archived from the original (PDF) on 2016-04-08. Retrieved 2020-07-27.
+^ "International Business Cycle Dates". Archived from the original on 2020-08-06. Retrieved 2020-08-02.
+^ 
+Jump up to:
+a b c d e f g Wilson, Thomas, Dungan, Peter, and Murphy, Steve "The Sources of the Recession in Canada: 1989–1992" (PDF), University of Toronto, S2CID 17318693, archived from the original (PDF) on 2 March 2019
+^ 
+Jump up to:
+a b c d Walsh, Mary Williams "The Hard Times Are Even Harder North of the Border", Los Angeles Times, 24 February 1991
+^ 
+Jump up to:
+a b c d Kneeboen, Ronald, and Gres, Margarita "Trends, Peaks, and Troughs: National and Regional Employment Cycles in Canada" (PDF). The School of Policy Research Research Papers. 6 (21). University of Calgary. July 2013.
+^ 
+Jump up to:
+a b c "Report for Selected Countries and Subjects".
+^ "How Canada Performs: Unemployment Rate". The Conference Board of Canada. 2020. Archived from the original on 2020-08-30. Retrieved 2020-08-05. {{cite journal}}: Cite journal requires |journal= (help)
+^ 
+Jump up to:
+a b Gordon Thiessen, "Canada's Economic Future" What Have We Learned from the 1990s?", Canadian Club of Toronto, January 22, 2001
+^ "Canada Prime Rate History | Prime Rate vs. Overnight Rate". 11 July 2023.
+^ "Canadian Economic Observer: Historical Statistical Supplement: Table 7.1 — Interest rates and exchange rates".
+^ "Report for Selected Countries and 5.Subjects".
+^ Laberge, Yvon (4 December 1992). "27% de la population active de Montréal est sans travail". La Presse (in French). Montreal, Quebec. Retrieved 5 December 2020.
+^ 
+Jump up to:
+a b "Canada GDP Growth Rate 1961–2020". macrotrends.net.
+^ Gordon, Todd, and McCormack, Geoffrey "Canada and the Crisis of Capitalism". Briarpatch. 2020 (March/April).
+^ "Finland". Archived from the original on 2016-03-14. Retrieved 2008-12-27.
+^ www.ek.fi https://web.archive.org/web/20081206133952/http://www.ek.fi/www/fi/talous/tietoa_Suomen_taloudesta/kuvat/tal42.pdf. Archived from the original (PDF) on 6 December 2008. {{cite web}}: Missing or empty |title= (help)
+^ Tilastokeskus. "Labour Market". www.stat.fi. Archived from the original on 2019-05-13. Retrieved 2008-12-27.
+^ Pollet, Pascale; Lollivier, Stéfan (January 1992). "1989–1991 : ralentissement dans l'industrie" (PDF). Insee Première (in French). Insee. Archived from the original (PDF) on 15 February 2017. Retrieved 5 December 2020.
+^ Éric Chaney; Fabrice Lenseigne; Patrick Pétour (March 1994). "Note de conjoncture de mars 1994 : Le creux du cycle" (PDF). Note de Conjoncture (in French). Insee. Archived from the original (PDF) on 2017-02-16. Retrieved 2020-12-05.
+^ "En 1993, une récession comparable à celle prévue pour 2009". L'Obs. 19 December 2008.
+^ 
+Jump up to:
+a b c Magali Demotes-Mainard (April 1994). "Les Comptes de la Nation en 1993" (PDF). Insee Première (in French) (309). Insee. Archived from the original (PDF) on 2017-02-15. Retrieved 2020-12-05.
+^ "1993: Recession over – it's official". 26 April 1993 – via news.bbc.co.uk.
+^ Feingold, Spencer (Mar 26, 2024). "Japan ends era of negative interest rates. A chief economist explains". weforum.org. Retrieved 28 Oct 2025.
+^ https://www.adb.org/publications/effectiveness-japan-negative-interest-rate-policy
+^ "The Lost Decade: Lessons from Japan's Real Estate Crisis".
+^ Paul Keating – Chronology Archived 26 September 2011 at the Wayback Machine at australianpolitics.com
+^ "Gainesville Sun – Google News Archive Search". news.google.com.
+^ Fox, David J. (December 17, 1993). "The Year In Movies : '93 A Record-smasher At The Box Office : 'Mrs. Doubtfire,' 'Pelican Brief' Propel Final Week And 'Jurassic Park' Chews Up The Competition As Industry Receipts Hit $5.2 Billion". Los Angeles Times. Archived from the original on April 27, 2020. Retrieved April 27, 2020.
+^ Dutka, Elaine (March 22, 1993). "A Startling New Concept: Family Films : With money tight and criticism of sex and violence high, studios are looking closer at PG's power". Los Angeles Times. Retrieved April 28, 2020.
+^ Weinraub, Bernard (November 12, 1992). "Hollywood Is Testing Family Values' Value". The New York Times. Archived from the original on May 26, 2015. Retrieved April 28, 2020.
+^ Hlavaty, Craig (March 28, 2013). "1993: The Greatest Year for Movies in the History of Movies Ever?". Houston Press. Archived from the original on April 26, 2020. Retrieved April 26, 2020.
+^ "Top 1993 Movies at the Domestic Box Office". The Numbers. Archived from the original on May 9, 2019. Retrieved May 6, 2020.
+^ Ebert, Roger (December 31, 1993). "The Best 10 Movies of 1993". RogerEbert.com. Archived from the original on April 16, 2020. Retrieved April 26, 2020.
+^ 
+Jump up to:
+a b Goldberg, Matt (March 19, 2018). "The Year in Film: 1993". Collider. Archived from the original on January 5, 2020. Retrieved April 26, 2020.
+^ Pearse, Emma (July 25, 2013). "Remember 1993? When the Best Movies Came Out?". Tribeca Film. Archived from the original on April 26, 2020. Retrieved April 26, 2020.
+^ Duhaime-Ross, Arielle (August 22, 2014). "The greatest film debate of our generation: 1993 or 1994?". The Verge. Archived from the original on April 28, 2017. Retrieved April 26, 2020.
+^ "Police clash with rioting youths in England, Wales". Archived from the original on 25 July 2012. Retrieved 6 July 2017.
+^ "A History of British Rioting". Archived from the original on 20 January 2012. Retrieved 15 January 2012.
+vte
+Economic history of the United States and Commonwealth of Nations countries
+
+Commercial revolution
+(1000–1760)	
+Great Bullion Famine (c. 1400–c. 1500)Great Slump (1430–1490)The Great Debasement (1544–1551)Financial Revolution (1690–1800)Slump of 1706Great Frost of 1709South Sea bubble (1713–1720)Mississippi bubble (1717–1720)Economic impact of the Seven Years' War (1754–1763)
+
+1st Industrial Revolution/
+Market Revolution
+(1760–1870)	
+Industrial Revolution ScotlandUnited StatesWalesBengal Bubble of 1769 (1769–1784)British credit crisis of 1772–1773American Revolutionary War inflation (1775–1783)Panic of 1785 (1785–1788)Copper Panic of 1789/Panic of 1792 (1789–1793)Canal Mania (c. 1790–c. 1810)Panic of 1796–1797 (1796–1799)1802–1804 recessionCarolina gold rush (1802–1825)Depression of 1807 (1807–1810)1810s Alabama real estate bubble Alabama Fever1812 recessionPost-Napoleonic Depression (1815–1821)1822–23 recessionPanic of 1825Panic of 18261828–29 recessionGeorgia Gold Rush (1828–c. 1840)1830s Chicago real estate bubble1833–34 recessionPanic of 1837 (1836–1838 and 1839–1843)U.S. state defaults in the 1840sRailway Mania (c. 1840–c. 1850)Plank Road Boom (1844–c. 1855)1845–46 recessionPanic of 1847 (1847–1848)California gold rush (1848–1855)British Columbia gold rushes Queen Charlottes Gold Rush, 1851Fraser Canyon Gold Rush, 1858Rock Creek Gold Rush, 1859Similkameen Gold Rush, 1860Stikine Gold Rush, 1861Cariboo Gold Rush, 1861–1867Wild Horse Creek Gold Rush, 1863–1870Leechtown Gold Rush, 1864–1865Big Bend Gold Rush, c. 1865Omineca Gold Rush, 1869Victorian gold rush (1851–c. 1870)New South Wales gold rush (1851–1880)Australian gold rushes (1851–1914)1853–54 recessionPanic of 1857 (1857–1858)Pike's Peak gold rush (1858–1861)Pennsylvania oil rush (1859–1891)1860–61 recessionColorado River mining boom (1861–1864)Otago gold rush (1861–1864)U.S. Civil War economy (1861–1865)First Nova Scotia Gold Rush (1861–1874)West Coast gold rush (1864–1867)Panic of 1866 (1865–1867)Vermilion Lake gold rush (1865–1867)Kildonan Gold Rush (1869)Black Friday (1869–1870)
+
+Gilded Age/
+2nd Industrial Revolution
+(1870–1914)	
+Coromandel Gold Rushes (c. 1870–c. 1890)Cassiar Gold Rush (c. 1870–c. 1890)Long Depression 1873–1879; Panic of 1873Black Hills gold rush (1874–1880)Colorado Silver Boom (1879–1893)Western Australian gold rushes (c. 1880–c. 1900)Indiana gas boom (c. 1880–1903)Ohio oil rush (c. 1880–c. 1930)Depression of 1882–1885 Panic of 1884Cayoosh Gold Rush (1884)Witwatersrand Gold Rush (1886)1887–88 recessionBaring crisis (1890–1891)Cripple Creek Gold Rush (c. 1890–c. 1910)Panic of 1893 (1893–1897)Australian banking crisis of 1893Black Monday (1894)Panic of 1896Klondike Gold Rush (1896–1899)Second Nova Scotia Gold Rush (1896–1903)Kobuk River Stampede (1897–1899)Mount Baker gold rush (1897–c. 1925)1899–1900 recessionNome Gold Rush (1899–1909)Fairbanks Gold Rush (c. 1900–c. 1930)Texas oil boom (1901–c. 1950)Panic of 1901 (1902–1904)Cobalt silver rush (1903–c. 1930)Panic of 1907 (1907–1908)Porcupine Gold Rush (1909–c. 1960)Panic of 1910–11 (1910–1912)Financial crisis of 1914 (1913–14)
+
+World War home fronts/
+Interwar period
+(1914–1945)	
+World War I economy and home fronts AustraliaCanadaUnited KingdomUnited StatesPost–World War I recession (1918–1919)Recession of 1920–19211920s Florida land boom (c. 1920–1925)Roaring Twenties1923–1924 recession1926–1927 recessionGreat Depression 1929–1939; Wall Street crash of 1929Panic of 1930Great Contraction, 1929–1933Recession of 1937–1938AustraliaCanadaIndiaSouth AfricaUnited KingdomUnited States1930s Kakamega gold rushThird Nova Scotia Gold Rush (1932–1942)World War II home front AustraliaCanadaUnited KingdomUnited States
+
+Post–WWII expansion/
+1970s stagflation
+(1945–1982)	
+Great Compression1945 recessionRecession of 1949 (1948–1949)Hong Kong and Singapore Asian Tiger expansions (1950–1990)1951 Canada recessionRecession of 1953 (1953–1954)Recession of 1958 (1957–1958)Recession of 1960–1961Kennedy Slide of 1962Poseidon bubble (1969–1970)Recession of 1969–19701970s commodities boom1973–1975 recession 1973–1974 stock market crashSecondary banking crisis of 1973–19751970s energy crisis 1973–1980; 1973 oil crisis1979 oil crisisSteel crisis (1973–1982)1976 sterling crisisSilver Thursday (1980)Early 1980s recession 1980–1982; United States
+
+Computer Age/
+Second Gilded Age
+(1982–present)	
+Great Moderation (1982–2007)1980s oil glutBlack Saturday (1983)New Zealand property bubble (c. 1985–)Savings and loan crisis (1986–1995)Black Monday (1987)Friday the 13th mini-crash (1989)Early 1990s recession 1990–1991; AustraliaUnited States1990 oil price shockRhode Island banking crisis (1990–1992)1991 Indian economic crisis1990s United States boom (1991–2001)1990s India economic boomHyperinflation in Zimbabwe (1991–present)Black Wednesday (1992)1994 bond market crisis1994 Papua New Guinea financial crisisDot-com bubble 1995–2004; Stock market downturn of 20021997 Asian financial crisis October 27, 1997, mini-crashEarly 2000s recession 2001; 9/11 stock market crash2000s commodities boom (2000–2014)United States housing bubble (2002–2006)Canadian property bubble (2002–)2003 Myanmar banking crisis2000s energy crisis (2003–2008)North Dakota oil boom (2006–2015)Uranium bubble of 2007Great Recession 2007–2009; Australia and New ZealandBangladesh, India, Malaysia, Pakistan, and Sri LankaBritish West IndiesCanadaSouth AfricaUnited KingdomUnited States2008 financial crisis SeptemberOctoberNovemberDecember2009Subprime mortgage crisis2000s U.S. housing market correctionU.S. bear market of 2007–20092007–2010 U.S. bank failuresCorporate debt bubble (2008–)Blue Monday Crash 20092010 flash crashMalaysia Tiger Cub expansion (2010s)Australian property bubble (2010–)August 2011 stock markets fall Black Monday2011 Bangladesh share market scamCryptocurrency bubble (2011–)Puerto Rican government-debt crisis (2014–2022)2015–2016 stock market selloffBrexit stock market crash (2016)2017 Sri Lankan fuel crisisGhana banking crisis (2017–2018)Sri Lankan economic crisis (2019–2024)COVID-19 recession 2020–2022; 2020 stock market crashfinancial market impactsectoral impactsshortagesCanadaIndiaMalaysiaNew ZealandUnited KingdomUnited States2020s commodities boomGlobal energy crisis 2021–2023; 2021 United Kingdom natural gas supplier crisisregional effects2021–2023 global supply chain crisis2021–2023 inflation surgePakistani economic crisis (2021–2024)2022 stock market decline2022–2023 global food crises2023 United Kingdom recession2023 United States banking crisis2025 stock market crash
+
+Countries and sectors	
+Australia rail transportslaverywhaling/Western AustraliaCanada agriculturecurrenciesearly banking systemlist of recessionspetroleum industryrail transportslaverytechnological and industrialwhaling/Pacific NorthwestGhanaIndia agricultureCompany rulemaritimeBritish RajDeindustrialisationsalt taxslaveryMalaysiaNew Zealand whalingNigeria slaveryPakistan maritimerail transportSouth Africa slaverywhalingUgandaUnited Kingdom Agricultural RevolutionAtlantic slave tradebankingBritish EmpireEnglish fiscal systemInterwar unemployment and povertylist of recessionsmaritime/England/ScotlandMiddle Ages England/agriculturenational debtScotland/agriculture/Middle Agesrail transport/pre–1830/1830–1922/1923–1947/1948–1994/1995–presentslaverytrade unionsVictorian eraWaleswhaling/ScotlandUnited States agriculturebanking/colonial-era credit/cooperatives/investment banking/wildcat bankingbusinesscentral bankingcoal miningindentured servitudeiron and steel industrylaborlist of economic expansionslist of recessionslumber industrymaritime/colonial-era/1776–1799/1800–1899/1900–1999/2000–presentmonetary policypovertypetroleum industry/oil shalepublic debtrail transportationslavery/colonial-era slavery/forced labor/slave trade/slave marketstariffstaxationtechnological and industrialUnited States dollarwhalingZimbabwe
+
+Business cycle topics	
+Aggregate demand/Supply Effective demandGeneral glutModelOverproductionParadox of thriftPrice-and-wage stickinessUnderconsumptionInflation and unemployment ChronicClassical dichotomyDebasementDebt monetizationDemand-pull/cost-push/built-in inflationDeflationDisinflationFull employmentHyperinflationMoney supply/demandNAIRUNatural rate of unemploymentNeutrality of moneyPhillips curvePrice levelReal and nominal valueSahm ruleVelocity of moneyExpansion MiracleRecoveryStagnationInterest rate Nominal interest rateReal interest rateYield curve/InvertedRecession Balance sheetDepressionGlobalRollingShapesStagflationShock DemandSupply
+
+Credit cycle topics	
+Financial bubble Commodity booms/diamond rush/gold rush/oil boomReal-estate bubble/housing bubble/boomtown/ghost townSpeculationStock market bubbleFinancial crisis Bank run/bank failureCommodity price shocksCredit crunchCurrency crisisDebt crisisEnergy crisisLiquidity crisis/accounting/capital/funding/marketMinsky moment/leverage cycleStock market crash/Flash crashSocial contagion Financial contagionIrrational exuberanceMarket trendProposed bubbles AI bubble/AI boom/Fourth Industrial Revolution/Imagination AgeCarbon bubble/Age of Oil/Peak oilEverything bubbleGreen bubbleSocial media stock bubbleUnicorn bubbleU.S. higher education bubble
+Retrieved from "https://en.wikipedia.org/w/index.php?title=Early_1990s_recession&oldid=1339348665"
+Categories:
+Early 1990s recession
+Aftermath of the Cold War
+Stock market crashes in the United States
+Hidden categories:
+Pages using the Chart extension
+CS1 errors: missing periodical
+CS1 French-language sources (fr)
+CS1 errors: missing title
+CS1 errors: bare URL
+Webarchive template wayback links
+CS1 maint: deprecated archival service
+Articles with short description
+Short description matches Wikidata
+Articles to be expanded from December 2017

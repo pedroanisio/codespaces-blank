@@ -1,0 +1,197 @@
+SOURCE ID : src-133
+TITLE     : Inside Japan's 1980s Asset Price Bubble: The Lost Decades
+URL       : https://www.capitalmind.in/insights/lost-decades-japan-1980s-asset-price-bubble
+PUBLISHER : Capitalmind
+RETRIEVED : 2026-03-26T14:06:02.738150+00:00
+────────────────────────────────────────────────────────────
+
+(category)Commentary
+
+Inside Japan's 1980s Asset Price Bubble: The Lost DecadesInside Japan's 1980s Asset Price Bubble: The Lost Decades
+
+Japan's Nikkei index recently hit a lifetime high, closing a 34-year chapter in financial history. This article delves into the dramatic rise and fall of Japan's economy, from the dizzying heights of the 1980s bubble to the prolonged bear market that followed. Explore the concept of 'Kamikaze Capitalism,' the impact of the Plaza Accord, and the fascinating world of 'zaitech' financial engineering. Understand how property speculation, art market frenzies, and government policies contributed to one of the most spectacular economic bubbles in modern history. Learn valuable lessons from Japan's 'Lost Decades' and their relevance to today's global economy.
+
+Anoop Vijaykumar•July 17, 2024
+
+On February 22 this year, the Nikkei, Japan’s benchmark equity index, crossed 38,915 and closed at a lifetime high of 39,098.
+
+With most major global markets making lifetime highs over the last year, this should not be distinctive.
+
+But the Japanese market is “different”.
+
+The last time the Japanese index touched 38,915 was in December 1989, over 34 years ago.
+
+In the chart below, we visualised the wait for new highs in cumulative months, along with the percentage drawdown between subsequent highs.
+
+After touching nearly 39,000 in December 1989, the Nikkei lost over 80% of its value over the next 18 years before finally starting its recovery. It took the next 16 years to recover to its 1989 level. All this while other major markets behaved like we’ve been taught equities are meant to.
+
+Why did the Japanese Equity Index peak in December 1989, followed by one of the world’s worst prolonged bear markets seen by any equity market?
+
+Kamikaze Capitalism
+
+Michael Lewis, of The Big Short fame, coined the term “Kamikaze Capitalism” in an article he wrote in June 1990, months into Japan’s stock market crash. Edward Chancellor borrowed the term in his book “Devil Take the Hindmost” for the chapter on the Japanese crash of 1989. This article summarizes most of that chapter to understand the wide-ranging factors leading to Japan’s asset price bubble and its subsequent collapse.
+
+Japan’s economic context going into the 1980s
+
+Following numerous bank collapses and stock market crashes in the 1920s and early 30s, Japanese authorities declared they would not tolerate such failures. So, risk was socialised in Japan far more than in the West. Then World War II happened, and Japan's economy was devastated. In 1945, Japan’s per capita GDP was only 11% of the United States and 47% of its own 1940 level. However, the country quickly began rebuilding under the Allied occupation, implementing land and labour reforms.
+
+From 1955 to 1973, Japan saw extraordinary economic expansion mainly due to government-led industrial policies, a focus on export-oriented industries, high rates of savings and investment, and the adoption of advanced technologies.
+
+The 1973 oil shock significantly challenged Japan’s oil-dependent economy. The country adapted by shifting to energy-efficient technologies, developing knowledge-intensive industries, and expanding the service sector. By the 1980s, Japan was the 2nd largest economy in the world.
+
+Against this backdrop, speculation finally came to Japan in the 1980s. It burrowed so deep inside the Japanese system that it was in ruins when it left after a mere five years.
+
+Japan - Economic superpower
+
+By the 1980s, Japan’s share of world trade was over 10 percent. Its exports were comparable to those of Britain in the nineteenth century. Japanese per capita income was due to exceed that of America. Japan’s industrial companies dominated new technologies in consumer electronics, and its banks were the largest in the world in terms of assets and market value. A book titled “Japan as Number One” became a best-seller on both sides of the Pacific.
+
+Japan invested its trade surplus in purchasing US assets, American real estate being a particular favourite.
+
+In 1986, Mitsui Corporation acquired the Exxon Building in Manhattan for a record price of $610 Million. Mitsui’s president reportedly paid $260 million above Exxon’s asking price to have his name in the Guinness Book of World Records.
+
+zaitech - financial engineering
+
+In 1984, Japan’s Ministry of Finance permitted companies to operate special accounts for their shareholdings, known as tokkin accounts. These accounts allowed companies to trade securities without paying capital gains tax on their profits.
+
+At the same time, Japanese companies were allowed to access the Eurobond market in London. Companies issued warrant bonds, a combination of traditional corporate bonds with an option (the “warrant") to purchase shares in the company at a specified price before expiry. Since Japanese shares were rising, the warrants became more valuable, allowing companies to issue bonds with low-interest payments.
+
+The companies, in turn, placed the money they raised into their tokkin accounts that invested in the stock market. Note the circularity: companies raised money by selling warrants that relied on increasing stock prices, which was used to buy more shares, thus increasing their gains from investing in the stock market.
+
+In the mid-80s, Japanese company corporate profits from trading in the stock market, zaitech, were greater than from company operations.
+
+The Property Boom as a Prelude
+
+Between 1956 and 1986, land prices in Japan increased by 5,000 percent, while consumer prices merely doubled.
+
+Japanese banks provided loans against land as collateral, and the rising land value became the engine for credit creation. Japanese banks also owned a large number of shares in other companies. A proportion of profits from these shareholdings counted against the banks’ capital.
+
+As Japanese share prices went up, so did the value of the banks' cross-holdings inflating their cpaital and enabling them to lend more.
+
+The 1985 Plaza Accord and the Yen
+
+In September 1985, US Treasury Secretary James Baker gathered the finance ministers of the world’s leading economic powers at the Plaza Hotel in Manhattan. The ministers agreed to lower the dollar’s value in relation to other currencies, particularly the yen.
+
+The dollar sank to under 150 yen within a few months from 259. The purchasing power in dollars for anyone with yen in their pockets rose by 40%. At the same time, Japanese goods became nearly twice as expensive in international markets, threatening the economy.
+
+The Bank of Japan cut interest rates to stimulate the economy, boosting the price of assets, land, and shares.
+
+By August 1986, the Nikkei reached 18,000, up 40% in a year. A manga on the Japanese economy, published by Japan's leading financial newspaper went to the top of the best-seller lists.
+
+Due to the above factors, Japanese share prices increased three times faster than corporate earnings.
+
+The textile sector sold for 103x earnings, service companies for 112x earnings, marine transportation businesses for 176x and fishery and forestry firms for 319x.
+
+Tax-exempt postal savings accounts were abolished in April 1988, releasing over ¥300 Trillion for new investment.
+
+Property prices climbed on an ever-increasing supply of credit. By 1990, the total Japanese property market was valued at over ¥2,000 trillion, or four times the real estate value of the entire United States.
+
+Property sector inflation had a direct impact on stock prices. Analysts looked for the "hidden value" of company land holdings that were valued at cost on the balance sheet. In aggregate, these holdings were computed to be worth ¥434 trillion yen above book value.
+
+Companies were valued more for their property than their businesses.
+
+Crash Protection
+
+In a Financial Times article on October 14, 1987, George Soros predicted a Japanese stock market crash. Markets worldwide did correct, but ironically, the Japanese market best weathered the global market crash, falling only 19% versus 30% for the Dow.
+
+The day after the October crash, the Ministry of Finance summoned the four largest brokerages and ordered them to make a market for NTT shares and keep the Nikkei above 21,000.
+
+The largest brokerage, Nomura, had five million domestic customers, mainly Japanese housewives, who put their daily savings into special Nomura piggy banks, played stocks market computer games on Nomura software, faithfully followed Nomura's stock tips (no "sell" recommendations were ever issued).
+
+Through their large shareholdings in the press, the Big Four brokerages could manipulate information available to their clients. During their weekly meetings, the same brokers were said to collude in choosing which shares to promote.
+
+After the October crash, the president of a securities house said Japan had survived the period of volatility because it was a consensus society—a nation that likes to move in one direction.
+
+The Far Eastern Economic Review called the Tokyo Stock Exchange “the most cynical, speculative, and manipulable stock market in the world.”
+
+Consumerism and the Art Bubble
+
+The bubble economy promoted a massive increase in consumer spending. The Wealth Effect of rising asset prices, combined with the stronger yen, stimulated a craze for foreign luxury imports.
+
+Credit card circulation increased 3x, and consumer debt per head rose to American levels
+
+The combination of ambitious Western auctioneers and Japanese speculators, whose wallets were swollen with bubble profits, created the most extravagant art market on record.
+
+In 1986, the dollar value of Japanese imports of foreign art quadrupled. The week after the 1987 crash, the world's most expensive diamond and the world's most expensive printed book were sold at auction. In both cases, the buyers were Japanese.
+
+Finance companies provided margin loans for up to half the value of the artworks.
+
+The end of the Bubble
+
+Japan made up 15% of world stock market capitalization in 1980. By 1989 it represented 42% of the global equity markets
+
+As 1989 ended, the stock market’s price-earnings ratio was 80x earnings, with a dividend yield of 0.38 and a price-book ratio of 6 times.
+
+Nomura securities forecasted the Nikkei would reach 80,000 by 1995, a level it has not reached nearly three decades later.
+
+But at the end of 1989, a new governor took charge at the Bank of Japan. He raised the interest rate on Christmas Day, 1989. Four days later, the Nikkei reached its all-time high.
+
+However, by the end of January 1990, the Nikkei had fallen 2,000 points. The central bank raised rates five times until it reached 6% in August 1990.
+
+Even as the brokerages tried to manage the fall, the Nikkei fell to 30,000 for the first time in two years and then to 20,000 in September 1990. After a brief bounce in October, the Nikkei slid to 14,309 in August 1992, a 60% decline from its peak.
+
+In the summer of 1990, the corruption that had simmered away during the bubble years burst forth in a series of financial scandals. Nomura, Nikko Securities, Daiwa, Cosmo Securities, Fuji Bank and many more were implicated in wrongdoing of some sort.
+
+Large American companies voluntarily delisted from the Tokyo Stock Exchange, and turnover on the exchange ebbed to 1/10th of its bubble peak.
+
+The excess production capacity created in the bubble led the Japanese economy into recession. Consumer spending plummeted. Property prices continued falling throughout the middle of the decade.
+
+Long term Impact
+
+Nine years after the collapse of the bubble economy, Japan teetered on the brink of systemic collapse, its banking system weighed down by bad debts of an uncertain magnitude, companies reporting record losses, and its consumers too frightened to spend.
+
+Over 60% of Japanese personal assets were committed to cash-bearing interest of less than 0.5% per annum by this time.
+
+The Japanese bubble economy illustrates the danger that arises when investors believe that market risk is shouldered by the government rather than by themselves, the moral hazard problem.
+
+The essential components of the Japanese economic system - centralised industrial planning, administrative guidance, authorised cartels, cross-shareholdings, lifetime employment, promotion by seniority, the long-termist view of market share above short-term profitability, were increasingly questioned and dismantled.
+
+By 2004, prime properties in Tokyo’s financial districts had slumped to less than 1% of their peak values, and residential homes fell to less than 1/10th of their peak.
+
+Firms that had borrowed heavily during the bubble years had massive excess debt and capacity. They underwent a prolonged period of deleveraging and reduced competitiveness against global competition.
+
+The Government’s attempts to stimulate the economy led to increasing public debt. By the 2010s, Japan faced significant fiscal sustainability challenges, exacerbated by an ageing population.
+
+The Bank of Japan faced the "zero interest rate constraint, " where even a 0% nominal interest rate was effectively positive in real terms due to deflation.
+
+Japan’s experience has become a cautionary tale for other developed economies, with policymakers and economists worldwide studying the “Lost Decades” to avoid similar outcomes in their countries
+
+Recommended Reading:
+
+[Book] Devil Take the Hindmost: A History of Financial Speculation by Edward Chancellor
+
+[Article] Kamikaze Capitalism by Michael Lewis
+
+(tag)Japan
+(tag)Nikkei
+Related Posts
+Debt Mutual Funds will be taxed unfavourably after April 2023
+
+Deepak Shenoy
+
+It isn't just about yesterday.
+
+Deepak Shenoy
+
+Where do Superhero stocks come from?
+
+Anoop Vijaykumar
+
+The Breaking of Gatekeepers
+
+Deepak Shenoy
+
+Make your money work as hard as you do.
+
+Talk to a Capitalmind Client Advisor
+
+Investing is not one size fits all
+
+Learn more about our distinct investment strategies and how they fit into your portfolio.
+
+Learn more about our portfolios
+
+Unlock your wealth potential
+
+Start your journey today
+
+Get Started Today

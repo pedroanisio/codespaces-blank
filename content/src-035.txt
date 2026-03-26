@@ -1,0 +1,20 @@
+SOURCE ID : src-035
+TITLE     : April 1990 - Hubble Space Telescope Launched
+URL       : https://www.nasa.gov/image-article/april-1990-hubble-space-telescope-hst-launched/
+PUBLISHER : NASA Official
+RETRIEVED : 2026-03-26T14:04:42.395304+00:00
+────────────────────────────────────────────────────────────
+
+1 min read
+
+April 1990 – Hubble Space Telescope (HST) Launched
+
+NASA
+
+Apr 01, 1990
+Image Article
+The Hubble Space Telescope (HST) was the first mission to be launched as part of the Great Observatories program. HST was the first telescope designed to be visited in space by astronauts and have repairs performed. Its upgraded equipment has allowed HST to continue viewing black holes, planets, stars and other astronomical phenomenon. HST’s…
+
+The Hubble Space Telescope (HST) was the first mission to be launched as part of the Great Observatories program. HST was the first telescope designed to be visited in space by astronauts and have repairs performed. Its upgraded equipment has allowed HST to continue viewing black holes, planets, stars and other astronomical phenomenon. HST’s communication pipeline goes through the Tracking and Data Relay Satellite (TDRS), then down to the ground station in White Sands, New Mexico, and then to NASA Goddard Space Flight Center. The Space Telescope Science Institute in Baltimore, Maryland processes the raw data into pictures. Other missions in the Great Observatories included: the Compton Gamma Ray Observatory (launched in April 1991 and reentered the atmosphere June 2000) which used TDRSS, Chandra X-ray Observatory (launched July 1999) which uses the DSN, and Spitzer Space Telescope (launched in August 2003) which uses the DSN.
+
+› NASA’s Great Observatories› Hubble Site› SCaN History of the 1990’s
