@@ -17,7 +17,7 @@ disclaimer: >
 
 # Research Source Map
 
-A pair of Zod v4 schemas for building, auditing, and remediating research
+A pair of schemas for building, auditing, and remediating research
 source collections across written, oral, visual, and time-based media.
 
 ## The problem

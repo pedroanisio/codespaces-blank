@@ -42,27 +42,47 @@ WAVEFORM_MAX = 100
 def load_audio_samples(path: Path, num_samples: int) -> tuple[list[float], float]:
     """
     Extract `num_samples` evenly-spaced RMS amplitude values and total duration
-    from an audio file using ffmpeg.
+    from an audio file.
+
+    Decodes audio to raw mono f32le PCM via ffmpeg pipe, then computes RMS
+    per chunk in Python. No external Python audio libraries required.
 
     Returns (amplitudes, duration_seconds).
     Each amplitude is a float in [0.0, 1.0].
     """
-    # Get duration first
+    import struct
+
     duration = _probe_duration(path)
 
-    # Resample to mono 8kHz, split into equal chunks via astats filter
-    # We generate num_samples chunks and read the RMS from each
-    chunk_duration = duration / num_samples
-
+    # Decode to raw mono 16kHz f32le — low rate keeps memory small
+    SAMPLE_RATE = 16000
     cmd = [
         "ffmpeg", "-v", "error",
         "-i", str(path),
-        "-af", f"asetnsamples=n={int(8000 * chunk_duration)},astats=metadata=1:reset=1",
-        "-f", "null", "-",
+        "-ac", "1",
+        "-ar", str(SAMPLE_RATE),
+        "-f", "f32le",
+        "pipe:1",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, check=True)
+    raw = result.stdout
 
-    amplitudes = _parse_rms_from_stderr(result.stderr, num_samples)
+    total_frames = len(raw) // 4  # 4 bytes per f32
+    samples_per_chunk = max(1, total_frames // num_samples)
+
+    amplitudes = []
+    for i in range(num_samples):
+        start = i * samples_per_chunk * 4
+        end = start + samples_per_chunk * 4
+        chunk_bytes = raw[start:end]
+        if not chunk_bytes:
+            amplitudes.append(0.0)
+            continue
+        n = len(chunk_bytes) // 4
+        floats = struct.unpack(f"{n}f", chunk_bytes)
+        rms = (sum(v * v for v in floats) / n) ** 0.5
+        amplitudes.append(min(1.0, rms))
+
     return amplitudes, duration
 
 
@@ -76,35 +96,6 @@ def _probe_duration(path: Path) -> float:
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     return float(result.stdout.strip())
-
-
-def _parse_rms_from_stderr(stderr: str, expected: int) -> list[float]:
-    """
-    Parse RMS_level values from ffmpeg astats filter output.
-    Falls back to zeros if parsing fails.
-    """
-    import re
-    # astats outputs lines like: lavfi.astats.Overall.RMS_level=-20.5
-    matches = re.findall(r"RMS_level=(-?\d+\.?\d*)", stderr)
-
-    if not matches:
-        return [0.0] * expected
-
-    # Convert dBFS to linear [0, 1]; silence is around -91 dBFS
-    DB_FLOOR = -60.0
-    amplitudes = []
-    for db_str in matches:
-        db = float(db_str)
-        if db <= DB_FLOOR or db == float("-inf"):
-            amplitudes.append(0.0)
-        else:
-            linear = 10 ** ((db - 0) / 20)  # 0 dBFS = 1.0
-            amplitudes.append(min(1.0, max(0.0, linear)))
-
-    # Pad or trim to expected count
-    if len(amplitudes) < expected:
-        amplitudes += [0.0] * (expected - len(amplitudes))
-    return amplitudes[:expected]
 
 
 # ---------------------------------------------------------------------------

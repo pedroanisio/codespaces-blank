@@ -10,7 +10,12 @@
       "Bash(find /workspaces/codespaces-blank -not -path */.git/* -type d)",
       "Bash(wc -l /workspaces/codespaces-blank/session-01/assets/*.ts)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:support.whapi.cloud)"
+      "WebFetch(domain:support.whapi.cloud)",
+      "Bash(python tools/prepare_whatsapp_audio.py \"session-01/assets/notebook-O_código_que_audita_silêncios_na_história.m4a\" --output-dir /tmp/wa_test)",
+      "Bash(ffmpeg -v error -i \"/tmp/wa_test/notebook-O_código_que_audita_silêncios_na_história.ogg\" -af \"asetnsamples=n=480000,astats=metadata=1:reset=1\" -f null -)",
+      "Bash(ffmpeg -i \"/tmp/wa_test/notebook-O_código_que_audita_silêncios_na_história.ogg\" -af \"asetnsamples=n=480000,astats=metadata=1:reset=1\" -f null -)",
+      "Bash(ffmpeg -i \"/tmp/wa_test2/notebook-O_código_que_audita_silêncios_na_história.ogg\" -af \"asetnsamples=n=910500,astats=metadata=1:reset=1\" -f null -)",
+      "Bash(python tools/prepare_whatsapp_audio.py \"session-01/assets/notebook-O_código_que_audita_silêncios_na_história.m4a\" --output-dir /tmp/wa_test3)"
     ]
   }
 }

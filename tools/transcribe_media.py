@@ -51,13 +51,24 @@ def write_srt(segments: list[dict], path: Path) -> None:
             f.write(f"{seg['text'].strip()}\n\n")
 
 
+def already_processed(stem: str, output_dir: Path, formats: set[str]) -> bool:
+    return all((output_dir / f"{stem}.{fmt}").exists() for fmt in formats)
+
+
 def transcribe_file(
     media_path: Path,
     model,
     output_dir: Path,
     formats: set[str],
     language: str | None,
+    force: bool = False,
 ) -> None:
+    stem = media_path.stem
+
+    if not force and already_processed(stem, output_dir, formats):
+        print(f"  Skipping (already processed): {media_path.name}")
+        return
+
     print(f"  Transcribing: {media_path.name}")
 
     options = {}
@@ -66,7 +77,6 @@ def transcribe_file(
 
     result = model.transcribe(str(media_path), **options)
 
-    stem = media_path.stem
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if "txt" in formats:
@@ -128,6 +138,11 @@ def main() -> None:
         help="Comma-separated output formats: txt, json, srt (default: txt).",
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-transcribe files even if output already exists.",
+    )
+    parser.add_argument(
         "--language",
         default=None,
         help="Force a language code, e.g. 'en', 'pt', 'de'. Auto-detected if omitted.",
@@ -165,7 +180,7 @@ def main() -> None:
 
     for media_path in media_files:
         try:
-            transcribe_file(media_path, model, args.output_dir, formats, args.language)
+            transcribe_file(media_path, model, args.output_dir, formats, args.language, args.force)
         except Exception as exc:
             print(f"  ERROR processing {media_path.name}: {exc}", file=sys.stderr)
 
