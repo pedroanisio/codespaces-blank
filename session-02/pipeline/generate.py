@@ -427,39 +427,92 @@ def _generate_reference_images(
 
 def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
     """
-    Build a consistency-enriched prompt for a shot by combining:
-    - The style preamble (character/environment/color context)
+    Build a consistency-enriched prompt for a shot by combining ALL protocol fields:
+    - Style preamble (character/environment/color/director context)
+    - Cinematic spec (shot type, angle, movement, focal length, palette)
+    - Scene context (mood, timeOfDay, weather, environment description)
     - The shot's specific generation prompt
-    - Scene mood and shot type context
+    - Director must-avoid as negative guidance
     """
     gen_params = shot.get("genParams") or {}
     base_prompt = gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
 
-    # Get scene context
+    # ── Scene context ─────────────────────────────────────────────────────
     scene_ref_id = (shot.get("sceneRef") or {}).get("id", "")
     scene_mood = ""
+    scene_time_of_day = ""
+    scene_weather = ""
+    scene_env_desc = ""
     for scene in (instance.get("production") or {}).get("scenes", []):
         if scene.get("id") == scene_ref_id or scene.get("logicalId") == scene_ref_id:
             scene_mood = scene.get("mood", "")
+            scene_time_of_day = scene.get("timeOfDay", "")
+            scene_weather = scene.get("weather", "")
+            # Resolve environment description
+            env_ref = (scene.get("environmentRef") or {}).get("id", "")
+            if env_ref:
+                for env in (instance.get("production") or {}).get("environments", []):
+                    if env.get("id") == env_ref or env.get("logicalId") == env_ref:
+                        scene_env_desc = env.get("description", "")
+                        break
             break
 
-    # Cinematic spec context
+    # ── Cinematic spec ────────────────────────────────────────────────────
     spec = shot.get("cinematicSpec") or {}
     shot_type = spec.get("shotType", "")
     movement = spec.get("cameraMovement", "")
     angle = spec.get("cameraAngle", "")
+    focal_mm = spec.get("focalLengthMm")
     style_adj = ", ".join((spec.get("style") or {}).get("adjectives", []))
+    style_palette = ", ".join((spec.get("style") or {}).get("palette", []))
 
-    # Build enriched prompt
+    # Map focal length to depth-of-field guidance
+    dof_hint = ""
+    if focal_mm:
+        if focal_mm <= 28:
+            dof_hint = "wide-angle lens, deep depth of field, expansive perspective"
+        elif focal_mm <= 50:
+            dof_hint = "standard lens, natural perspective"
+        elif focal_mm <= 85:
+            dof_hint = "portrait lens, shallow depth of field, subject isolation"
+        else:
+            dof_hint = "telephoto lens, very shallow depth of field, compressed perspective"
+
+    # ── Build enriched prompt ─────────────────────────────────────────────
     enriched_parts = [
         f"[GLOBAL STYLE CONTEXT]\n{preamble}",
-        f"\n[SHOT SPECIFICATION]",
-        f"Shot type: {shot_type}, Camera: {angle} angle, {movement} movement",
     ]
-    if style_adj:
-        enriched_parts.append(f"Shot mood: {style_adj}")
+
+    # Scene environment
+    if scene_env_desc:
+        enriched_parts.append(f"\n[ENVIRONMENT]\n{scene_env_desc}")
+    scene_ctx = []
+    if scene_time_of_day:
+        scene_ctx.append(f"Time: {scene_time_of_day}")
+    if scene_weather:
+        scene_ctx.append(f"Setting: {scene_weather}")
     if scene_mood:
-        enriched_parts.append(f"Scene mood: {scene_mood}")
+        scene_ctx.append(f"Mood: {scene_mood}")
+    if scene_ctx:
+        enriched_parts.append(f"\n[SCENE CONTEXT]\n{', '.join(scene_ctx)}")
+
+    # Camera specification
+    cam_parts = [f"Shot type: {shot_type}"]
+    if angle:
+        cam_parts.append(f"{angle} angle")
+    if movement:
+        cam_parts.append(f"{movement} movement")
+    if focal_mm:
+        cam_parts.append(f"{focal_mm}mm lens")
+    if dof_hint:
+        cam_parts.append(dof_hint)
+    enriched_parts.append(f"\n[CAMERA]\n{', '.join(cam_parts)}")
+
+    if style_adj:
+        enriched_parts.append(f"Visual feel: {style_adj}")
+    if style_palette:
+        enriched_parts.append(f"Color palette: {style_palette}")
+
     enriched_parts.append(f"\n[GENERATION PROMPT]\n{base_prompt}")
 
     # Director's must-avoid as negative guidance
@@ -622,7 +675,7 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
 
         # ElevenLabs: SFX / ambient
         if elevenlabs_key and tool in ("elevenlabs", "auto") and atype in ("sfx", "ambient"):
-            prompt = steps[0].get("prompt") or asset.get("description") or atype
+            prompt = steps[0].get("prompt") or asset.get("description") or asset.get("name") or atype
             duration = asset.get("durationSec")
             try:
                 from . import providers
@@ -636,7 +689,7 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
 
         # ElevenLabs: music (fallback when Suno unavailable)
         if elevenlabs_key and tool in ("elevenlabs", "suno", "auto") and atype == "music":
-            prompt = steps[0].get("prompt") or asset.get("description") or "cinematic score"
+            prompt = steps[0].get("prompt") or asset.get("description") or asset.get("mood") or asset.get("name") or "cinematic score"
             duration = asset.get("durationSec") or 30
             try:
                 from . import providers

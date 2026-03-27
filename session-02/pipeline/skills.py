@@ -10,6 +10,14 @@ Media-generating skills call provider APIs directly:
   S13 reference-asset-gen → providers.generate_image()
   S16 consistency-enforcer → providers.vision_score()
 
+Research-augmented skills inject web context via Brave Search:
+  S02 story-architect       → providers.search_web_context()
+  S04 character-designer    → providers.search_web_context()
+  S05 environment-designer  → providers.search_web_context()
+
+Post-production skills integrate with external editing tools:
+  S18 post-production → providers.descript_import_media() / descript_agent_edit()
+
 Usage
 -----
   # Full pipeline from a creative idea
@@ -126,6 +134,43 @@ _CONTEXT_MAP: dict[str, list[str]] = {
                                 "assetLibrary.audioAssets", "project"],
     "s24-pipeline-orchestrator": ["project", "package", "orchestration", "relationships"],
 }
+
+# Skills that benefit from web research context (Brave Search)
+_RESEARCH_SKILLS: set[str] = {
+    "s02-story-architect",
+    "s04-character-designer",
+    "s05-environment-designer",
+}
+
+
+def _build_research_query(skill_dir: str, idea: str, context: dict) -> str:
+    """Build a targeted web search query for a research-augmented skill."""
+    project = context.get("project", {})
+    genres = project.get("genres", [])
+    genre_str = ", ".join(genres) if genres else ""
+
+    if skill_dir == "s02-story-architect":
+        base = f"narrative structure story beats {genre_str}" if genre_str else "narrative structure story beats"
+        return f"{base}: {idea}" if idea else base
+
+    if skill_dir == "s04-character-designer":
+        # Extract character names from script if available
+        script = context.get("canonicalDocuments", {}).get("script", {})
+        speakers = set()
+        for seg in script.get("segments", []):
+            if seg.get("type") == "dialogue" and seg.get("speaker"):
+                speakers.add(seg["speaker"])
+        if speakers:
+            return f"character design archetypes for: {', '.join(list(speakers)[:3])}"
+        return f"character design archetypes {genre_str} {idea}".strip()
+
+    if skill_dir == "s05-environment-designer":
+        story = context.get("canonicalDocuments", {}).get("story", {})
+        synopsis = story.get("synopsis", "")[:100]
+        return f"environment location design cinematography {genre_str} {synopsis or idea}".strip()
+
+    return idea
+
 
 _SYSTEM_PREAMBLE = """\
 You are an autonomous AI skill in a video production pipeline.
@@ -261,6 +306,19 @@ def run_skill(
     user_parts = []
     if idea:
         user_parts.append(f'Creative idea: "{idea}"')
+
+    # Inject web research context for research-augmented skills
+    if skill_dir in _RESEARCH_SKILLS and os.getenv("BRAVE_API_KEY"):
+        query = _build_research_query(skill_dir, idea, context)
+        if query:
+            log.info("    🔍 %s — web research: %s", skill_dir, query[:60])
+            web_ctx = providers.search_web_context(query, max_tokens=2048)
+            if web_ctx:
+                user_parts.append(
+                    "Web research context (use as creative inspiration, not verbatim):\n"
+                    + web_ctx[:3000]
+                )
+
     if context:
         user_parts.append(
             "Current schema instance (your relevant context):\n"
@@ -355,6 +413,46 @@ def _post_process(
             log.info("    consistency score: %.3f", score)
             # Inject score into update if it has a consistency section
             update.setdefault("_consistencyScore", score)
+
+    # ── S18: post-production — Descript transcription + AI editing ────────────
+    elif skill_dir == "s18-post-production":
+        if not os.getenv("DESCRIPT_API_KEY"):
+            log.debug("s18: DESCRIPT_API_KEY not set — skipping Descript integration")
+        else:
+            # Find any rendered video/audio to import into Descript
+            media_candidates = list((output_dir / "shots").glob("*.mp4")) if (output_dir / "shots").is_dir() else []
+            audio_candidates = list((output_dir / "audio").glob("*.mp3")) if (output_dir / "audio").is_dir() else []
+
+            project_name = instance.get("project", {}).get("name", "pipeline-edit")
+
+            # Import the first assembled video (or longest audio) for transcription
+            media_file = None
+            if media_candidates:
+                media_file = max(media_candidates, key=lambda p: p.stat().st_size)
+            elif audio_candidates:
+                media_file = max(audio_candidates, key=lambda p: p.stat().st_size)
+
+            if media_file:
+                log.info("    Descript: importing %s for transcription", media_file.name)
+                import_result = providers.descript_import_media(
+                    str(media_file.resolve()),
+                    project_name=f"s18-{project_name}",
+                )
+                project_id = import_result.get("project_id")
+                if project_id:
+                    update.setdefault("_descript", {})["projectId"] = project_id
+                    log.info("    Descript: project created → %s", project_id)
+
+                    # Apply AI editing from director instructions
+                    director = instance.get("canonicalDocuments", {}).get("directorInstructions", {})
+                    post_notes = director.get("postProductionNotes", "") or director.get("editingStyle", "")
+                    if post_notes:
+                        log.info("    Descript: applying agent edit — %s", post_notes[:60])
+                        edit_result = providers.descript_agent_edit(project_id, post_notes)
+                        job_id = edit_result.get("job_id")
+                        if job_id:
+                            update["_descript"]["jobId"] = job_id
+                            log.info("    Descript: agent edit job queued → %s", job_id)
 
     return update
 
@@ -671,11 +769,11 @@ def _audio_tool_from_type(atype: str) -> str:
         "dialogue":   "elevenlabs",
         "voice_over": "elevenlabs",
         "music":      "suno",
-        "sfx":        "stub",
-        "ambient":    "stub",
-        "foley":      "stub",
+        "sfx":        "auto",
+        "ambient":    "auto",
+        "foley":      "auto",
         "stem":       "suno",
-    }.get(atype, "stub")
+    }.get(atype, "auto")
 
 
 def _parse_color_direction(direction: str) -> dict:

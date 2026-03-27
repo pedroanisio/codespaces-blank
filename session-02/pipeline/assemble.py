@@ -91,16 +91,43 @@ def _build_audio_mix_cmd(
     """
     Build FFmpeg command to mix all audio tracks onto the video.
 
-    Reads v3 syncPoints.timelineInSec/timelineOutSec/fadeInSec/fadeOutSec
-    from each assetLibrary.audioAsset.
+    Reads timing from timeline.audioClips (authoritative source) and
+    gainDb from renderPlan.operations[opType=audioMix].tracks[].
+    Falls back to audioAsset.syncPoints if timeline clips are absent.
     """
+    # ── Build timing index from timeline audioClips ───────────────────────
+    timelines = (instance.get("assembly") or {}).get("timelines") or []
+    tl = timelines[0] if timelines else {}
+    tl_audio_clips = tl.get("audioClips") or []
+
+    # Map audio asset ref ID → {timelineStartSec, durationSec}
+    clip_timing: dict[str, dict] = {}
+    for ac in tl_audio_clips:
+        ref_id = (ac.get("sourceRef") or {}).get("id", "")
+        clip_timing[ref_id] = {
+            "startSec": float(ac.get("timelineStartSec", 0)),
+            "durationSec": float(ac.get("durationSec", 30)),
+        }
+
+    # ── Build gain index from renderPlan audioMix operation ───────────────
+    render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
+    rp = render_plans[0] if render_plans else {}
+    gain_by_ref: dict[str, float] = {}
+    for op in rp.get("operations", []):
+        if op.get("opType") == "audioMix":
+            for track in op.get("tracks", []):
+                ref_id = (track.get("audioRef") or {}).get("id", "")
+                if ref_id:
+                    gain_by_ref[ref_id] = float(track.get("gainDb", 0))
+
+    # ── Audio assets lookup ───────────────────────────────────────────────
     audio_assets: list[dict] = (
         instance.get("assetLibrary", {}).get("audioAssets") or []
     )
-    asset_by_id: dict[str, dict] = {
-        (a.get("logicalId") or a.get("id") or ""): a
-        for a in audio_assets
-    }
+    asset_by_lid: dict[str, dict] = {}
+    for a in audio_assets:
+        asset_by_lid[a.get("logicalId", "")] = a
+        asset_by_lid[a.get("id", "")] = a
 
     inputs: list[str] = ["-i", str(video_path)]
     filter_parts: list[str] = []
@@ -112,25 +139,34 @@ def _build_audio_mix_cmd(
             log.warning("audio file missing for %s — skipped", key)
             continue
 
-        asset = asset_by_id.get(key) or {}
-        sync = asset.get("syncPoints") or {}
-        t_in    = float(sync.get("timelineInSec",  0))
-        t_out   = float(sync.get("timelineOutSec", 90))
-        fade_in = float(sync.get("fadeInSec",  0))
-        fade_out = float(sync.get("fadeOutSec", 0))
-        duration = max(t_out - t_in, 0.1)
+        asset = asset_by_lid.get(key) or {}
+        asset_id = asset.get("id", "")
+
+        # Get timing: prefer timeline audioClips, fallback to syncPoints
+        timing = clip_timing.get(asset_id) or clip_timing.get(key)
+        if timing:
+            t_in = timing["startSec"]
+            duration = timing["durationSec"]
+        else:
+            # Legacy: read from syncPoints
+            sync = asset.get("syncPoints") or {}
+            t_in = float(sync.get("timelineInSec", 0))
+            t_out = float(sync.get("timelineOutSec", 30))
+            duration = max(t_out - t_in, 0.1)
+
+        # Get gain from renderPlan
+        gain_db = gain_by_ref.get(asset_id, gain_by_ref.get(key, 0))
 
         inputs += ["-i", str(audio_path)]
         stream = idx + 1  # input 0 is video
 
+        # Build per-track filter chain
         chain = f"[{stream}:a]"
         chain += f"atrim=duration={duration},"
         chain += f"adelay={int(t_in * 1000)}|{int(t_in * 1000)},"
         chain += f"apad=whole_dur=300"
-        if fade_in > 0:
-            chain += f",afade=t=in:st={t_in}:d={fade_in}"
-        if fade_out > 0:
-            chain += f",afade=t=out:st={t_out - fade_out}:d={fade_out}"
+        if gain_db != 0:
+            chain += f",volume={gain_db}dB"
         tag = f"[a{idx}]"
         filter_parts.append(chain + tag)
         mix_inputs.append(tag)
@@ -162,14 +198,20 @@ def _parse_color_direction(direction: str) -> dict:
         saturation = 0.75
     if "vibrant" in d or "saturated" in d:
         saturation = 1.3
-    if "warm" in d:
+    if "warm" in d or "amber" in d:
         brightness, contrast = 0.05, 1.05
-    if "cool" in d or "cold" in d:
+    if "cool" in d or "cold" in d or "blue" in d:
         brightness = -0.03
     if "high contrast" in d:
         contrast = 1.2
-    if "lifted blacks" in d or "film look" in d:
+    if "dark" in d or "crushed" in d or "noir" in d:
+        brightness, contrast = -0.05, 1.15
+        saturation = min(saturation, 0.85)
+    if "lifted blacks" in d or "film look" in d or "filmic" in d:
         brightness, contrast = 0.04, 0.95
+    if "cinematic" in d:
+        contrast = max(contrast, 1.08)
+        saturation = min(saturation, 0.9)
     return {
         "brightness": round(brightness, 3),
         "contrast":   round(contrast,   3),
@@ -197,21 +239,41 @@ def _color_grade_cmd(input_path: Path, params: dict, out_path: Path) -> list[str
     ]
 
 
-def _encode_cmd(input_path: Path, qp: dict, output_path: Path) -> list[str]:
-    """Build final encode command from qualityProfile video settings."""
+def _encode_cmd(
+    input_path: Path,
+    qp: dict,
+    output_path: Path,
+    *,
+    render_plan: dict | None = None,
+) -> list[str]:
+    """Build final encode command from qualityProfile + renderPlan settings."""
     video = qp.get("video") or {}
     resolution = video.get("resolution") or {}
-    width  = resolution.get("width",  1920)
-    height = resolution.get("height", 1080)
+    width  = resolution.get("widthPx") or resolution.get("width", 1920)
+    height = resolution.get("heightPx") or resolution.get("height", 1080)
     fps    = (video.get("frameRate") or {}).get("fps", 24)
     audio_cfg = qp.get("audio") or {}
     sample_rate = audio_cfg.get("sampleRateHz", 44100)
+
+    # Read codec/bitrate from renderPlan encode operation if available
+    codec = "libx264"
+    bitrate_flag: list[str] = ["-crf", "18"]
+    if render_plan:
+        for op in render_plan.get("operations", []):
+            if op.get("opType") == "encode":
+                comp = op.get("compression") or {}
+                if comp.get("codec"):
+                    codec = comp["codec"]
+                if comp.get("bitrateMbps"):
+                    bitrate_flag = ["-b:v", f"{comp['bitrateMbps']}M"]
+                elif comp.get("crf"):
+                    bitrate_flag = ["-crf", str(comp["crf"])]
 
     return [
         "ffmpeg", "-y",
         "-i", str(input_path),
         "-vf", f"scale={width}:{height},fps={fps}",
-        "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+        "-c:v", codec, *bitrate_flag, "-preset", "fast",
         "-movflags", "+faststart",
         "-c:a", "aac", "-b:a", "192k",
         "-ar", str(sample_rate),
@@ -219,19 +281,66 @@ def _encode_cmd(input_path: Path, qp: dict, output_path: Path) -> list[str]:
     ]
 
 
-def _concat_clips_ffmpeg(clip_paths: list[Path], out_path: Path) -> None:
+def _concat_clips_ffmpeg(
+    clip_paths: list[Path],
+    out_path: Path,
+    *,
+    transitions: list[dict] | None = None,
+) -> None:
+    """Concatenate clips with optional scene transitions (fade/dissolve)."""
     list_file = out_path.parent / "_concat_list.txt"
     list_file.write_text(
         "\n".join(f"file '{p.resolve()}'" for p in clip_paths),
         encoding="utf-8",
     )
-    cmd = [
-        "ffmpeg", "-y",
-        "-f", "concat", "-safe", "0",
-        "-i", str(list_file),
-        "-c", "copy",
-        str(out_path),
-    ]
+
+    # Build transition filter if transitions are provided
+    vf_filters: list[str] = []
+    if transitions:
+        # Calculate cumulative time offsets for each clip
+        offsets: list[float] = [0.0]
+        for p in clip_paths[:-1]:
+            try:
+                probe = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries",
+                     "format=duration", "-of", "csv=p=0", str(p)],
+                    capture_output=True, text=True, timeout=5,
+                )
+                dur = float(probe.stdout.strip() or "5")
+            except Exception:
+                dur = 5.0
+            offsets.append(offsets[-1] + dur)
+
+        total_dur = offsets[-1] + 5.0  # approx last clip
+
+        # Apply fade-in at start if first transition is "fade"
+        first_t = transitions[0] if transitions else {}
+        if first_t.get("transitionIn", {}).get("type") == "fade":
+            vf_filters.append("fade=t=in:st=0:d=1")
+
+        # Apply fade-out at end if last transition is "fade"
+        last_t = transitions[-1] if transitions else {}
+        if last_t.get("transitionOut", {}).get("type") == "fade":
+            vf_filters.append(f"fade=t=out:st={total_dur - 1.5}:d=1.5")
+
+    if vf_filters:
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "concat", "-safe", "0",
+            "-i", str(list_file),
+            "-vf", ",".join(vf_filters),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-c:a", "aac", "-b:a", "192k",
+            str(out_path),
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "concat", "-safe", "0",
+            "-i", str(list_file),
+            "-c", "copy",
+            str(out_path),
+        ]
     subprocess.run(cmd, check=True, capture_output=True)
     list_file.unlink(missing_ok=True)
 
