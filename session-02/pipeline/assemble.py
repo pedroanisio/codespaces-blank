@@ -42,9 +42,16 @@ def _shots_in_scene_order(instance: dict, shot_clips: dict[str, Path]) -> list[P
     then shot order within each scene.
     """
     production = instance.get("production", {})
-    shots_by_lid: dict[str, dict] = {
-        _shot_id(s): s for s in production.get("shots", [])
-    }
+    # Build a mapping from any ID form (id or logicalId) to the shot's logicalId
+    # which is the key used by generate.py for shot_clips
+    id_to_logical: dict[str, str] = {}
+    for s in production.get("shots", []):
+        lid = s.get("logicalId", "")
+        sid = s.get("id", "")
+        if lid:
+            id_to_logical[lid] = lid
+        if sid:
+            id_to_logical[sid] = lid
 
     scenes = sorted(
         production.get("scenes", []),
@@ -55,15 +62,16 @@ def _shots_in_scene_order(instance: dict, shot_clips: dict[str, Path]) -> list[P
     seen: set[str] = set()
     for scene in scenes:
         for ref in scene.get("shotRefs", []):
-            lid = ref.get("logicalId") or ref.get("id") or ""
-            if not lid or lid in seen:
+            ref_id = ref.get("id") or ref.get("logicalId") or ""
+            logical = id_to_logical.get(ref_id, ref_id)
+            if not logical or logical in seen:
                 continue
-            clip = shot_clips.get(lid)
+            clip = shot_clips.get(logical)
             if clip and clip.exists():
                 ordered.append(clip)
-                seen.add(lid)
+                seen.add(logical)
             else:
-                log.warning("missing clip for shot %s — skipped", lid)
+                log.warning("missing clip for shot %s — skipped", ref_id)
 
     # Fallback: no scene refs worked — use dict order
     if not ordered:

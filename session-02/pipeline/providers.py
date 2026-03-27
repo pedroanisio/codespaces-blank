@@ -732,7 +732,7 @@ def generate_music(
 
 # ── Descript (beta API) ────────────────────────────────────────────────────────
 
-_DESCRIPT_BASE = "https://api.descript.com/v1"
+_DESCRIPT_BASE = "https://descriptapi.com/v1"
 
 
 def _descript_headers() -> dict[str, str] | None:

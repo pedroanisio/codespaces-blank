@@ -173,15 +173,19 @@ def _validate_deepseek() -> tuple[bool, str]:
 
 
 def _validate_xai() -> tuple[bool, str]:
-    """Validate XAI_API_KEY via OpenAI-compatible models.list()."""
+    """Validate XAI_API_KEY with a lightweight GET /v1/api-key call."""
     try:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=os.environ["XAI_API_KEY"],
-            base_url="https://api.x.ai/v1",
+        import requests as _req
+        resp = _req.get(
+            "https://api.x.ai/v1/api-key",
+            headers={"Authorization": f"Bearer {os.environ['XAI_API_KEY']}"},
+            timeout=6,
         )
-        client.models.list()
-        return True, ""
+        if resp.status_code == 200:
+            return True, ""
+        if resp.status_code in (401, 403):
+            return False, "invalid key"
+        return False, f"HTTP {resp.status_code}"
     except Exception as exc:
         return False, str(exc)[:80]
 
@@ -245,7 +249,7 @@ def _validate_descript() -> tuple[bool, str]:
     try:
         import requests as _req
         resp = _req.get(
-            "https://api.descript.com/v1/jobs",
+            "https://descriptapi.com/v1/jobs",
             headers={"Authorization": f"Bearer {os.environ['DESCRIPT_API_KEY']}"},
             timeout=10,
         )

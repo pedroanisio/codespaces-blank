@@ -55,9 +55,11 @@ def _shots_in_order(instance: dict) -> list[dict]:
     Reads v3 fields: production.scenes[*].shotRefs → production.shots.
     """
     production = instance.get("production", {})
-    shots_by_lid: dict[str, dict] = {
-        _shot_id(s): s for s in production.get("shots", [])
-    }
+    # Index shots by both id and logicalId so refs using either will match
+    shots_index: dict[str, dict] = {}
+    for s in production.get("shots", []):
+        shots_index[s.get("id", "")] = s
+        shots_index[s.get("logicalId", "")] = s
 
     scenes = sorted(
         production.get("scenes", []),
@@ -68,12 +70,15 @@ def _shots_in_order(instance: dict) -> list[dict]:
     seen: set[str] = set()
     for scene in scenes:
         for ref in scene.get("shotRefs", []):
-            lid = ref.get("logicalId") or ref.get("id") or ""
-            if lid and lid not in seen:
-                shot = shots_by_lid.get(lid)
+            ref_id = ref.get("id") or ref.get("logicalId") or ""
+            if ref_id and ref_id not in seen:
+                shot = shots_index.get(ref_id)
                 if shot:
                     ordered.append(shot)
-                    seen.add(lid)
+                    seen.add(ref_id)
+                    # Also mark the other key as seen
+                    seen.add(shot.get("id", ""))
+                    seen.add(shot.get("logicalId", ""))
 
     # Fallback: no scene→shot refs — use shots list sorted by order
     if not ordered:
@@ -143,26 +148,31 @@ def _stub_audio(asset: dict, out_path: Path) -> None:
 # ── real generators ───────────────────────────────────────────────────────────
 
 def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
-    """Generate a video clip via Runway Gen4 REST API."""
+    """Generate a video clip via Runway Gen4.5 text-to-video REST API."""
     import requests  # noqa: PLC0415
 
-    steps = shot.get("generation", {}).get("steps") or [{}]
-    prompt = steps[0].get("prompt") or shot.get("purpose") or "cinematic shot"
-    duration = int(shot.get("targetDurationSec", 5))
+    gen_params = shot.get("genParams") or {}
+    prompt = gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+    duration = min(int(shot.get("targetDurationSec", 5)), 10)
 
     payload = {
         "promptText": prompt,
-        "model": "gen4_turbo",
-        "duration": min(duration, 10),
-        "ratio": "1280:768",
+        "model": "gen4.5",
+        "duration": duration,
+        "ratio": "1280:720",
     }
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+    }
     resp = requests.post(
-        "https://api.dev.runwayml.com/v1/image_to_video",
+        "https://api.dev.runwayml.com/v1/text_to_video",
         json=payload, headers=headers, timeout=30,
     )
     resp.raise_for_status()
     task_id = resp.json()["id"]
+    log.info("runway task %s started for %s", task_id, _shot_id(shot))
 
     for _ in range(120):
         time.sleep(5)
@@ -174,26 +184,31 @@ def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
         data = poll.json()
         status = data.get("status")
         if status == "SUCCEEDED":
-            video_url = data["output"][0]
+            artifacts = data.get("artifacts") or data.get("output") or []
+            if isinstance(artifacts, list) and artifacts:
+                video_url = artifacts[0] if isinstance(artifacts[0], str) else artifacts[0].get("url", "")
+            else:
+                raise RuntimeError(f"Runway task {task_id}: no artifacts in response")
             break
         if status == "FAILED":
-            raise RuntimeError(f"Runway task {task_id} failed: {data.get('failure')}")
+            raise RuntimeError(f"Runway task {task_id} failed: {data.get('failure', data.get('error', 'unknown'))}")
     else:
-        raise TimeoutError(f"Runway task {task_id} timed out")
+        raise TimeoutError(f"Runway task {task_id} timed out after 10 minutes")
 
     video_resp = requests.get(video_url, timeout=120)
     video_resp.raise_for_status()
     out_path.write_bytes(video_resp.content)
-    log.info("runway → %s", out_path.name)
+    log.info("runway → %s (%d bytes)", out_path.name, len(video_resp.content))
 
 
 def _veo_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
     """Generate a video clip via Google Veo 3.1 (Gemini API)."""
+    import requests as _req  # noqa: PLC0415
     from google import genai  # noqa: PLC0415
     from google.genai import types  # noqa: PLC0415
 
-    steps = shot.get("generation", {}).get("steps") or [{}]
-    prompt = steps[0].get("prompt") or shot.get("purpose") or "cinematic shot"
+    gen_params = shot.get("genParams") or {}
+    prompt = gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
 
     client = genai.Client(api_key=api_key)
 
@@ -204,6 +219,7 @@ def _veo_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
             aspect_ratio="16:9",
         ),
     )
+    log.info("veo 3.1 task started for %s", _shot_id(shot))
 
     # Poll until complete (max ~10 min)
     for _ in range(120):
@@ -218,8 +234,23 @@ def _veo_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
         raise RuntimeError("Veo 3.1 returned no video")
 
     video = operation.response.generated_videos[0].video
-    out_path.write_bytes(video.video_bytes)
-    log.info("veo 3.1 → %s", out_path.name)
+
+    # Video data may be in video_bytes or behind a download URI
+    if video.video_bytes:
+        out_path.write_bytes(video.video_bytes)
+    elif video.uri:
+        # Gemini file URIs require the API key for auth
+        download_url = video.uri
+        if "generativelanguage.googleapis.com" in download_url:
+            sep = "&" if "?" in download_url else "?"
+            download_url = f"{download_url}{sep}key={api_key}"
+        resp = _req.get(download_url, timeout=120, allow_redirects=True)
+        resp.raise_for_status()
+        out_path.write_bytes(resp.content)
+    else:
+        raise RuntimeError("Veo 3.1: no video_bytes or uri in response")
+
+    log.info("veo 3.1 → %s (%d bytes)", out_path.name, out_path.stat().st_size)
 
 
 def _elevenlabs_generate_audio(asset: dict, api_key: str, out_path: Path) -> None:
@@ -368,17 +399,22 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
             return key, out_path
 
         steps = asset.get("generation", {}).get("steps") or [{}]
-        tool = steps[0].get("tool") or "stub"
+        tool = steps[0].get("tool") or "auto"
         atype = asset.get("audioType") or "ambient"
 
-        if tool == "elevenlabs" and elevenlabs_key and asset.get("transcript"):
+        # ElevenLabs: use for dialogue/voice_over with transcript, or when explicitly requested
+        use_elevenlabs = (
+            elevenlabs_key and asset.get("transcript")
+            and (tool in ("elevenlabs", "auto") and atype in ("dialogue", "voice_over"))
+        )
+        if use_elevenlabs:
             try:
                 _elevenlabs_generate_audio(asset, elevenlabs_key, out_path)
                 return key, out_path
             except Exception as exc:
                 log.warning("ElevenLabs failed for %s (%s) — stub", key, exc)
 
-        if tool == "suno" and suno_cookie and atype == "music":
+        if (tool in ("suno", "auto")) and suno_cookie and atype == "music":
             try:
                 _suno_generate_music(asset, suno_cookie, out_path)
                 return key, out_path
