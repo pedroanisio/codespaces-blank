@@ -1,2 +1,20 @@
+# API keys — never commit
+.env
+
+# Pipeline output
 session-02/output/
+output/
+
+# Python
+__pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db

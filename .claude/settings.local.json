@@ -37,7 +37,8 @@
       "Bash(find /workspaces/codespaces-blank/session-02/skills/s* -name \"schema.json\" -type f)",
       "Bash(python3 validate.py example-project.json --schema video-project-schema-v2.json)",
       "Bash(python3 validate.py example-project.json --schema video-project-schema-v2.json --verbose)",
-      "Bash(python3 validate.py example-project.json --schema claude-unified-video-project-v3.schema.json --verbose)"
+      "Bash(python3 validate.py example-project.json --schema claude-unified-video-project-v3.schema.json --verbose)",
+      "Bash(xargs ls:*)"
     ]
   }
 }

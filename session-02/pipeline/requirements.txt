@@ -1,5 +1,15 @@
+# ── Video assembly ─────────────────────────────────────────────────────────────
 moviepy>=2.1.2
 numpy>=1.24
 Pillow>=10.0
 requests>=2.31
 jsonschema>=4.21
+
+# ── Core AI providers ──────────────────────────────────────────────────────────
+anthropic>=0.40.0          # Claude — primary skill executor (S01-S24)
+openai>=1.50.0             # GPT-4o · DALL-E 3 (S13 images) · TTS (S12 voice)
+google-generativeai>=0.8.0 # Gemini 2.0 Flash + Imagen 3 (image fallback)
+python-dotenv>=1.0.0       # Load .env API keys automatically
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+tqdm>=4.66                 # Progress bars for multi-skill pipeline runs
