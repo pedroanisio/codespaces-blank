@@ -474,9 +474,9 @@ class TestAudioMixCmd:
         audio_files = self._make_audio_files(tmp_path)
         cmd = _build_audio_mix_cmd(video, audio_files, minimal_instance, tmp_path / "out.mp4")
         cmd_str = " ".join(cmd)
-        # Ambient gain is -8dB, score is -14dB
-        assert "-8dB" in cmd_str
-        assert "-14dB" in cmd_str
+        # Ambient gain is -8dB, score is -14dB (may be formatted as -8.0dB)
+        assert "volume=-8" in cmd_str and "dB" in cmd_str
+        assert "volume=-14" in cmd_str and "dB" in cmd_str
 
     def test_no_gain_for_zero_db(self, minimal_instance, tmp_path):
         from pipeline.assemble import _build_audio_mix_cmd

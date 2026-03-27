@@ -58,6 +58,7 @@ _IMPORT_NAME_MAP = {
     "python-dotenv": "dotenv",
     "google-genai": "google.genai",
     "google-generativeai": "google.generativeai",
+    "Pillow": "PIL",
 }
 
 

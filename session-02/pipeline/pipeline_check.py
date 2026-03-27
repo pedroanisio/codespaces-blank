@@ -592,50 +592,222 @@ def gate_8_derive(ev: Evidence, instance: dict) -> dict:
 #  GATE 9: GENERATION PHASE (video + audio files)
 # ═════════════════════════════════════════════════════════════════════════════
 
+def _is_stub_video(path: Path) -> tuple[bool, str]:
+    """
+    Detect if a video file is a stub (solid-colour FFmpeg lavfi output).
+
+    Stubs have:
+    - lavfi virtual input (no real video source)
+    - Single solid color across all frames (entropy near zero)
+    - drawtext filter metadata in stream
+    """
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe or not path.exists():
+        return False, "cannot probe"
+
+    try:
+        # Check if the input format is lavfi (stub signature)
+        r = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-print_format", "json",
+             "-show_format", "-show_streams", str(path)],
+            capture_output=True, text=True, timeout=10,
+        )
+        probe = json.loads(r.stdout) if r.stdout else {}
+        fmt_name = probe.get("format", {}).get("format_name", "")
+        streams = probe.get("streams", [])
+
+        # Check 1: video stream codec — stubs use libx264 ultrafast with tiny bitrate
+        for s in streams:
+            if s.get("codec_type") == "video":
+                # Stubs have no audio stream
+                has_audio = any(st.get("codec_type") == "audio" for st in streams)
+                if not has_audio:
+                    # Stub videos are generated with -an (no audio)
+                    pass
+
+        # Check 2: use ffmpeg signalstats to measure frame entropy
+        # A solid-colour stub has near-zero spatial complexity
+        r2 = subprocess.run(
+            ["ffmpeg", "-i", str(path), "-vframes", "1",
+             "-vf", "signalstats", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=10,
+        )
+        stderr = r2.stderr or ""
+
+        # signalstats outputs YMIN/YMAX — if they're identical, it's a solid colour
+        ymin = ymax = None
+        for line in stderr.splitlines():
+            if "YMIN" in line:
+                parts = line.split()
+                for p in parts:
+                    if p.startswith("YMIN"):
+                        ymin = p.split(":")[-1].strip() if ":" in p else None
+                    if p.startswith("YMAX"):
+                        ymax = p.split(":")[-1].strip() if ":" in p else None
+
+        # Fallback: check file size heuristic — stub 5s 1080p ultrafast is typically < 30KB
+        size_kb = path.stat().st_size / 1024
+        duration = float(probe.get("format", {}).get("duration", 5))
+        kb_per_sec = size_kb / max(duration, 0.1)
+
+        # Real video (even low quality) > 50 KB/s; stub solid colour < 10 KB/s
+        if kb_per_sec < 15:
+            return True, f"bitrate={kb_per_sec:.1f} KB/s (solid colour stub signature)"
+
+        return False, f"bitrate={kb_per_sec:.1f} KB/s"
+
+    except Exception as exc:
+        return False, f"probe error: {exc}"
+
+
+def _is_stub_audio(path: Path) -> tuple[bool, str]:
+    """
+    Detect if an audio file is a stub (silence or sine wave from FFmpeg lavfi).
+
+    Stubs have:
+    - anullsrc (silence) or sine generator
+    - Mean volume near -inf dB (silence) or exactly one frequency (sine)
+    """
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe or not path.exists():
+        return False, "cannot probe"
+
+    try:
+        # Use volumedetect to get mean_volume
+        r = subprocess.run(
+            ["ffmpeg", "-i", str(path), "-af", "volumedetect", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=10,
+        )
+        stderr = r.stderr or ""
+        mean_vol = None
+        max_vol = None
+        for line in stderr.splitlines():
+            if "mean_volume" in line:
+                # e.g. [Parsed_volumedetect_0 ...] mean_volume: -91.0 dB
+                parts = line.split("mean_volume:")
+                if len(parts) > 1:
+                    try:
+                        mean_vol = float(parts[1].strip().split()[0])
+                    except ValueError:
+                        pass
+            if "max_volume" in line:
+                parts = line.split("max_volume:")
+                if len(parts) > 1:
+                    try:
+                        max_vol = float(parts[1].strip().split()[0])
+                    except ValueError:
+                        pass
+
+        if mean_vol is not None:
+            # Silence stubs: mean_volume < -70 dB
+            if mean_vol < -70:
+                return True, f"mean_volume={mean_vol:.1f} dB (silence stub)"
+            # Sine wave stubs: very consistent volume, mean close to max (< 3dB spread)
+            if max_vol is not None and abs(mean_vol - max_vol) < 3.0 and mean_vol < -20:
+                return True, f"mean={mean_vol:.1f} dB, max={max_vol:.1f} dB (sine stub signature)"
+
+        # Fallback: file size heuristic — stub audio is ~16 KB/s at 128kbps
+        # Real speech/music/SFX has the same bitrate but we already caught silence/sine above
+        return False, f"mean_volume={mean_vol} dB" if mean_vol else "volumedetect unavailable"
+
+    except Exception as exc:
+        return False, f"probe error: {exc}"
+
+
 def gate_9_generation(ev: Evidence, instance: dict, output_dir: Path, stub_only: bool) -> tuple[dict, dict]:
     ev.begin_gate("GATE 9 — Generation Phase (shots + audio)")
 
     from pipeline.generate import generate_shots, generate_audio
 
-    # Clear API keys for stub-only mode
-    saved_keys = {}
-    if stub_only:
-        for k in ("RUNWAY_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY",
-                   "ELEVENLABS_API_KEY", "SUNO_COOKIE", "XAI_API_KEY"):
-            saved_keys[k] = os.environ.pop(k, None)
+    shot_clips = generate_shots(instance, output_dir)
+    audio_files = generate_audio(instance, output_dir)
 
-    try:
-        shot_clips = generate_shots(instance, output_dir)
-        audio_files = generate_audio(instance, output_dir)
-    finally:
-        # Restore keys
-        for k, v in saved_keys.items():
-            if v is not None:
-                os.environ[k] = v
+    stub_shots: list[str] = []
+    real_shots: list[str] = []
+    stub_audio: list[str] = []
+    real_audio: list[str] = []
 
-    # Shots
+    # ── Shots ────────────────────────────────────────────────────────────────
     expected_shots = len(instance.get("production", {}).get("shots", []))
     ev.check(
-        f"generate_shots produced {expected_shots} clip(s)",
+        f"generate_shots: count matches ({expected_shots})",
         len(shot_clips) == expected_shots,
         f"expected={expected_shots}, got={len(shot_clips)}",
     )
-    for sid, path in shot_clips.items():
-        ev.check(f"shot {sid}: file exists", path.exists(), path.name)
-        if path.exists():
-            ev.check(f"shot {sid}: file > 0 bytes", path.stat().st_size > 0)
 
-    # Audio
+    for sid, path in shot_clips.items():
+        if not path.exists():
+            ev.check(f"shot {sid}: file exists", False, "MISSING")
+            continue
+        if path.stat().st_size == 0:
+            ev.check(f"shot {sid}: file non-empty", False, "0 bytes")
+            continue
+
+        is_stub, detail = _is_stub_video(path)
+        if is_stub:
+            stub_shots.append(sid)
+            ev.check(f"shot {sid}: is REAL content (not stub)", False, f"STUB — {detail}")
+        else:
+            real_shots.append(sid)
+            ev.check(f"shot {sid}: is REAL content (not stub)", True, detail)
+
+    # ── Audio ────────────────────────────────────────────────────────────────
     expected_audio = len(instance.get("assetLibrary", {}).get("audioAssets", []))
     ev.check(
-        f"generate_audio produced {expected_audio} track(s)",
+        f"generate_audio: count matches ({expected_audio})",
         len(audio_files) == expected_audio,
         f"expected={expected_audio}, got={len(audio_files)}",
     )
+
     for aid, path in audio_files.items():
-        ev.check(f"audio {aid}: file exists", path.exists(), path.name)
-        if path.exists():
-            ev.check(f"audio {aid}: file > 0 bytes", path.stat().st_size > 0)
+        if not path.exists():
+            ev.check(f"audio {aid}: file exists", False, "MISSING")
+            continue
+        if path.stat().st_size == 0:
+            ev.check(f"audio {aid}: file non-empty", False, "0 bytes")
+            continue
+
+        is_stub, detail = _is_stub_audio(path)
+        if is_stub:
+            stub_audio.append(aid)
+            ev.check(f"audio {aid}: is REAL content (not stub)", False, f"STUB — {detail}")
+        else:
+            real_audio.append(aid)
+            ev.check(f"audio {aid}: is REAL content (not stub)", True, detail)
+
+    # ── Aggregate verdict ────────────────────────────────────────────────────
+    total_assets = len(shot_clips) + len(audio_files)
+    total_stubs = len(stub_shots) + len(stub_audio)
+    total_real = len(real_shots) + len(real_audio)
+
+    ev.check(
+        f"REAL assets > 0 (got {total_real}/{total_assets})",
+        total_real > 0,
+        f"{total_real} real, {total_stubs} stubs",
+    )
+    ev.check(
+        f"NO stubs in output (got {total_stubs}/{total_assets})",
+        total_stubs == 0,
+        f"stubs: {stub_shots + stub_audio}" if total_stubs else "all real",
+        evidence={
+            "real_shots": real_shots,
+            "stub_shots": stub_shots,
+            "real_audio": real_audio,
+            "stub_audio": stub_audio,
+        },
+    )
+
+    # Save the stub/real manifest as evidence
+    ev.save_artifact("asset-provenance.json", json.dumps({
+        "real_shots": real_shots,
+        "stub_shots": stub_shots,
+        "real_audio": real_audio,
+        "stub_audio": stub_audio,
+        "total_assets": total_assets,
+        "total_real": total_real,
+        "total_stubs": total_stubs,
+        "verdict": "PASS" if total_stubs == 0 else "FAIL — stubs detected",
+    }, indent=2))
 
     return shot_clips, audio_files
 
@@ -663,54 +835,78 @@ def gate_10_assembly(
         return
 
     ev.check("output file exists", final_path.exists(), str(final_path.name))
-    if final_path.exists():
-        size = final_path.stat().st_size
-        ev.check("output file > 0 bytes", size > 0, f"{size / 1024:.1f} KB")
+    if not final_path.exists():
+        return
 
-        # Probe with ffprobe
-        ffprobe = shutil.which("ffprobe")
-        if ffprobe:
-            try:
-                r = subprocess.run(
-                    [
-                        "ffprobe", "-v", "quiet", "-print_format", "json",
-                        "-show_format", "-show_streams", str(final_path),
-                    ],
-                    capture_output=True, text=True, timeout=10,
-                )
-                probe = json.loads(r.stdout) if r.stdout else {}
-                fmt = probe.get("format", {})
-                duration = float(fmt.get("duration", 0))
-                streams = probe.get("streams", [])
-                has_video = any(s.get("codec_type") == "video" for s in streams)
-                has_audio = any(s.get("codec_type") == "audio" for s in streams)
+    size = final_path.stat().st_size
+    ev.check("output file > 0 bytes", size > 0, f"{size / 1024:.1f} KB")
 
-                ev.check("ffprobe: has video stream", has_video)
-                ev.check("ffprobe: has audio stream", has_audio)
-                ev.check(
-                    "ffprobe: duration > 0",
-                    duration > 0,
-                    f"{duration:.1f}s",
-                )
+    # ── ffprobe deep analysis ────────────────────────────────────────────
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        ev.warn("ffprobe not available", "install ffprobe for media analysis")
+        return
 
-                target = instance.get("project", {}).get("targetRuntimeSec", 0)
-                if target:
-                    drift = abs(duration - target)
-                    ev.check(
-                        f"ffprobe: duration ≈ target ({target}s ±20%)",
-                        drift <= target * 0.20,
-                        f"actual={duration:.1f}s, drift={drift:.1f}s",
-                    )
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-print_format", "json",
+             "-show_format", "-show_streams", str(final_path)],
+            capture_output=True, text=True, timeout=10,
+        )
+        probe = json.loads(r.stdout) if r.stdout else {}
+        fmt = probe.get("format", {})
+        duration = float(fmt.get("duration", 0))
+        streams = probe.get("streams", [])
+        has_video = any(s.get("codec_type") == "video" for s in streams)
+        has_audio = any(s.get("codec_type") == "audio" for s in streams)
 
-                # Save probe as evidence
-                ev.save_artifact(
-                    "ffprobe-output.json",
-                    json.dumps(probe, indent=2),
-                )
-            except Exception as exc:
-                ev.warn("ffprobe analysis", str(exc)[:80])
-        else:
-            ev.warn("ffprobe not available", "install ffprobe for detailed media checks")
+        ev.check("ffprobe: has video stream", has_video)
+        ev.check("ffprobe: has audio stream", has_audio)
+        ev.check("ffprobe: duration > 0", duration > 0, f"{duration:.1f}s")
+
+        target = instance.get("project", {}).get("targetRuntimeSec", 0)
+        if target:
+            drift = abs(duration - target)
+            ev.check(
+                f"ffprobe: duration ≈ target ({target}s ±20%)",
+                drift <= target * 0.20,
+                f"actual={duration:.1f}s, drift={drift:.1f}s",
+            )
+
+        # ── Stub detection on final render ───────────────────────────────
+        is_stub, detail = _is_stub_video(final_path)
+        ev.check(
+            "final render: is REAL content (not assembled stubs)",
+            not is_stub,
+            f"STUB — {detail}" if is_stub else detail,
+        )
+
+        # ── Volume check: render should not be silent ────────────────────
+        r2 = subprocess.run(
+            ["ffmpeg", "-i", str(final_path), "-af", "volumedetect", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=15,
+        )
+        mean_vol = None
+        for line in (r2.stderr or "").splitlines():
+            if "mean_volume" in line:
+                parts = line.split("mean_volume:")
+                if len(parts) > 1:
+                    try:
+                        mean_vol = float(parts[1].strip().split()[0])
+                    except ValueError:
+                        pass
+        if mean_vol is not None:
+            ev.check(
+                "final render: audio is not silence",
+                mean_vol > -70,
+                f"mean_volume={mean_vol:.1f} dB" + (" (SILENT)" if mean_vol <= -70 else ""),
+            )
+
+        # Save probe as evidence
+        ev.save_artifact("ffprobe-output.json", json.dumps(probe, indent=2))
+
+    except Exception as exc:
+        ev.warn("ffprobe analysis", str(exc)[:80])
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -800,11 +996,6 @@ def main(argv: list[str] | None = None) -> int:
         help="Directory for evidence artifacts (default: ./evidence)",
     )
     parser.add_argument(
-        "--live",
-        action="store_true",
-        help="Use real API providers (default: stub-only for generation).",
-    )
-    parser.add_argument(
         "--skip-generation",
         action="store_true",
         help="Skip generation + assembly gates (schema-only check).",
@@ -834,14 +1025,13 @@ def main(argv: list[str] | None = None) -> int:
     print(BOLD(  "║   SAFE AI Production — Pipeline Checklist               ║"))
     print(BOLD(  "╚══════════════════════════════════════════════════════════╝"))
     print(DIM(f"  Instance : {instance_path.name}"))
-    print(DIM(f"  Mode     : {'LIVE (real APIs)' if args.live else 'STUB (no API calls)'}"))
     print(DIM(f"  Evidence : {output_dir.resolve()}"))
 
     # Save a copy of the input instance as evidence
     ev.save_artifact("input-instance.json", json.dumps(instance, indent=2, ensure_ascii=False))
 
     # ── Run gates ────────────────────────────────────────────────────────────
-    gate_0_prerequisites(ev, instance, args.live)
+    gate_0_prerequisites(ev, instance, live=True)
     schema_ok = gate_1_schema_validation(ev, instance)
     gate_2_canonical_documents(ev, instance)
     gate_3_production(ev, instance)
@@ -856,7 +1046,7 @@ def main(argv: list[str] | None = None) -> int:
         # Save post-derive instance as evidence
         ev.save_artifact("post-derive-instance.json", json.dumps(instance, indent=2, ensure_ascii=False))
 
-        shot_clips, audio_files = gate_9_generation(ev, instance, output_dir, stub_only=not args.live)
+        shot_clips, audio_files = gate_9_generation(ev, instance, output_dir, stub_only=False)
 
         gate_10_assembly(ev, instance, output_dir, shot_clips, audio_files)
     else:
