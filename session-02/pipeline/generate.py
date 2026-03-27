@@ -6,6 +6,7 @@ Two modes per asset type:
                      No API keys required. Produces a fully runnable pipeline.
   REAL             — calls actual APIs when the matching env var is set:
                        RUNWAY_API_KEY     → Runway Gen4  (video shots)
+                       GEMINI_API_KEY     → Google Veo 3.1 (video shots — fallback)
                        ELEVENLABS_API_KEY → ElevenLabs   (dialogue / voice-over)
                        SUNO_COOKIE        → Suno         (music)
 
@@ -186,6 +187,41 @@ def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
     log.info("runway → %s", out_path.name)
 
 
+def _veo_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
+    """Generate a video clip via Google Veo 3.1 (Gemini API)."""
+    from google import genai  # noqa: PLC0415
+    from google.genai import types  # noqa: PLC0415
+
+    steps = shot.get("generation", {}).get("steps") or [{}]
+    prompt = steps[0].get("prompt") or shot.get("purpose") or "cinematic shot"
+
+    client = genai.Client(api_key=api_key)
+
+    operation = client.models.generate_videos(
+        model="veo-3.1-generate-preview",
+        prompt=prompt,
+        config=types.GenerateVideosConfig(
+            aspect_ratio="16:9",
+        ),
+    )
+
+    # Poll until complete (max ~10 min)
+    for _ in range(120):
+        time.sleep(5)
+        operation = client.operations.get(operation)
+        if operation.done:
+            break
+    else:
+        raise TimeoutError("Veo 3.1 video generation timed out")
+
+    if not operation.response or not operation.response.generated_videos:
+        raise RuntimeError("Veo 3.1 returned no video")
+
+    video = operation.response.generated_videos[0].video
+    out_path.write_bytes(video.video_bytes)
+    log.info("veo 3.1 → %s", out_path.name)
+
+
 def _elevenlabs_generate_audio(asset: dict, api_key: str, out_path: Path) -> None:
     """Generate speech via ElevenLabs TTS."""
     import requests  # noqa: PLC0415
@@ -254,6 +290,7 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
     shots_dir.mkdir(parents=True, exist_ok=True)
 
     runway_key = os.getenv("RUNWAY_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
     all_shots = _shots_in_order(instance)
 
     if not all_shots:
@@ -269,12 +306,20 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
         if out_path.exists():
             log.debug("cache hit: %s", out_path.name)
             return sid, out_path
+        # Try Runway first
         if runway_key:
             try:
                 _runway_generate_shot(shot, runway_key, out_path)
                 return sid, out_path
             except Exception as exc:
-                log.warning("Runway failed for %s (%s) — falling back to stub", sid, exc)
+                log.warning("Runway failed for %s (%s) — trying Veo fallback", sid, exc)
+        # Try Veo 3.1 as fallback
+        if gemini_key and "REPLACE_ME" not in gemini_key:
+            try:
+                _veo_generate_shot(shot, gemini_key, out_path)
+                return sid, out_path
+            except Exception as exc:
+                log.warning("Veo 3.1 failed for %s (%s) — falling back to stub", sid, exc)
         _stub_shot_video(shot, out_path)
         return sid, out_path
 

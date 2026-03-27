@@ -6,9 +6,9 @@ requests>=2.31
 jsonschema>=4.21
 
 # ── Core AI providers ──────────────────────────────────────────────────────────
-anthropic>=0.40.0          # Claude — primary skill executor (S01-S24)
-openai>=1.50.0             # GPT-4o · DALL-E 3 (S13 images) · TTS (S12 voice)
-google-generativeai>=0.8.0 # Gemini 2.0 Flash + Imagen 3 (image fallback)
+anthropic>=0.45.0          # Claude Sonnet 4.6 — primary skill executor (S01-S24)
+openai>=1.60.0             # GPT-4.1 · GPT-Image-1.5 · TTS-HD (S12/S13)
+google-genai>=1.5.0        # Gemini 2.5 Flash + Imagen 4 (image fallback)
 python-dotenv>=1.0.0       # Load .env API keys automatically
 
 # ── Utilities ──────────────────────────────────────────────────────────────────

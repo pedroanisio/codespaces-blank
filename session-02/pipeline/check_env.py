@@ -54,9 +54,17 @@ BOLD = lambda t: _c("1",  t)   # bold
 
 # ── Checkers ─────────────────────────────────────────────────────────────────
 
+_IMPORT_NAME_MAP = {
+    "python-dotenv": "dotenv",
+    "google-genai": "google.genai",
+    "google-generativeai": "google.generativeai",
+}
+
+
 def _check_package(name: str) -> tuple[bool, str]:
     """Return (installed, version_or_error_string)."""
-    spec = importlib.util.find_spec(name.replace("-", "_").split(".")[0])
+    import_name = _IMPORT_NAME_MAP.get(name, name.replace("-", "_").split(".")[0])
+    spec = importlib.util.find_spec(import_name)
     if spec is None:
         return False, "not installed"
     try:
@@ -91,6 +99,200 @@ def _check_key(env_var: str) -> tuple[bool, str]:
         return False, "not set"
     masked = val[:4] + "***" + val[-2:] if len(val) > 8 else "***"
     return True, masked
+
+
+# ── Live API-key validators (cheap, read-only calls) ─────────────────────────
+
+def _validate_anthropic() -> tuple[bool, str]:
+    """Validate ANTHROPIC_API_KEY with a minimal Haiku call (~8 tokens)."""
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=8,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_openai() -> tuple[bool, str]:
+    """Validate OPENAI_API_KEY with a free models.list() call."""
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        client.models.list()
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_gemini() -> tuple[bool, str]:
+    """Validate GEMINI_API_KEY with a minimal generate_content call (~4 tokens)."""
+    # Try new google-genai SDK first, fall back to deprecated google-generativeai
+    try:
+        from google import genai
+        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents="hi",
+            config={"max_output_tokens": 4},
+        )
+        return True, ""
+    except ImportError:
+        pass
+    # Fallback: deprecated SDK
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            import google.generativeai as genai_legacy
+        genai_legacy.configure(api_key=os.environ["GEMINI_API_KEY"])
+        genai_legacy.GenerativeModel("gemini-2.0-flash-lite").generate_content(
+            "hi", generation_config={"max_output_tokens": 4},
+        )
+        return True, "⚠ using deprecated google-generativeai — run: pip install google-genai"
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_deepseek() -> tuple[bool, str]:
+    """Validate DEEPSEEK_API_KEY via OpenAI-compatible models.list()."""
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=os.environ["DEEPSEEK_API_KEY"],
+            base_url="https://api.deepseek.com",
+        )
+        client.models.list()
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_xai() -> tuple[bool, str]:
+    """Validate XAI_API_KEY via OpenAI-compatible models.list()."""
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=os.environ["XAI_API_KEY"],
+            base_url="https://api.x.ai/v1",
+        )
+        client.models.list()
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_runway() -> tuple[bool, str]:
+    """Validate RUNWAY_API_KEY with a free GET /v1/tasks."""
+    try:
+        import requests as _req
+        resp = _req.get(
+            "https://api.dev.runwayml.com/v1/tasks",
+            headers={"Authorization": f"Bearer {os.environ['RUNWAY_API_KEY']}"},
+            timeout=6,
+        )
+        if resp.status_code in (200, 400, 404):
+            return True, ""
+        if resp.status_code in (401, 403):
+            return False, "invalid key"
+        return False, f"HTTP {resp.status_code}"
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_elevenlabs() -> tuple[bool, str]:
+    """Validate ELEVENLABS_API_KEY with a free GET /v1/voices."""
+    try:
+        import requests as _req
+        resp = _req.get(
+            "https://api.elevenlabs.io/v1/voices",
+            headers={"xi-api-key": os.environ["ELEVENLABS_API_KEY"]},
+            timeout=6,
+        )
+        if resp.status_code == 200:
+            return True, ""
+        if resp.status_code == 401:
+            return False, "invalid key"
+        return False, f"HTTP {resp.status_code}"
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_suno() -> tuple[bool, str]:
+    """Validate SUNO_COOKIE with a lightweight billing/info check."""
+    try:
+        import requests as _req
+        resp = _req.get(
+            "https://studio-api.suno.ai/api/billing/info/",
+            headers={"Cookie": os.environ["SUNO_COOKIE"]},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            return True, ""
+        if resp.status_code in (401, 403):
+            return False, "expired or invalid cookie"
+        return False, f"HTTP {resp.status_code}"
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_descript() -> tuple[bool, str]:
+    """Validate DESCRIPT_API_KEY with a lightweight API call."""
+    try:
+        import requests as _req
+        resp = _req.get(
+            "https://api.descript.com/v1/jobs",
+            headers={"Authorization": f"Bearer {os.environ['DESCRIPT_API_KEY']}"},
+            timeout=10,
+        )
+        if resp.status_code in (200, 400, 404):
+            return True, ""
+        if resp.status_code in (401, 403):
+            return False, "invalid key"
+        return False, f"HTTP {resp.status_code}"
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+def _validate_brave() -> tuple[bool, str]:
+    """Validate BRAVE_API_KEY with a minimal web search query."""
+    try:
+        import requests as _req
+        resp = _req.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            headers={
+                "Accept": "application/json",
+                "X-Subscription-Token": os.environ["BRAVE_API_KEY"],
+            },
+            params={"q": "test", "count": 1},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            return True, ""
+        if resp.status_code in (401, 403):
+            return False, "invalid key"
+        return False, f"HTTP {resp.status_code}"
+    except Exception as exc:
+        return False, str(exc)[:80]
+
+
+# Map env-var name → validator function (only for keys that can be live-checked)
+_KEY_VALIDATORS: dict[str, callable] = {
+    "ANTHROPIC_API_KEY":  _validate_anthropic,
+    "OPENAI_API_KEY":     _validate_openai,
+    "GEMINI_API_KEY":     _validate_gemini,
+    "DEEPSEEK_API_KEY":   _validate_deepseek,
+    "XAI_API_KEY":        _validate_xai,
+    "RUNWAY_API_KEY":     _validate_runway,
+    "ELEVENLABS_API_KEY": _validate_elevenlabs,
+    "SUNO_COOKIE":        _validate_suno,
+    "BRAVE_API_KEY":      _validate_brave,
+    "DESCRIPT_API_KEY":   _validate_descript,
+}
 
 
 def _check_ffmpeg_codecs() -> dict[str, bool]:
@@ -187,8 +389,9 @@ def run_checks() -> int:
     print(_section("4. Optional Python Packages"))
 
     optional_pkgs = [
-        ("openai",              "DALL-E 3 images · OpenAI TTS · GPT-4o vision"),
-        ("google-generativeai", "Gemini 2.0 Flash · Imagen 3"),
+        ("openai",              "GPT-Image-1.5 · TTS-HD · GPT-4.1 vision"),
+        ("google-genai",        "Gemini 2.5 Flash · Imagen 4 (recommended)"),
+        ("google-generativeai", "Gemini (deprecated — upgrade to google-genai)"),
         ("moviepy",             "Legacy video utilities"),
         ("Pillow",              "Image processing"),
         ("tqdm",                "Progress bars"),
@@ -213,12 +416,15 @@ def run_checks() -> int:
     keys: list[tuple[str, bool, str]] = [
         # (env_var, required, description)
         ("ANTHROPIC_API_KEY",   True,  "Claude — AI skills pipeline (--idea mode)"),
-        ("OPENAI_API_KEY",      False, "DALL-E 3 images · TTS · GPT-4o vision"),
-        ("GEMINI_API_KEY",      False, "Gemini Flash · Imagen 3 (image fallback)"),
-        ("XAI_API_KEY",         False, "Grok — text/JSON fallback provider"),
-        ("RUNWAY_API_KEY",      False, "Runway Gen4 — real video shot generation"),
-        ("ELEVENLABS_API_KEY",  False, "TTS · Ambient/SFX · Music generation"),
+        ("OPENAI_API_KEY",      False, "GPT-Image-1.5 · TTS-HD · GPT-4.1 vision"),
+        ("GEMINI_API_KEY",      False, "Gemini 2.5 Flash · Imagen 4 (image fallback)"),
+        ("DEEPSEEK_API_KEY",    False, "DeepSeek V3.2 — text/JSON fallback provider"),
+        ("XAI_API_KEY",         False, "Grok 4 — text/JSON + Aurora image gen"),
+        ("RUNWAY_API_KEY",      False, "Runway Gen-4.5 — real video shot generation"),
+        ("ELEVENLABS_API_KEY",  False, "Eleven v3 TTS · SFX · Music generation"),
         ("SUNO_COOKIE",         False, "Suno — music generation (unofficial API)"),
+        ("BRAVE_API_KEY",       False, "Brave Search — web research for creative skills"),
+        ("DESCRIPT_API_KEY",    False, "Descript — transcription + AI editing (beta)"),
         ("AUDIOCRAFT_MODEL_DIR",False, "Local MusicGen model cache path"),
     ]
 
@@ -235,6 +441,20 @@ def run_checks() -> int:
         req_tag = " [REQUIRED]" if required else " [optional]"
         note = masked if ok else f"not set — {desc}"
         print(_row(env_var + req_tag, status, note))
+
+        # Live-validate keys that are present
+        if ok and env_var in _KEY_VALIDATORS:
+            valid, msg = _KEY_VALIDATORS[env_var]()
+            if valid:
+                print(DIM(f"    ↳ live validation              [") + OK(" PASS ") + DIM("]"))
+                if msg:
+                    print(WARN(f"       {msg}"))
+            else:
+                print(DIM(f"    ↳ live validation              [") + FAIL(" FAIL ") + DIM("]"))
+                if msg:
+                    print(FAIL(f"       {msg}"))
+                ok = False  # key is set but invalid — treat as missing
+                status = "miss" if required else "warn"
 
         if required and not ok:
             all_required_ok = False
@@ -285,9 +505,17 @@ def run_checks() -> int:
          feature_flags.get("ELEVENLABS_API_KEY", False),
          "needs ELEVENLABS_API_KEY")
 
-    feat("Real video shots (Runway Gen4)",
+    feat("Real video shots (Runway Gen-4.5)",
          feature_flags.get("RUNWAY_API_KEY", False),
          "needs RUNWAY_API_KEY")
+
+    feat("Real video shots (Google Veo 3.1)",
+         feature_flags.get("GEMINI_API_KEY", False),
+         "needs GEMINI_API_KEY (fallback when Runway unavailable)")
+
+    feat("Image generation (Grok Aurora)",
+         feature_flags.get("XAI_API_KEY", False),
+         "needs XAI_API_KEY (fallback image provider)")
 
     feat("Image-guided video (Runway img2vid)",
          feature_flags.get("RUNWAY_API_KEY", False) and (
@@ -308,6 +536,22 @@ def run_checks() -> int:
          feature_flags.get("audiocraft_pkg", False) and
          feature_flags.get("AUDIOCRAFT_MODEL_DIR", False),
          "needs audiocraft + AUDIOCRAFT_MODEL_DIR")
+
+    feat("Transcription + AI editing (Descript)",
+         feature_flags.get("DESCRIPT_API_KEY", False),
+         "needs DESCRIPT_API_KEY (beta API)")
+
+    feat("Sound effects generation (ElevenLabs SFX)",
+         feature_flags.get("ELEVENLABS_API_KEY", False),
+         "needs ELEVENLABS_API_KEY")
+
+    feat("Web research for creative skills (S02/S04/S05)",
+         feature_flags.get("BRAVE_API_KEY", False),
+         "needs BRAVE_API_KEY")
+
+    feat("LLM-optimised web context (Brave Context)",
+         feature_flags.get("BRAVE_API_KEY", False),
+         "needs BRAVE_API_KEY")
 
     feat("Video fallback: Ken Burns effect",
          ffmpeg_ok,
