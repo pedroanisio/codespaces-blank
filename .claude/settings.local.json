@@ -44,7 +44,19 @@
       "Bash(python -m pipeline.run --stub-only --idea:*)",
       "Bash(python session-02/pipeline/run.py --idea:*)",
       "Bash(python -m pipeline.run example-project.json --output-dir ./output/the-last-signal --stub-only --skip-validation)",
-      "Bash(python -m pipeline.run --idea \"A short film about a robot learning to paint\")"
+      "Bash(python -m pipeline.run --idea \"A short film about a robot learning to paint\")",
+      "Bash(python -m pipeline.run output/instance-phase16.json --output-dir /tmp/test-render --stub-only --skip-validation)",
+      "Bash(wc -l /workspaces/codespaces-blank/session-02/pipeline/*.py)",
+      "Bash(python3 -c \"import hashlib; s=''shot-001-001''; print\\(int\\(hashlib.sha256\\(s.encode\\(\\)\\).hexdigest\\(\\), 16\\) % \\(2**32\\)\\)\")",
+      "Bash(grep -n \"sound.generation\\\\|sound_generation\\\\|/v1/sound\" /workspaces/codespaces-blank/session-02/pipeline/*.py)",
+      "Bash(ffprobe /tmp/test-render/the-painted-circuit.mp4)",
+      "Bash(ffprobe /tmp/test-render/intermediate/01_concat.mp4)",
+      "Bash(ffprobe /tmp/test-render/intermediate/03_graded.mp4)",
+      "Bash(ffprobe /tmp/test-render/intermediate/02_mixed.mp4)",
+      "Bash(grep -n \"audiocraft\\\\|musicgen\\\\|music_gen\\\\|MusicGen\" /workspaces/codespaces-blank/session-02/pipeline/*.py)",
+      "Bash(ffmpeg -y -i /tmp/test-render/intermediate/03_graded.mp4 -vf \"scale=1920:1080,fps=24\" -c:v libx264 -crf 18 -preset slow -c:a aac -b:a 192k -ar 44100 /tmp/test-encode-test.mp4)",
+      "Bash(python check_env.py)",
+      "Bash(python -m pipeline.check_env)"
     ]
   }
 }
