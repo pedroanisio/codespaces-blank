@@ -1,0 +1,3395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/generative-video-project-package.schema.json",
+  "title": "Generative Video Project Package",
+  "description": "Tool-agnostic schema for programmatic creation, storage, versioning, orchestration, and assembly of video projects up to 30 minutes.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "package",
+    "project",
+    "canonicalDocuments",
+    "production",
+    "assetLibrary",
+    "orchestration",
+    "assembly",
+    "deliverables",
+    "relationships"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "package": {
+      "$ref": "#/$defs/PackageInfo"
+    },
+    "project": {
+      "$ref": "#/$defs/ProjectEntity"
+    },
+    "qualityProfiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/QualityProfileEntity"
+      }
+    },
+    "canonicalDocuments": {
+      "type": "object",
+      "required": [
+        "story",
+        "script",
+        "directorInstructions"
+      ],
+      "properties": {
+        "story": {
+          "$ref": "#/$defs/StoryEntity"
+        },
+        "script": {
+          "$ref": "#/$defs/ScriptEntity"
+        },
+        "directorInstructions": {
+          "$ref": "#/$defs/DirectorInstructionsEntity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "production": {
+      "type": "object",
+      "required": [
+        "characters",
+        "environments",
+        "props",
+        "scenes",
+        "shots"
+      ],
+      "properties": {
+        "characters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CharacterEntity"
+          }
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EnvironmentEntity"
+          }
+        },
+        "props": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PropEntity"
+          }
+        },
+        "scenes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SceneEntity"
+          }
+        },
+        "shots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShotEntity"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "assetLibrary": {
+      "type": "object",
+      "required": [
+        "visualAssets",
+        "audioAssets",
+        "marketingAssets",
+        "genericAssets"
+      ],
+      "properties": {
+        "visualAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VisualAssetEntity"
+          }
+        },
+        "audioAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AudioAssetEntity"
+          }
+        },
+        "marketingAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MarketingAssetEntity"
+          }
+        },
+        "genericAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GenericAssetEntity"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "orchestration": {
+      "$ref": "#/$defs/Orchestration"
+    },
+    "assembly": {
+      "$ref": "#/$defs/Assembly"
+    },
+    "deliverables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FinalOutputEntity"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Relationship"
+      }
+    },
+    "extensions": {
+      "$ref": "#/$defs/Extensions"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,200}$"
+    },
+    "SemVer": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?(?:\\+[A-Za-z0-9.-]+)?$"
+    },
+    "Extensions": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "StringMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "NumericOrString": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "Contributor": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "contact": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VersionSelector": {
+      "type": "object",
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "latest",
+            "latestApproved",
+            "latestPublished",
+            "semverRange",
+            "tag",
+            "branch"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "EntityRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "logicalId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "versionSelector": {
+          "$ref": "#/$defs/VersionSelector"
+        },
+        "role": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "required": [
+            "logicalId"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "Checksum": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Approval": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "unreviewed",
+            "needs_changes",
+            "approved",
+            "rejected",
+            "waived"
+          ]
+        },
+        "approvedBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Rights": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        },
+        "usageRestrictions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VersionInfo": {
+      "type": "object",
+      "required": [
+        "number",
+        "state"
+      ],
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/SemVer"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "working",
+            "review",
+            "approved",
+            "published",
+            "superseded",
+            "archived"
+          ]
+        },
+        "branch": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "changeSummary": {
+          "type": "string"
+        },
+        "derivedFrom": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "contentHash": {
+          "type": "string"
+        },
+        "releasedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "FrameRate": {
+      "type": "object",
+      "required": [
+        "fps"
+      ],
+      "properties": {
+        "fps": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "constant",
+            "variable"
+          ]
+        },
+        "timebaseNumerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "timebaseDenominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "Resolution": {
+      "type": "object",
+      "required": [
+        "width",
+        "height"
+      ],
+      "properties": {
+        "preset": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pixelAspectRatio": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "AspectRatio": {
+      "type": "object",
+      "required": [
+        "expression"
+      ],
+      "properties": {
+        "preset": {
+          "type": "string"
+        },
+        "expression": {
+          "type": "string"
+        },
+        "numerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "Timecode": {
+      "type": "object",
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "dropFrame": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TimeRange": {
+      "type": "object",
+      "properties": {
+        "startSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "endSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "startTimecode": {
+          "$ref": "#/$defs/Timecode"
+        },
+        "endTimecode": {
+          "$ref": "#/$defs/Timecode"
+        },
+        "toleranceFrames": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "TemporalConsistency": {
+      "type": "object",
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "minConsistencyScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maxFlickerScore": {
+          "type": "number",
+          "minimum": 0
+        },
+        "maxIdentityDriftScore": {
+          "type": "number",
+          "minimum": 0
+        },
+        "strategies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anchorRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CharacterCoherence": {
+      "type": "object",
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "characterRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "minSimilarityScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "lockedAttributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anchorRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "LightingGuidelines": {
+      "type": "object",
+      "properties": {
+        "mood": {
+          "type": "string"
+        },
+        "style": {
+          "type": "string"
+        },
+        "keyToFillRatio": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "backlightRatio": {
+          "type": "number",
+          "minimum": 0
+        },
+        "colorTemperatureKelvin": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "contrastStyle": {
+          "type": "string"
+        },
+        "referenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "StyleGuidelines": {
+      "type": "object",
+      "properties": {
+        "genres": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "adjectives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "textureDescriptors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cameraLanguage": {
+          "type": "string"
+        },
+        "editingLanguage": {
+          "type": "string"
+        },
+        "referenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "MotionBlurControl": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "shutterAngleDegrees": {
+          "type": "number",
+          "minimum": 0
+        },
+        "syntheticAllowed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CompressionControls": {
+      "type": "object",
+      "properties": {
+        "codec": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "bitrateMbps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "maxBitrateMbps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "gopLength": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "VideoQualityControls": {
+      "type": "object",
+      "properties": {
+        "colorGradingIntent": {
+          "type": "string"
+        },
+        "lutRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "motionBlur": {
+          "$ref": "#/$defs/MotionBlurControl"
+        },
+        "denoiseLevel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sharpenLevel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stabilizationMaxCropPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "antiFlicker": {
+          "type": "boolean"
+        },
+        "maxNoiseLevel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "continuityChecks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "compression": {
+          "$ref": "#/$defs/CompressionControls"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ValidationRule": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "metric": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string"
+        },
+        "targetValue": {},
+        "expression": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QCResult": {
+      "type": "object",
+      "required": [
+        "metric",
+        "pass"
+      ],
+      "properties": {
+        "metric": {
+          "type": "string"
+        },
+        "actualValue": {},
+        "expectedValue": {},
+        "pass": {
+          "type": "boolean"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "measuredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "QualityProfile": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "video": {
+          "type": "object",
+          "properties": {
+            "resolution": {
+              "$ref": "#/$defs/Resolution"
+            },
+            "aspectRatio": {
+              "$ref": "#/$defs/AspectRatio"
+            },
+            "frameRate": {
+              "$ref": "#/$defs/FrameRate"
+            },
+            "scanType": {
+              "type": "string"
+            },
+            "bitDepth": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "colorSpace": {
+              "type": "string"
+            },
+            "dynamicRange": {
+              "type": "string"
+            },
+            "runtimeTargetSec": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1800
+            },
+            "runtimeToleranceSec": {
+              "type": "number",
+              "minimum": 0
+            },
+            "temporalConsistency": {
+              "$ref": "#/$defs/TemporalConsistency"
+            },
+            "characterCoherence": {
+              "$ref": "#/$defs/CharacterCoherence"
+            },
+            "lighting": {
+              "$ref": "#/$defs/LightingGuidelines"
+            },
+            "style": {
+              "$ref": "#/$defs/StyleGuidelines"
+            },
+            "qualityControls": {
+              "$ref": "#/$defs/VideoQualityControls"
+            }
+          },
+          "additionalProperties": false
+        },
+        "audio": {
+          "type": "object",
+          "properties": {
+            "sampleRateHz": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "bitDepth": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "channelLayout": {
+              "type": "string"
+            },
+            "loudnessIntegratedLUFS": {
+              "type": "number"
+            },
+            "truePeakDbTP": {
+              "type": "number"
+            },
+            "dialogIntelligibilityMinScore": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "validationRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationRule"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QualityProfileEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "profile"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "qualityProfile"
+            },
+            "profile": {
+              "$ref": "#/$defs/QualityProfile"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ModelDescriptor": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "modelVersion": {
+          "type": "string"
+        },
+        "checkpoint": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "adapterRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ReferenceInput": {
+      "type": "object",
+      "required": [
+        "ref"
+      ],
+      "properties": {
+        "ref": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "role": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lockAttributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ConsistencyAnchor": {
+      "type": "object",
+      "required": [
+        "anchorType"
+      ],
+      "properties": {
+        "anchorType": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lockLevel": {
+          "type": "string",
+          "enum": [
+            "soft",
+            "medium",
+            "hard"
+          ]
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "AdapterInput": {
+      "type": "object",
+      "required": [
+        "adapterType"
+      ],
+      "properties": {
+        "adapterType": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "LogEntry": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "level": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "GenerationStep": {
+      "type": "object",
+      "required": [
+        "stepId",
+        "operationType"
+      ],
+      "properties": {
+        "stepId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "operationType": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelDescriptor"
+        },
+        "executionEnvironment": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "inputRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "outputRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "negativePrompt": {
+          "type": "string"
+        },
+        "systemPrompt": {
+          "type": "string"
+        },
+        "structuredPrompt": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "guidanceScale": {
+          "type": "number"
+        },
+        "inferenceSteps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sampler": {
+          "type": "string"
+        },
+        "scheduler": {
+          "type": "string"
+        },
+        "strength": {
+          "type": "number"
+        },
+        "cfg": {
+          "type": "number"
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "resolution": {
+          "$ref": "#/$defs/Resolution"
+        },
+        "aspectRatio": {
+          "$ref": "#/$defs/AspectRatio"
+        },
+        "frameRate": {
+          "$ref": "#/$defs/FrameRate"
+        },
+        "referenceAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReferenceInput"
+          }
+        },
+        "consistencyAnchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConsistencyAnchor"
+          }
+        },
+        "adapterInputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AdapterInput"
+          }
+        },
+        "voiceSettings": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cameraMotionHints": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "status": {
+          "type": "string"
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LogEntry"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GenerationManifest": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "ai_generated",
+            "hybrid",
+            "captured",
+            "licensed",
+            "procedural",
+            "unknown"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GenerationStep"
+          }
+        },
+        "consistencyAnchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConsistencyAnchor"
+          }
+        },
+        "reproducibility": {
+          "type": "object",
+          "properties": {
+            "deterministic": {
+              "type": "boolean"
+            },
+            "requiresExactModelVersion": {
+              "type": "boolean"
+            },
+            "requiresExactSeed": {
+              "type": "boolean"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "FileObject": {
+      "type": "object",
+      "required": [
+        "uri",
+        "mediaType"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string"
+        },
+        "storageProvider": {
+          "type": "string"
+        },
+        "mediaType": {
+          "type": "string"
+        },
+        "fileRole": {
+          "type": "string"
+        },
+        "byteSize": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "checksum": {
+          "$ref": "#/$defs/Checksum"
+        },
+        "containerFormat": {
+          "type": "string"
+        },
+        "codec": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "frameRate": {
+          "$ref": "#/$defs/FrameRate"
+        },
+        "sampleRateHz": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bitDepth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channelLayout": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "BaseEntity": {
+      "type": "object",
+      "required": [
+        "id",
+        "logicalId",
+        "entityType",
+        "name",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "logicalId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "entityType": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "in_progress",
+            "review",
+            "approved",
+            "published",
+            "archived",
+            "deprecated"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "version": {
+          "$ref": "#/$defs/VersionInfo"
+        },
+        "approval": {
+          "$ref": "#/$defs/Approval"
+        },
+        "qualityProfile": {
+          "$ref": "#/$defs/QualityProfile"
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "dependencyRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "generation": {
+          "$ref": "#/$defs/GenerationManifest"
+        },
+        "storage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FileObject"
+          }
+        },
+        "rights": {
+          "$ref": "#/$defs/Rights"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "VersioningPolicy": {
+      "type": "object",
+      "properties": {
+        "immutablePublishedVersions": {
+          "type": "boolean"
+        },
+        "defaultReferenceMode": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "latestApproved",
+            "latestPublished",
+            "semverRange",
+            "tag",
+            "branch"
+          ]
+        },
+        "requireContentHashForPublished": {
+          "type": "boolean"
+        },
+        "requireSupersedesForSameLogicalId": {
+          "type": "boolean"
+        },
+        "allowParallelBranches": {
+          "type": "boolean"
+        },
+        "approvalRequiredForDeliverables": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Governance": {
+      "type": "object",
+      "properties": {
+        "namingConventions": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "releaseCriteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validationRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationRule"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PackageInfo": {
+      "type": "object",
+      "required": [
+        "packageId",
+        "createdAt",
+        "versioningPolicy"
+      ],
+      "properties": {
+        "packageId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "schemaUri": {
+          "type": "string"
+        },
+        "versioningPolicy": {
+          "$ref": "#/$defs/VersioningPolicy"
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProjectEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "targetRuntimeSec",
+            "defaultQualityProfile"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "project"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "genres": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "audiences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "targetRuntimeSec": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1800
+            },
+            "runtimeHardLimitSec": {
+              "type": "number",
+              "const": 1800
+            },
+            "defaultQualityProfile": {
+              "$ref": "#/$defs/QualityProfile"
+            },
+            "globalCharacterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "globalEnvironmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "globalStyleRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "governance": {
+              "$ref": "#/$defs/Governance"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "StoryBeat": {
+      "type": "object",
+      "required": [
+        "beatId",
+        "name",
+        "order"
+      ],
+      "properties": {
+        "beatId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "targetRange": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "sceneRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "emotionalObjective": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "NarrativeArc": {
+      "type": "object",
+      "required": [
+        "arcId",
+        "name"
+      ],
+      "properties": {
+        "arcId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "characterRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "startBeatRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "endBeatRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "trajectory": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "StoryEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "logline",
+            "beats"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "story"
+            },
+            "logline": {
+              "type": "string"
+            },
+            "synopsis": {
+              "type": "string"
+            },
+            "premise": {
+              "type": "string"
+            },
+            "themes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tone": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "beats": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/StoryBeat"
+              }
+            },
+            "arcs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/NarrativeArc"
+              }
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "marketingHooks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ScriptSegment": {
+      "type": "object",
+      "required": [
+        "segmentId",
+        "order",
+        "segmentType"
+      ],
+      "properties": {
+        "segmentId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "segmentType": {
+          "type": "string"
+        },
+        "sceneRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "shotRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "speakerRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "text": {
+          "type": "string"
+        },
+        "spokenText": {
+          "type": "string"
+        },
+        "actionDescription": {
+          "type": "string"
+        },
+        "onScreenText": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "performanceNotes": {
+          "type": "string"
+        },
+        "audioAssetRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "subtitleText": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScriptEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "segments"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "script"
+            },
+            "format": {
+              "type": "string"
+            },
+            "segments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScriptSegment"
+              }
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "language": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "TargetedNote": {
+      "type": "object",
+      "required": [
+        "note"
+      ],
+      "properties": {
+        "targetRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "category": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DirectorInstructionsEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "visionStatement"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "directorInstructions"
+            },
+            "visionStatement": {
+              "type": "string"
+            },
+            "mustHaves": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "mustAvoid": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cameraLanguage": {
+              "type": "string"
+            },
+            "editingLanguage": {
+              "type": "string"
+            },
+            "performanceDirection": {
+              "type": "string"
+            },
+            "musicDirection": {
+              "type": "string"
+            },
+            "colorDirection": {
+              "type": "string"
+            },
+            "targetedNotes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TargetedNote"
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "VoiceProfile": {
+      "type": "object",
+      "properties": {
+        "voiceDescription": {
+          "type": "string"
+        },
+        "accent": {
+          "type": "string"
+        },
+        "pitchRange": {
+          "type": "string"
+        },
+        "speakingRateWpm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "referenceAudioRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CharacterEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "character"
+            },
+            "appearance": {
+              "type": "string"
+            },
+            "wardrobe": {
+              "type": "string"
+            },
+            "personality": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "ageRange": {
+              "type": "string"
+            },
+            "voiceProfile": {
+              "$ref": "#/$defs/VoiceProfile"
+            },
+            "canonicalPromptFragments": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "bannedTraits": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "coherenceRequirements": {
+              "$ref": "#/$defs/CharacterCoherence"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "EnvironmentEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "environment"
+            },
+            "locationType": {
+              "type": "string"
+            },
+            "architectureStyle": {
+              "type": "string"
+            },
+            "timeOfDayDefaults": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "weatherDefaults": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "continuityNotes": {
+              "type": "string"
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "PropEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "prop"
+            },
+            "category": {
+              "type": "string"
+            },
+            "continuityNotes": {
+              "type": "string"
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ShotTechnicalSpec": {
+      "type": "object",
+      "properties": {
+        "shotType": {
+          "type": "string"
+        },
+        "cameraAngle": {
+          "type": "string"
+        },
+        "cameraMovement": {
+          "type": "string"
+        },
+        "focalLengthMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "aperture": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "sensorFormat": {
+          "type": "string"
+        },
+        "stabilization": {
+          "type": "string"
+        },
+        "focusMode": {
+          "type": "string"
+        },
+        "focusDistanceM": {
+          "type": "number",
+          "minimum": 0
+        },
+        "whiteBalanceKelvin": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "exposureNotes": {
+          "type": "string"
+        },
+        "framing": {
+          "type": "string"
+        },
+        "compositionNotes": {
+          "type": "string"
+        },
+        "lighting": {
+          "$ref": "#/$defs/LightingGuidelines"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleGuidelines"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SyncPoint": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "time": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "anchorRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "toleranceFrames": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "beat": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "TransitionSpec": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "SceneEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "sceneNumber",
+            "shotRefs",
+            "targetDurationSec"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "scene"
+            },
+            "sceneNumber": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "synopsis": {
+              "type": "string"
+            },
+            "storyBeatRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "scriptSegmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "directorNoteRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "characterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "environmentRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "propRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "timeOfDay": {
+              "type": "string"
+            },
+            "weather": {
+              "type": "string"
+            },
+            "mood": {
+              "type": "string"
+            },
+            "targetDurationSec": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "plannedPosition": {
+              "$ref": "#/$defs/TimeRange"
+            },
+            "shotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "transitionIn": {
+              "$ref": "#/$defs/TransitionSpec"
+            },
+            "transitionOut": {
+              "$ref": "#/$defs/TransitionSpec"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "AssemblyHints": {
+      "type": "object",
+      "properties": {
+        "track": {
+          "type": "string"
+        },
+        "layerOrder": {
+          "type": "integer"
+        },
+        "speedPercent": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reverse": {
+          "type": "boolean"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "blendMode": {
+          "type": "string"
+        },
+        "transitionIn": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "transitionOut": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "runtimeHints": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ShotEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "sceneRef",
+            "shotNumber",
+            "targetDurationSec",
+            "technicalSpec"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "shot"
+            },
+            "sceneRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "shotNumber": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "targetDurationSec": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "plannedPosition": {
+              "$ref": "#/$defs/TimeRange"
+            },
+            "characterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "environmentRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "propRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "scriptSegmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "audioCueRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "technicalSpec": {
+              "$ref": "#/$defs/ShotTechnicalSpec"
+            },
+            "continuityNotes": {
+              "type": "string"
+            },
+            "vfxNotes": {
+              "type": "string"
+            },
+            "assemblyHints": {
+              "$ref": "#/$defs/AssemblyHints"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "VisualAssetSpec": {
+      "type": "object",
+      "properties": {
+        "resolution": {
+          "$ref": "#/$defs/Resolution"
+        },
+        "aspectRatio": {
+          "$ref": "#/$defs/AspectRatio"
+        },
+        "frameRate": {
+          "$ref": "#/$defs/FrameRate"
+        },
+        "dominantPalette": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lighting": {
+          "$ref": "#/$defs/LightingGuidelines"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleGuidelines"
+        },
+        "continuityNotes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VisualAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "visualType",
+            "modality"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "visualAsset"
+            },
+            "visualType": {
+              "type": "string"
+            },
+            "modality": {
+              "type": "string",
+              "enum": [
+                "image",
+                "video",
+                "vector",
+                "3d",
+                "depth",
+                "mask",
+                "alpha",
+                "document",
+                "other"
+              ]
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "referenceRole": {
+              "type": "string"
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "shotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "characterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "environmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "isCanonicalReference": {
+              "type": "boolean"
+            },
+            "spec": {
+              "$ref": "#/$defs/VisualAssetSpec"
+            },
+            "variantSetId": {
+              "$ref": "#/$defs/Identifier"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "AudioTechnicalSpec": {
+      "type": "object",
+      "properties": {
+        "sampleRateHz": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bitDepth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channelLayout": {
+          "type": "string"
+        },
+        "loudnessLUFS": {
+          "type": "number"
+        },
+        "truePeakDbTP": {
+          "type": "number"
+        },
+        "tempoBpm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "musicalKey": {
+          "type": "string"
+        },
+        "timeSignature": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AudioAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "audioType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "audioAsset"
+            },
+            "audioType": {
+              "type": "string"
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "speakerRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "characterRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "transcript": {
+              "type": "string"
+            },
+            "lyrics": {
+              "type": "string"
+            },
+            "mood": {
+              "type": "string"
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "shotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "syncPoints": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SyncPoint"
+              }
+            },
+            "technicalSpec": {
+              "$ref": "#/$defs/AudioTechnicalSpec"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "CopyPack": {
+      "type": "object",
+      "properties": {
+        "headline": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "cta": {
+          "type": "string"
+        },
+        "hashtags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "altText": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MarketingAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "marketingType",
+            "targetPlatforms"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "marketingAsset"
+            },
+            "marketingType": {
+              "type": "string"
+            },
+            "campaignId": {
+              "$ref": "#/$defs/Identifier"
+            },
+            "targetPlatforms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "durationSec": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1800
+            },
+            "sourceSceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "sourceShotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "sourceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "copy": {
+              "$ref": "#/$defs/CopyPack"
+            },
+            "assemblyPlanRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "thumbnailSourceRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "GenericAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "assetClass"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "genericAsset"
+            },
+            "assetClass": {
+              "type": "string"
+            },
+            "modality": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "Transform": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scale": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "rotationDegrees": {
+          "type": "number"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "crop": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "blendMode": {
+          "type": "string"
+        },
+        "maskRef": {
+          "$ref": "#/$defs/EntityRef"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RetimeSpec": {
+      "type": "object",
+      "properties": {
+        "speedPercent": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reverse": {
+          "type": "boolean"
+        },
+        "frameInterpolation": {
+          "type": "string"
+        },
+        "freezeFrames": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Operation": {
+      "type": "object",
+      "required": [
+        "opId",
+        "opType"
+      ],
+      "properties": {
+        "opId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "opType": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "compatibleRuntimes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "runtimeHints": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "TimelineClip": {
+      "type": "object",
+      "required": [
+        "clipId",
+        "sourceRef",
+        "timelineStartSec",
+        "durationSec"
+      ],
+      "properties": {
+        "clipId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "sourceInSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sourceOutSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "timelineStartSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "layerOrder": {
+          "type": "integer"
+        },
+        "transform": {
+          "$ref": "#/$defs/Transform"
+        },
+        "retime": {
+          "$ref": "#/$defs/RetimeSpec"
+        },
+        "syncPoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SyncPoint"
+          }
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Operation"
+          }
+        },
+        "transitionIn": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "transitionOut": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "runtimeHints": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "TimelineTrack": {
+      "type": "object",
+      "required": [
+        "trackId",
+        "kind",
+        "clips"
+      ],
+      "properties": {
+        "trackId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "video",
+            "audio",
+            "text",
+            "mask",
+            "data"
+          ]
+        },
+        "clips": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TimelineClip"
+          }
+        },
+        "mute": {
+          "type": "boolean"
+        },
+        "solo": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Marker": {
+      "type": "object",
+      "properties": {
+        "markerId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "time": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "color": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TimelineEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "timebase",
+            "tracks"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "timeline"
+            },
+            "timelineType": {
+              "type": "string"
+            },
+            "timebase": {
+              "$ref": "#/$defs/FrameRate"
+            },
+            "startTimecode": {
+              "$ref": "#/$defs/Timecode"
+            },
+            "durationSec": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1800
+            },
+            "tracks": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TimelineTrack"
+              }
+            },
+            "markers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Marker"
+              }
+            },
+            "compatibleRuntimes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "runtimeHints": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "EditVersionEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "timelineRef"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "editVersion"
+            },
+            "timelineRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "changeList": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "approvedForRender": {
+              "type": "boolean"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "RenderPlanEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "sourceTimelineRef",
+            "operations"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "renderPlan"
+            },
+            "sourceTimelineRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "targetOutputRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "compatibleRuntimes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Operation"
+              }
+            },
+            "colorPipeline": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "runtimeHints": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "Assembly": {
+      "type": "object",
+      "required": [
+        "timelines",
+        "editVersions",
+        "renderPlans"
+      ],
+      "properties": {
+        "timelines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TimelineEntity"
+          }
+        },
+        "editVersions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EditVersionEntity"
+          }
+        },
+        "renderPlans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RenderPlanEntity"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "WorkflowNode": {
+      "type": "object",
+      "required": [
+        "nodeId",
+        "nodeType"
+      ],
+      "properties": {
+        "nodeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nodeType": {
+          "type": "string"
+        },
+        "assetRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "operationRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "executor": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            },
+            "compatibleRuntimes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "environment": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "retryPolicy": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cacheKey": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "WorkflowEdge": {
+      "type": "object",
+      "required": [
+        "fromNodeId",
+        "toNodeId"
+      ],
+      "properties": {
+        "fromNodeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "toNodeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "WorkflowGraph": {
+      "type": "object",
+      "required": [
+        "workflowId",
+        "nodes",
+        "edges"
+      ],
+      "properties": {
+        "workflowId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowNode"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowEdge"
+          }
+        },
+        "runtimeHints": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Orchestration": {
+      "type": "object",
+      "required": [
+        "workflows"
+      ],
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowGraph"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "FinalOutputEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "outputType",
+            "runtimeSec",
+            "sourceTimelineRef",
+            "renderPlanRef"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "finalOutput"
+            },
+            "outputType": {
+              "type": "string"
+            },
+            "platform": {
+              "type": "string"
+            },
+            "releaseChannel": {
+              "type": "string"
+            },
+            "runtimeSec": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1800
+            },
+            "sourceTimelineRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "sourceEditRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "renderPlanRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "sourceOutputRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "qcResults": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/QCResult"
+              }
+            },
+            "publicationMetadata": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "Relationship": {
+      "type": "object",
+      "required": [
+        "relationshipId",
+        "relationshipType",
+        "from",
+        "to"
+      ],
+      "properties": {
+        "relationshipId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "relationshipType": {
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "to": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
