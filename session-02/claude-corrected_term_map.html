@@ -1,0 +1,295 @@
+
+<style>
+*{box-sizing:border-box}
+body{margin:0}
+.root{font-size:13px;color:var(--color-text-primary);line-height:1.5;padding:12px}
+.section-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-tertiary);margin:18px 0 6px}
+.axis-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.axis-box{padding:10px 12px;border-radius:8px;background:var(--color-background-secondary)}
+.axis-name{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.axis-desc{font-size:12px;color:var(--color-text-secondary)}
+.pipeline{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pipe-col{border-radius:8px;overflow:hidden}
+.pipe-head{padding:7px 10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.pipe-head.pre{background:#E1F5EE;color:#085041}
+.pipe-head.prod{background:#E6F1FB;color:#0C447C}
+.pipe-head.post{background:#EEEDFE;color:#3C3489}
+@media(prefers-color-scheme:dark){
+.pipe-head.pre{background:#04342C;color:#9FE1CB}
+.pipe-head.prod{background:#042C53;color:#85B7EB}
+.pipe-head.post{background:#26215C;color:#AFA9EC}
+}
+.pipe-body{background:var(--color-background-secondary);padding:8px 10px;display:flex;flex-direction:column;gap:5px}
+.pipe-term{display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-radius:6px;cursor:pointer;transition:opacity .15s}
+.pipe-term:hover{opacity:.65}
+.pt-name{font-size:12px;font-weight:500;color:var(--color-text-primary);white-space:nowrap}
+.pt-role{font-size:11px;color:var(--color-text-tertiary)}
+.dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.d-teal{background:#1D9E75}
+.d-blue{background:#378ADD}
+.d-purple{background:#7F77DD}
+.d-amber{background:#BA7517}
+.d-coral{background:#D85A30}
+.d-pink{background:#D4537E}
+.d-gray{background:#888780}
+.term-grid{display:flex;flex-direction:column;gap:6px}
+.term-card{border-radius:8px;border:1px solid var(--color-border-tertiary);overflow:hidden}
+.tc-head{display:grid;grid-template-columns:1fr auto;align-items:center;padding:9px 12px;background:var(--color-background-secondary);cursor:pointer;gap:8px}
+.tc-head:hover .tc-name{opacity:.7}
+.tc-name{font-size:13px;font-weight:500}
+.tc-badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap}
+.b-audio{background:#E1F5EE;color:#085041}
+.b-visual{background:#EEEDFE;color:#3C3489}
+.b-pre{background:#E1F5EE;color:#085041}
+.b-prod{background:#E6F1FB;color:#0C447C}
+.b-post{background:#EEEDFE;color:#3C3489}
+.b-d{background:#FAEEDA;color:#633806}
+.b-nd{background:#F1EFE8;color:#444441}
+.b-both{background:#FAECE7;color:#712B13}
+.b-fmt{background:#FBEAF0;color:#72243E}
+@media(prefers-color-scheme:dark){
+.b-audio{background:#04342C;color:#9FE1CB}
+.b-visual{background:#26215C;color:#AFA9EC}
+.b-pre{background:#04342C;color:#9FE1CB}
+.b-prod{background:#042C53;color:#85B7EB}
+.b-post{background:#26215C;color:#AFA9EC}
+.b-d{background:#412402;color:#FAC775}
+.b-nd{background:#2C2C2A;color:#B4B2A9}
+.b-both{background:#4A1B0C;color:#F5C4B3}
+.b-fmt{background:#4B1528;color:#ED93B1}
+}
+.tc-body{padding:9px 12px;font-size:12px;color:var(--color-text-secondary);border-top:1px solid var(--color-border-tertiary);display:none}
+.tc-body.open{display:block}
+.tc-note{margin-top:6px;padding:6px 8px;border-radius:5px;background:var(--color-background-tertiary);font-size:11px;color:var(--color-text-tertiary)}
+.ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ov-card{padding:10px 12px;border-radius:8px;background:var(--color-background-secondary);border-left:2px solid var(--color-border-secondary);cursor:pointer}
+.ov-card:hover{opacity:.75}
+.ov-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px}
+.ov-body{font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.ov-card.real{border-left-color:#1D9E75}
+.ov-card.op{border-left-color:#378ADD}
+.ov-card.no{border-left-color:#E24B4A}
+.divider{height:1px;background:var(--color-border-tertiary);margin:4px 0}
+</style>
+
+<div class="root">
+
+<div class="section-label">Correct organizing axes (replacing false style/FX binary)</div>
+<div class="axis-strip">
+  <div class="axis-box">
+    <div class="axis-name">Axis 1 — Domain</div>
+    <div class="axis-desc">Audio vs. Visual. Clean, non-overlapping. The only axis from the previous map that holds.</div>
+  </div>
+  <div class="axis-box">
+    <div class="axis-name">Axis 2 — Vocabulary type</div>
+    <div class="axis-desc">Aesthetic (what it looks/sounds like) vs. Operational (who does it, at which pipeline stage). Most terms straddle both — that is the real source of confusion.</div>
+  </div>
+</div>
+<div class="axis-strip">
+  <div class="axis-box">
+    <div class="axis-name">Axis 3 — Diegetic status</div>
+    <div class="axis-desc">Diegetic: exists within the fiction (a lamp in the scene). Non-diegetic: imposed by the author (a stylistic flare, a score). Several terms live on both sides depending on use.</div>
+  </div>
+  <div class="axis-box">
+    <div class="axis-name">Axis 4 — Pipeline stage</div>
+    <div class="axis-desc">Pre-production (design/concept), Production (capture/record), Post-production (DI, VFX, sound mix). Terms are not interchangeable across stages.</div>
+  </div>
+</div>
+
+<div class="section-label">Industry pipeline placement</div>
+<div class="pipeline">
+  <div class="pipe-col">
+    <div class="pipe-head pre">Pre-production</div>
+    <div class="pipe-body">
+      <div class="pipe-term" onclick="sendPrompt('What graphics style decisions are made in pre-production? Who owns them?')">
+        <div class="dot d-purple"></div>
+        <div><div class="pt-name">Graphics style</div><div class="pt-role">Art director / production designer</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('How does graphic novel visual language function as a format, not a style category?')">
+        <div class="dot d-pink"></div>
+        <div><div class="pt-name">Graphic novel (format)</div><div class="pt-role">Artist / writer — concept</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('When is light style decided in pre-production vs on set?')">
+        <div class="dot d-amber"></div>
+        <div><div class="pt-name">Light style (concept)</div><div class="pt-role">DP — lookbook phase</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="pipe-col">
+    <div class="pipe-head prod">Production</div>
+    <div class="pipe-body">
+      <div class="pipe-term" onclick="sendPrompt('What does the DP control on set regarding light style and light FX?')">
+        <div class="dot d-amber"></div>
+        <div><div class="pt-name">Light style / Light FX</div><div class="pt-role">DP + gaffer — on set</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('When does soundtrack composition begin relative to production?')">
+        <div class="dot d-teal"></div>
+        <div><div class="pt-name">Soundtrack (temp/scoring starts)</div><div class="pt-role">Composer / music supervisor</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('How is sound FX captured on set vs designed in post?')">
+        <div class="dot d-teal"></div>
+        <div><div class="pt-name">Sound FX (on-set capture)</div><div class="pt-role">Production sound mixer</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="pipe-col">
+    <div class="pipe-head post">Post-production</div>
+    <div class="pipe-body">
+      <div class="pipe-term" onclick="sendPrompt('What is DI (Digital Intermediate)? How does it differ from VFX?')">
+        <div class="dot d-purple"></div>
+        <div><div class="pt-name">Color style + Color FX</div><div class="pt-role">Colorist — DI (not VFX)</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('What does VFX actually mean in a production pipeline? What does it not include?')">
+        <div class="dot d-purple"></div>
+        <div><div class="pt-name">Visual FX (VFX proper)</div><div class="pt-role">VFX supervisor + compositors</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('What is motion graphics and how does it differ from VFX?')">
+        <div class="dot d-purple"></div>
+        <div><div class="pt-name">Graphic FX (motion graphics)</div><div class="pt-role">Motion graphics artist — separate from VFX</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('How does final soundtrack differ from the temp track or production score?')">
+        <div class="dot d-teal"></div>
+        <div><div class="pt-name">Soundtrack (final mix)</div><div class="pt-role">Re-recording mixer</div></div>
+      </div>
+      <div class="pipe-term" onclick="sendPrompt('How is sound FX designed in post? Foley vs designed vs library?')">
+        <div class="dot d-teal"></div>
+        <div><div class="pt-name">Sound FX (Foley + design)</div><div class="pt-role">Sound designer / Foley artist</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-label">Term definitions — corrected (click to expand)</div>
+<div class="term-grid">
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Soundtrack</div>
+    <div class="tc-badges"><span class="badge b-audio">audio</span><span class="badge b-both">diegetic or non-diegetic</span></div>
+  </div>
+  <div class="tc-body">Composed or licensed music synchronized to the work. Can be non-diegetic (score — exists only for the audience) or diegetic (source music — playing within the scene). The distinction matters: diegetic music can be interrupted, reacted to, or turned off by characters. Owned by composer and music supervisor. Delivered as stems to the re-recording mixer.
+  <div class="tc-note">Overlap zone: Sound FX — when compositional sound design is used as score (e.g. Zimmer's Interstellar, industrial music). The border dissolves intentionally in these cases.</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Sound FX</div>
+    <div class="tc-badges"><span class="badge b-audio">audio</span><span class="badge b-both">diegetic or non-diegetic</span></div>
+  </div>
+  <div class="tc-body">Designed audio events attached to actions, objects, or transitions. Diegetic when tied to on-screen events (footsteps, gunshots, doors). Non-diegetic when used editorially (whooshes on title cards, stylized impact frames). Produced by sound designers and Foley artists in post; some captured on set by the production sound department.
+  <div class="tc-note">Overlap zone: Soundtrack — in ambient, industrial, and scored-effects work. Also overlaps with graphic FX when sound accompanies visual transitions (a motion graphic whoosh is both a graphic FX and a sound FX).</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Visual FX (VFX) — corrected scope</div>
+    <div class="tc-badges"><span class="badge b-visual">visual</span><span class="badge b-post">post</span><span class="badge b-both">diegetic or non-diegetic</span></div>
+  </div>
+  <div class="tc-body">In the production industry, VFX means: compositing, CGI, matte painting, wire removal, environment replacement — i.e. content modification or augmentation of live-action footage. It does NOT contain color grading (DI) or motion graphics, which are separate disciplines with separate credits, tools, and vendors.
+  <div class="tc-note">Previous map error: "Visual FX ⊃ {light FX, color FX, graphic FX}" was incorrect. VFX may receive a light FX pass (e.g. a CG lens flare) and may composite motion graphics, but those are collaboration points, not containment. Color grading is DI, owned by the colorist, not the VFX supervisor.</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Graphic FX (motion graphics)</div>
+    <div class="tc-badges"><span class="badge b-visual">visual</span><span class="badge b-post">post</span><span class="badge b-nd">non-diegetic (typically)</span></div>
+  </div>
+  <div class="tc-body">Title cards, lower thirds, stylized transitions, kinetic typography, animated overlays. Produced by motion graphics artists in post using tools like After Effects or Cinema 4D. Typically non-diegetic (the audience sees them; characters do not). Composited into the final picture but produced independently of the VFX pipeline.
+  <div class="tc-note">Operational overlap with VFX: graphic FX elements are often delivered to the VFX department for compositing into a shot. That is a handoff, not containment.</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Light style</div>
+    <div class="tc-badges"><span class="badge b-visual">visual</span><span class="badge b-prod">production</span><span class="badge b-both">diegetic or non-diegetic</span></div>
+  </div>
+  <div class="tc-body">The DP's recurring aesthetic language for lighting: hardness/softness, directionality, color temperature, motivated vs. unmotivated sources. Decided in pre-production (lookbook, references) and executed on set. Diegetic when light sources exist in the scene (a window, a candle); non-diegetic when light is unmotivated and purely stylistic.
+  <div class="tc-note">Physical co-determination with color style: the color temperature of light sources on set directly determines the color palette. A DP choosing tungsten vs. daylight makes a color style decision simultaneously. These are not separate — they are one physical decision expressed in two vocabularies.</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Light FX</div>
+    <div class="tc-badges"><span class="badge b-visual">visual</span><span class="badge b-both">production or post</span><span class="badge b-both">diegetic or non-diegetic</span></div>
+  </div>
+  <div class="tc-body">Specific lighting effects: lens flares, god rays, volumetric shafts, light leaks, halos. Can be practical (achieved on set by the DP with physical gels, practical sources, or lens choices) or synthetic (added in VFX or DI in post). Same aesthetic result; different production route and different crew credit.
+  <div class="tc-note">This is one of the few terms that genuinely spans production and post — the same effect can be created in either stage. It is therefore an aesthetic term (what it looks like) more than an operational one.</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Color style</div>
+    <div class="tc-badges"><span class="badge b-visual">visual</span><span class="badge b-both">pre + post</span><span class="badge b-nd">non-diegetic</span></div>
+  </div>
+  <div class="tc-body">The color language of the work: palette, saturation, hue bias, contrast relationship. Decided conceptually in pre-production (lookbook, reference stills) and executed in post by the colorist in the DI. Always non-diegetic — characters do not perceive the grade. Owned aesthetically by the director and DP; executed operationally by the colorist.
+  <div class="tc-note">Near-synonym with color FX in practice: the DI session where color style is defined is the same session where color FX passes are applied. The distinction is conceptual (intent vs. technique), not operational.</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Color FX</div>
+    <div class="tc-badges"><span class="badge b-visual">visual</span><span class="badge b-post">post — DI</span><span class="badge b-nd">non-diegetic</span></div>
+  </div>
+  <div class="tc-body">Specific color transformations applied as effects: LUTs, bleach bypass, cross-processing simulation, sky replacement grades, selective color isolation. Applied by the colorist in DI using tools like DaVinci Resolve. Operationally identical to color style — both happen in the same DI session — but color FX refers to specific, identifiable passes rather than the overall aesthetic direction.
+  <div class="tc-note">DI is not VFX. The colorist is not a VFX artist. The tools, deliverables, union classifications, and vendor relationships are separate. Color FX lives in the DI pipeline, not the VFX pipeline.</div>
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Graphics style</div>
+    <div class="tc-badges"><span class="badge b-visual">visual</span><span class="badge b-pre">pre-production</span><span class="badge b-nd">non-diegetic</span></div>
+  </div>
+  <div class="tc-body">The overall visual design language: line quality, rendering approach, typographic system, spatial grammar, palette logic. Set in pre-production. In film: the production design and title sequence aesthetic. In illustration/comics: the mark-making system (line weight, fill, halftone, hatching, panel structure). Not a synonym for "graphic novel" — it is the language; graphic novel is one of many formats that language can appear in.
+  </div>
+</div>
+
+<div class="term-card">
+  <div class="tc-head" onclick="this.nextElementSibling.classList.toggle('open')">
+    <div class="tc-name">Graphic novel — corrected: format, not style</div>
+    <div class="tc-badges"><span class="badge b-fmt">format</span><span class="badge b-pre">pre-production</span></div>
+  </div>
+  <div class="tc-body">A publication format: long-form sequential art in book form. Not a style. The visual styles within graphic novels span ligne claire (Hergé, Moebius), high-contrast ink (Frank Miller), painted realism (Alex Ross), collage (Dave McKean), and many others. Invoking "graphic novel" as a visual reference is invoking a format that contains dozens of incompatible styles. The useful question is: which specific graphic novel visual conventions — panel borders, speech bubble morphology, halftone, ink weight, color flatness — are being referenced?
+  <div class="tc-note">Previous map error: "graphic novel ⊂ graphics style" was a category inversion. A graphic novel is a container for a graphics style, not a subtype of one.</div>
+  </div>
+</div>
+
+</div>
+
+<div class="section-label">Corrected overlaps — three types</div>
+<div class="ov-grid">
+  <div class="ov-card real" onclick="sendPrompt('Why are light style and color style physically co-determined? How does a DP\'s lighting choice make a color decision?')">
+    <div class="ov-title">Light style ↔ color style — physical co-determination</div>
+    <div class="ov-body">Color temperature of light sources on set determines the color palette. One physical decision; two vocabulary entries. Real and unavoidable overlap.</div>
+  </div>
+  <div class="ov-card real" onclick="sendPrompt('Why are color style and color FX operationally synonymous? What happens in a DI session?')">
+    <div class="ov-title">Color style ≈ color FX — same DI session</div>
+    <div class="ov-body">Both executed by the colorist in DI. The distinction is conceptual (aesthetic intent vs. applied pass), not operational. Near-synonym in practice.</div>
+  </div>
+  <div class="ov-card real" onclick="sendPrompt('Where exactly does sound design become compositional? Give examples from film scores.')">
+    <div class="ov-title">Soundtrack ∩ sound FX — when sound design is compositional</div>
+    <div class="ov-body">In works like Interstellar, The Social Network, or Apocalypse Now's helicopter opening, the border dissolves intentionally. Sound FX become the score.</div>
+  </div>
+  <div class="ov-card op" onclick="sendPrompt('How does light FX differ when produced on set by the DP vs. synthetically in post by VFX?')">
+    <div class="ov-title">Light FX — production OR post (same aesthetic, different crew)</div>
+    <div class="ov-body">A lens flare can be practical (DP on set) or CG (VFX in post). Same visual result; different pipeline, credit, and cost. Operational split, not semantic.</div>
+  </div>
+  <div class="ov-card op" onclick="sendPrompt('How do motion graphics get composited into VFX shots? Is that containment or collaboration?')">
+    <div class="ov-title">Graphic FX ↔ VFX — handoff, not containment</div>
+    <div class="ov-body">Motion graphics are often delivered to VFX for compositing into shots. That is a pipeline handoff between two separate disciplines, not one containing the other.</div>
+  </div>
+  <div class="ov-card no" onclick="sendPrompt('Why does VFX not contain color grading? What is DI and how is it structured as a separate discipline?')">
+    <div class="ov-title">VFX does NOT contain color grading — previous map error</div>
+    <div class="ov-body">Color grading is DI. Separate tools (DaVinci Resolve), separate credit (colorist), separate vendor, separate union. The colorist does not report to the VFX supervisor.</div>
+  </div>
+</div>
+
+</div>

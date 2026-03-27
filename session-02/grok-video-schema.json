@@ -1,0 +1,507 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.videogen.ai/video-project-v1.0.json",
+  "title": "VideoProject",
+  "description": "Comprehensive, tool-agnostic JSON Schema for a complete video production project (up to 30 minutes). Supports hierarchical assets, versioning, generative-AI parameters, quality specifications, and programmatic assembly with MoviePy, Movis, OpenCV, PyAV, or Manim. All generative fields are extensible via provider/model-specific parameters and additionalProperties.",
+  "type": "object",
+  "required": [
+    "projectId",
+    "title",
+    "version",
+    "globalSpecifications",
+    "narrativeArc",
+    "fullScript",
+    "directorsInstructions",
+    "scenes",
+    "visualAssets",
+    "audioAssets",
+    "assemblyInstructions",
+    "finalOutputs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "projectId": {
+      "type": "string",
+      "description": "Globally unique project identifier (UUID recommended)."
+    },
+    "title": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the entire project (e.g., '1.2.3'). Bumping follows standard rules when any asset or instruction changes.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "globalSpecifications": {
+      "$ref": "#/$defs/GlobalSpecifications"
+    },
+    "narrativeArc": {
+      "$ref": "#/$defs/NarrativeArc"
+    },
+    "fullScript": {
+      "$ref": "#/$defs/FullScript"
+    },
+    "directorsInstructions": {
+      "$ref": "#/$defs/DirectorsInstructions"
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Scene"
+      },
+      "minItems": 1,
+      "description": "Ordered list of scenes. Each scene references its shots; shots reference assets."
+    },
+    "visualAssets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/VisualAsset"
+      },
+      "description": "Map of visualAssetId → VisualAsset. Assets may be shared across shots/scenes."
+    },
+    "audioAssets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/AudioAsset"
+      },
+      "description": "Map of audioAssetId → AudioAsset."
+    },
+    "marketingMaterials": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/MarketingMaterial"
+      },
+      "description": "Map of marketingAssetId → MarketingMaterial (trailers, thumbnails, etc.)."
+    },
+    "finalOutputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FinalOutput"
+      },
+      "description": "Versioned final video renders with their assembly provenance."
+    },
+    "assemblyInstructions": {
+      "$ref": "#/$defs/AssemblyInstructions"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sourceId": { "type": "string" },
+          "targetId": { "type": "string" },
+          "type": { "enum": ["requires", "references", "derivedFrom"] }
+        },
+        "required": ["sourceId", "targetId", "type"]
+      },
+      "description": "Explicit cross-asset dependency graph for orchestration and validation."
+    }
+  },
+  "$defs": {
+    "GlobalSpecifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolution", "aspectRatio", "frameRate"],
+      "properties": {
+        "resolution": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": ["720p", "1080p", "1440p", "4K", "8K"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "width": { "type": "integer", "minimum": 1 },
+                "height": { "type": "integer", "minimum": 1 }
+              },
+              "required": ["width", "height"]
+            }
+          ]
+        },
+        "aspectRatio": {
+          "type": "string",
+          "examples": ["16:9", "9:16", "2.35:1", "1:1", "4:5"],
+          "description": "Can be overridden per-shot or per-output."
+        },
+        "frameRate": {
+          "type": "number",
+          "examples": [24, 30, 60],
+          "description": "fps"
+        },
+        "maxDurationSeconds": {
+          "type": "number",
+          "maximum": 1800,
+          "default": 1800
+        },
+        "qualityControls": {
+          "type": "object",
+          "properties": {
+            "temporalConsistency": {
+              "type": "string",
+              "enum": ["strict", "medium", "relaxed"],
+              "description": "Enforced across shots via consistency anchors."
+            },
+            "characterCoherence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "cinematicLighting": { "type": "string" },
+            "colorGrading": { "type": "string" },
+            "motionBlur": { "type": "boolean" },
+            "depthOfField": { "type": "string" },
+            "additionalControls": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "styleGuidelines": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "NarrativeArc": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "structure": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "act": { "type": "string" },
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "keyEvents": { "type": "array", "items": { "type": "string" } },
+              "emotionalTone": { "type": "string" }
+            },
+            "required": ["act", "description"]
+          }
+        },
+        "themes": { "type": "array", "items": { "type": "string" } },
+        "targetLengthSeconds": { "type": "number" }
+      }
+    },
+    "FullScript": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fullText": { "type": "string" },
+        "timedSegments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "startTimeSeconds": { "type": "number" },
+              "endTimeSeconds": { "type": "number" },
+              "sceneId": { "type": "string" },
+              "shotId": { "type": "string" },
+              "dialogue": { "type": "string" },
+              "actionDescription": { "type": "string" },
+              "speaker": { "type": "string" }
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "DirectorsInstructions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overallVision": { "type": "string" },
+        "toneAndMood": { "type": "string" },
+        "styleReferences": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-text or URLs; can also reference visualAssetIds."
+        },
+        "perSceneOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "vision": { "type": "string" },
+              "cameraStyle": { "type": "string" }
+            }
+          }
+        },
+        "targetAudience": { "type": "string" }
+      }
+    },
+    "Scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sceneId", "title", "shots"],
+      "properties": {
+        "sceneId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "startTimeSeconds": { "type": "number" },
+        "endTimeSeconds": { "type": "number" },
+        "shots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Shot" }
+        },
+        "directorNotes": { "type": "string" }
+      }
+    },
+    "Shot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shotId", "durationSeconds"],
+      "properties": {
+        "shotId": { "type": "string" },
+        "durationSeconds": { "type": "number" },
+        "visualSpecification": {
+          "type": "object",
+          "properties": {
+            "cameraMovement": { "type": "string", "enum": ["static", "pan", "tilt", "zoom", "dolly", "tracking", "orbit", "custom"] },
+            "angle": { "type": "string", "enum": ["eye-level", "low", "high", "dutch", "over-the-shoulder"] },
+            "lighting": { "type": "string" },
+            "composition": { "type": "string" },
+            "basePrompt": { "type": "string" }
+          }
+        },
+        "generativeParams": {
+          "$ref": "#/$defs/GenerationConfig"
+        },
+        "visualAssetReference": {
+          "type": "object",
+          "properties": {
+            "assetId": { "type": "string" },
+            "versionId": { "type": "string" }
+          }
+        },
+        "audioSyncPoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "audioAssetId": { "type": "string" },
+              "offsetSeconds": { "type": "number" },
+              "durationSeconds": { "type": "number" }
+            }
+          }
+        },
+        "transition": {
+          "type": "string",
+          "description": "e.g., 'fade', 'cut', 'dissolve'"
+        }
+      }
+    },
+    "GenerationConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Any current/future tool: 'runway', 'kling', 'luma', 'pika', 'midjourney', 'elevenlabs', 'stable-diffusion', 'custom', etc."
+        },
+        "modelId": { "type": "string" },
+        "modelVersion": { "type": "string" },
+        "prompt": { "type": "string" },
+        "negativePrompt": { "type": "string" },
+        "seed": { "type": "integer" },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Tool-specific key/value pairs (e.g., motionStrength, cfgScale, steps, duration, etc.)."
+        },
+        "consistencyAnchors": {
+          "type": "object",
+          "properties": {
+            "characterReferences": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "visualAssetIds of character references"
+            },
+            "styleReferences": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "environmentReferences": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "ipAdapterConfig": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "VisualAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "type", "versions"],
+      "properties": {
+        "assetId": { "type": "string" },
+        "type": {
+          "enum": ["image", "storyboard", "character-reference", "environment-reference", "video-clip", "animated-sequence"]
+        },
+        "description": { "type": "string" },
+        "associatedShotIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "versionId": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" },
+              "status": { "enum": ["draft", "approved", "rejected", "final"] },
+              "generationConfig": { "$ref": "#/$defs/GenerationConfig" },
+              "outputReference": {
+                "type": "object",
+                "properties": {
+                  "filePath": { "type": "string" },
+                  "url": { "type": "string", "format": "uri" },
+                  "format": { "type": "string" },
+                  "durationSeconds": { "type": "number" },
+                  "checksum": { "type": "string" }
+                }
+              },
+              "qualityMetrics": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "required": ["versionId", "status"]
+          }
+        },
+        "currentVersionId": { "type": "string" }
+      }
+    },
+    "AudioAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "type", "versions"],
+      "properties": {
+        "assetId": { "type": "string" },
+        "type": {
+          "enum": ["voice-over", "dialogue", "music", "sound-effect", "ambient"]
+        },
+        "description": { "type": "string" },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "versionId": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" },
+              "status": { "enum": ["draft", "approved", "rejected", "final"] },
+              "generationConfig": { "$ref": "#/$defs/GenerationConfig" },
+              "outputReference": {
+                "type": "object",
+                "properties": {
+                  "filePath": { "type": "string" },
+                  "url": { "type": "string", "format": "uri" },
+                  "format": { "type": "string" },
+                  "durationSeconds": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "currentVersionId": { "type": "string" }
+      }
+    },
+    "MarketingMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "assetId": { "type": "string" },
+        "type": {
+          "enum": ["trailer", "thumbnail", "promotional-still", "social-clip", "poster"]
+        },
+        "targetPlatform": { "type": "string" },
+        "generativeParams": { "$ref": "#/$defs/GenerationConfig" },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "versionId": { "type": "string" },
+              "outputReference": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    "AssemblyInstructions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "enum": ["structured", "python-snippet"]
+        },
+        "structuredSteps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "operation": {
+                "enum": ["load", "concat", "overlayAudio", "addTransition", "applyEffect", "render", "manim-animate", "opencv-process"]
+              },
+              "library": {
+                "enum": ["moviepy", "movis", "opencv", "pyav", "manim", "custom"]
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "inputAssetIds": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "outputAssetId": { "type": "string" },
+              "timestamp": { "type": "number" }
+            }
+          },
+          "description": "Machine-readable steps that can be directly translated into Python code using the supported libraries."
+        },
+        "pythonSnippet": {
+          "type": "string",
+          "description": "Optional raw Python code template (for advanced custom orchestration)."
+        }
+      }
+    },
+    "FinalOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outputId": { "type": "string" },
+        "version": { "type": "string" },
+        "fileReference": {
+          "type": "object",
+          "properties": {
+            "filePath": { "type": "string" },
+            "url": { "type": "string", "format": "uri" },
+            "format": { "type": "string" },
+            "durationSeconds": { "type": "number" }
+          }
+        },
+        "specsUsed": { "$ref": "#/$defs/GlobalSpecifications" },
+        "assemblyInstructionHash": { "type": "string" },
+        "renderTimestamp": { "type": "string", "format": "date-time" },
+        "status": { "enum": ["rendered", "validated", "published"] }
+      }
+    }
+  }
+}
