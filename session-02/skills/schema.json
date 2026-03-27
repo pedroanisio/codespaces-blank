@@ -99,11 +99,6 @@
           "items": {
             "$ref": "#/$defs/ShotEntity"
           }
-        },
-        "styleGuides": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/StyleGuideEntity" },
-          "description": "Versioned, rights-bearing style guides. Restores the regression from v2's asset_registry.style_guides[]. Populated by S07 (Director). Referenced by CinematicSpec.styleGuideRef."
         }
       }
     },
@@ -837,36 +832,6 @@
         }
       }
     },
-    "StyleGuideEntity": {
-      "description": "Style guide as a versioned, rights-bearing production entity. Restores rights + approval_chain + versioning that StyleGuidelines (plain embedded type) lost relative to v2's asset_registry.style_guides[]. Populated by S07 (Director). Referenced by CinematicSpec.styleGuideRef.",
-      "allOf": [
-        { "$ref": "#/$defs/BaseEntity" },
-        {
-          "type": "object",
-          "required": ["entityType"],
-          "properties": {
-            "entityType": { "const": "styleGuide" },
-            "scope": {
-              "type": "string",
-              "enum": ["project", "act", "scene", "shot", "character"],
-              "description": "What level of production this guide governs. A project-scoped guide is the baseline; scene or shot-scoped guides override it."
-            },
-            "guidelines": { "$ref": "#/$defs/StyleGuidelines" },
-            "negativeStylePrompt": {
-              "type": "string",
-              "description": "Traits, aesthetics, or looks to actively suppress in all generation using this guide."
-            },
-            "appliesTo": {
-              "type": "array",
-              "items": { "$ref": "#/$defs/EntityRef" },
-              "description": "Optional allow-list of entity refs (scenes, shots, characters) this guide applies to. Empty = applies globally within scope."
-            }
-          }
-        }
-      ],
-      "unevaluatedProperties": false
-    },
-
     "MotionBlurControl": {
       "type": "object",
       "additionalProperties": false,
@@ -2947,12 +2912,7 @@
           "$ref": "#/$defs/LightingGuidelines"
         },
         "style": {
-          "$ref": "#/$defs/StyleGuidelines",
-          "description": "Inline style guidelines. Use styleGuideRef instead when referencing a versioned StyleGuideEntity from production.styleGuides[]."
-        },
-        "styleGuideRef": {
-          "$ref": "#/$defs/EntityRef",
-          "description": "Reference to a StyleGuideEntity in production.styleGuides[]. Takes precedence over inline 'style' embed when both are set. Enables rights tracking, approval workflow, and versioning on style."
+          "$ref": "#/$defs/StyleGuidelines"
         },
         "colorPalette": {
           "type": "array",
@@ -2966,14 +2926,6 @@
         },
         "manim": {
           "$ref": "#/$defs/ManimConfig"
-        },
-        "cameraExtrinsics": {
-          "$ref": "#/$defs/CameraExtrinsics",
-          "description": "Camera position and orientation in scene world space. Completes the projection model: CinematicSpec = intrinsics (lens); cameraExtrinsics = extrinsics (pose)."
-        },
-        "spatialBridgeAnchorRef": {
-          "$ref": "#/$defs/EntityRef",
-          "description": "Spatial bridge pattern: references SpatialAnchor/SpatialPlacement from preceding shot for spatial coherence. Parallels temporalBridgeAnchorRef."
         }
       }
     },
@@ -3030,15 +2982,6 @@
             },
             "coherenceRequirements": {
               "$ref": "#/$defs/CharacterCoherence"
-            },
-            "defaultBounds": {
-              "$ref": "#/$defs/BoundingVolume",
-              "description": "Default bounding volume for this character. Overridden per-placement if needed."
-            },
-            "heightM": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Rule 7: metres. Standing height. Used for eye-level camera calculations and scale consistency."
             }
           }
         }
@@ -3098,14 +3041,6 @@
               "items": {
                 "$ref": "#/$defs/EntityRef"
               }
-            },
-            "defaultSceneSpace": {
-              "$ref": "#/$defs/SceneSpace",
-              "description": "Default spatial setup for scenes using this environment. Scenes can override with their own sceneSpace."
-            },
-            "spatialExtent": {
-              "$ref": "#/$defs/BoundingVolume",
-              "description": "Physical extent of this environment."
             }
           }
         }
@@ -3143,10 +3078,6 @@
               "items": {
                 "$ref": "#/$defs/EntityRef"
               }
-            },
-            "defaultBounds": {
-              "$ref": "#/$defs/BoundingVolume",
-              "description": "Default bounding volume for this prop."
             }
           }
         }
@@ -3329,14 +3260,6 @@
             "qaGate": {
               "$ref": "#/$defs/QaGate",
               "description": "Scene-level QA gate. Blocks assembly when overallPass=false."
-            },
-            "sceneSpace": {
-              "$ref": "#/$defs/SceneSpace",
-              "description": "3D spatial context for this scene. Defines coordinate system, entity placements, and spatial anchors. Shared by all shots in this scene."
-            },
-            "spatialConsistency": {
-              "$ref": "#/$defs/SpatialConsistency",
-              "description": "Spatial consistency contract for this scene. Parallels TemporalConsistency."
             }
           }
         }
@@ -3434,11 +3357,6 @@
             "qaGate": {
               "$ref": "#/$defs/QaGate",
               "description": "Shot-level QA gate."
-            },
-            "spatialOverrides": {
-              "type": "array",
-              "items": { "$ref": "#/$defs/SpatialPlacement" },
-              "description": "Shot-specific entity placements that override scene-level SceneSpace.placements for this shot's duration."
             }
           }
         }
@@ -5332,464 +5250,6 @@
         "notes": {
           "type": "string"
         }
-      }
-    },
-
-    "CoordinateSystem": {
-      "type": "object",
-      "required": ["handedness", "upAxis", "unitM"],
-      "additionalProperties": false,
-      "description": "Declared spatial convention. Two systems are compatible iff handedness+upAxis+unitM all match. Rule 7: unitM is a dimensionless scale factor to SI metres.",
-      "properties": {
-        "handedness": {
-          "type": "string",
-          "enum": ["right", "left"],
-          "description": "right = OpenGL/USD/Blender default. left = DirectX/Unity default."
-        },
-        "upAxis": {
-          "type": "string",
-          "enum": ["+Y", "-Y", "+Z", "-Z"],
-          "description": "+Y = USD/glTF/OpenGL. +Z = Blender/engineering."
-        },
-        "unitM": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "default": 1.0,
-          "description": "Rule 7: scale factor to SI metres. 1.0 = metres. 0.01 = centimetres. 0.0254 = inches."
-        },
-        "forwardAxis": {
-          "type": "string",
-          "enum": ["+X", "-X", "+Z", "-Z", "+Y", "-Y"],
-          "description": "Camera/character forward direction. Defaults to -Z for right-handed +Y-up (OpenGL)."
-        },
-        "notes": { "type": "string" }
-      }
-    },
-
-    "Position3D": {
-      "type": "object",
-      "required": ["x", "y", "z"],
-      "additionalProperties": false,
-      "description": "Point in 3D space. Units determined by enclosing CoordinateSystem.unitM. Rule 7: unitless numbers — unit inherited from coordinate system.",
-      "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "z": { "type": "number" }
-      }
-    },
-
-    "Quaternion": {
-      "type": "object",
-      "required": ["x", "y", "z", "w"],
-      "additionalProperties": false,
-      "description": "Unit quaternion, Hamilton convention, scalar-last [x,y,z,w] matching glTF 2.0 §5.17.4 and USD GfQuatf. Constraint: x²+y²+z²+w²=1 within floating-point tolerance (x-computed — not enforceable in JSON Schema).",
-      "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "z": { "type": "number" },
-        "w": { "type": "number" }
-      }
-    },
-
-    "EulerAnglesDeg": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Euler angles in degrees. Rule 7: degrees. Convenience representation — quaternion is authoritative when both present.",
-      "properties": {
-        "pitch": { "type": "number", "description": "Rotation around lateral axis (X in +Y-up)." },
-        "yaw":   { "type": "number", "description": "Rotation around up axis (Y in +Y-up)." },
-        "roll":  { "type": "number", "description": "Rotation around forward axis (Z in +Y-up)." },
-        "order": {
-          "type": "string",
-          "enum": ["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"],
-          "default": "YXZ",
-          "description": "Intrinsic rotation order. YXZ = Tait-Bryan yaw→pitch→roll (common in film). Unity uses ZXY, Unreal uses ZYX."
-        }
-      }
-    },
-
-    "Orientation3D": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Rotation in 3D. Primary: unit quaternion. Euler: optional convenience. lookAtTarget overrides both when present.",
-      "properties": {
-        "quaternion": { "$ref": "#/$defs/Quaternion" },
-        "eulerDeg":   { "$ref": "#/$defs/EulerAnglesDeg" },
-        "lookAtTarget": {
-          "$ref": "#/$defs/Position3D",
-          "description": "If set, orientation is derived: entity faces this world-space point. Overrides quaternion and eulerDeg."
-        },
-        "lookAtUpHint": {
-          "$ref": "#/$defs/Position3D",
-          "description": "Up vector for lookAt resolution. Defaults to coordinate system up axis if absent."
-        }
-      }
-    },
-
-    "Scale3D": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Non-uniform scale factors. 1.0 = no scale. Negative = mirror on that axis.",
-      "properties": {
-        "x": { "type": "number", "default": 1.0 },
-        "y": { "type": "number", "default": 1.0 },
-        "z": { "type": "number", "default": 1.0 }
-      }
-    },
-
-    "Transform3D": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Full 3D transform: translate, rotate, scale. Applied in TRS order (scale → rotate → translate) per glTF/USD convention.",
-      "properties": {
-        "position":    { "$ref": "#/$defs/Position3D", "description": "Translation in scene space." },
-        "orientation": { "$ref": "#/$defs/Orientation3D" },
-        "scale":       { "$ref": "#/$defs/Scale3D" },
-        "matrix4x4": {
-          "type": "array",
-          "items": { "type": "number" },
-          "minItems": 16,
-          "maxItems": 16,
-          "description": "Column-major 4×4 homogeneous transform. If present, overrides position/orientation/scale. Elements: [m00,m10,m20,m30, m01,m11,m21,m31, m02,m12,m22,m32, m03,m13,m23,m33]."
-        }
-      }
-    },
-
-    "BoundingVolume": {
-      "type": "object",
-      "required": ["volumeType"],
-      "additionalProperties": false,
-      "description": "Axis-aligned bounding box or bounding sphere. Discriminated by volumeType (Rule 8). if/then enforces required sub-fields per volumeType.",
-      "properties": {
-        "volumeType": {
-          "type": "string",
-          "enum": ["aabb", "sphere"],
-          "description": "aabb = axis-aligned bounding box. sphere = bounding sphere."
-        },
-        "aabbMin": {
-          "$ref": "#/$defs/Position3D",
-          "description": "Minimum corner of AABB. Required when volumeType=aabb."
-        },
-        "aabbMax": {
-          "$ref": "#/$defs/Position3D",
-          "description": "Maximum corner of AABB. Required when volumeType=aabb."
-        },
-        "sphereCenter": {
-          "$ref": "#/$defs/Position3D",
-          "description": "Center of bounding sphere. Required when volumeType=sphere."
-        },
-        "sphereRadiusM": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "Rule 7: metres. Radius in scene-space units × CoordinateSystem.unitM = metres. Required when volumeType=sphere."
-        }
-      },
-      "if":   { "properties": { "volumeType": { "const": "aabb" } } },
-      "then": { "required": ["aabbMin", "aabbMax"] },
-      "else": {
-        "if":   { "properties": { "volumeType": { "const": "sphere" } } },
-        "then": { "required": ["sphereCenter", "sphereRadiusM"] }
-      }
-    },
-
-    "CameraKeyframe": {
-      "type": "object",
-      "required": ["timeSec", "transform"],
-      "additionalProperties": false,
-      "description": "Single keyframe in a camera motion path.",
-      "properties": {
-        "timeSec": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Rule 7: seconds from shot start."
-        },
-        "transform": { "$ref": "#/$defs/Transform3D" },
-        "interpolation": {
-          "type": "string",
-          "enum": ["linear", "bezier", "catmullRom", "step", "custom"],
-          "default": "linear",
-          "description": "Interpolation to next keyframe."
-        },
-        "easeIn":  { "type": "number", "minimum": 0, "maximum": 1 },
-        "easeOut": { "type": "number", "minimum": 0, "maximum": 1 },
-        "focalLengthMm": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Rule 7: mm. Per-keyframe focal length for zoom shots. Overrides CinematicSpec.focalLengthMm at this keyframe."
-        },
-        "focusDistanceM": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Rule 7: metres. Per-keyframe focus distance for rack-focus."
-        }
-      }
-    },
-
-    "CameraExtrinsics": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Camera position and orientation in scene world space. Completes the projection pipeline: CinematicSpec = intrinsics (lens), CameraExtrinsics = extrinsics (pose). Together: P_c = [R|t]·P_w then p = K·P_c.",
-      "properties": {
-        "transform": {
-          "$ref": "#/$defs/Transform3D",
-          "description": "Camera pose in scene space. Position = optical center. Orientation forward axis per CoordinateSystem.forwardAxis."
-        },
-        "motionPath": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/CameraKeyframe" },
-          "description": "Keyframed camera path for moving shots. Ordered by timeSec. Overrides static transform for shot duration."
-        },
-        "constraintTarget": {
-          "$ref": "#/$defs/EntityRef",
-          "description": "Entity the camera tracks. Orientation auto-adjusts to keep target framed."
-        },
-        "constraintMode": {
-          "type": "string",
-          "enum": ["lookAt", "follow", "orbit", "rail", "custom"],
-          "description": "How camera relates to constraintTarget."
-        },
-        "constraintOffsetM": {
-          "$ref": "#/$defs/Position3D",
-          "description": "Offset from constraintTarget in target-local space. Rule 7: scene-space units."
-        }
-      }
-    },
-
-    "PlacementKeyframe": {
-      "type": "object",
-      "required": ["timeSec", "transform"],
-      "additionalProperties": false,
-      "description": "Single keyframe in an entity motion path within a scene.",
-      "properties": {
-        "timeSec": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Rule 7: seconds from scene/shot start."
-        },
-        "transform": { "$ref": "#/$defs/Transform3D" },
-        "interpolation": {
-          "type": "string",
-          "enum": ["linear", "bezier", "catmullRom", "step", "custom"],
-          "default": "linear"
-        }
-      }
-    },
-
-    "SpatialPlacement": {
-      "type": "object",
-      "required": ["placementId", "entityRef", "transform"],
-      "additionalProperties": false,
-      "description": "Places a character, prop, light, or audio source at a specific 3D position/orientation in scene space. Composition: owned by SceneSpace.",
-      "properties": {
-        "placementId": { "$ref": "#/$defs/Identifier" },
-        "entityRef": {
-          "$ref": "#/$defs/EntityRef",
-          "description": "The entity being placed."
-        },
-        "transform": {
-          "$ref": "#/$defs/Transform3D",
-          "description": "Position and orientation in scene space."
-        },
-        "bounds": {
-          "$ref": "#/$defs/BoundingVolume",
-          "description": "Spatial extent. Used for spatial queries and occlusion checks."
-        },
-        "motionPath": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/PlacementKeyframe" },
-          "description": "Keyframed motion for moving entities. Ordered by timeSec."
-        },
-        "interactionZoneRadiusM": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Rule 7: metres. Radius within which other entities are considered interacting."
-        },
-        "facingDirection": {
-          "$ref": "#/$defs/Position3D",
-          "description": "World-space point the entity faces. Convenience alternative to setting orientation."
-        },
-        "notes": { "type": "string" }
-      }
-    },
-
-    "SpatialAnchor": {
-      "type": "object",
-      "required": ["anchorId", "name", "position"],
-      "additionalProperties": false,
-      "description": "Named spatial reference point for continuity rules. E.g., action lines for 180° rule, staging marks, sightlines.",
-      "properties": {
-        "anchorId": { "$ref": "#/$defs/Identifier" },
-        "name": {
-          "type": "string",
-          "description": "Human-readable. E.g., 'door_frame', 'table_center', 'action_line_A'."
-        },
-        "position": { "$ref": "#/$defs/Position3D" },
-        "orientation": {
-          "$ref": "#/$defs/Orientation3D",
-          "description": "Facing direction for directional anchors."
-        },
-        "radiusM": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Rule 7: metres. Influence radius for proximity checks."
-        },
-        "anchorType": {
-          "type": "string",
-          "enum": ["landmark", "action_line", "staging_mark", "entry_point", "sightline", "custom"]
-        },
-        "linkedAnchorId": {
-          "$ref": "#/$defs/Identifier",
-          "description": "For line-type anchors: the other endpoint. Segment between this and linkedAnchorId defines the constraint axis."
-        },
-        "persistAcrossShots": {
-          "type": "boolean",
-          "default": true,
-          "description": "If true, position is invariant across all shots in the scene."
-        }
-      }
-    },
-
-    "SpatialRule": {
-      "type": "object",
-      "required": ["ruleType"],
-      "additionalProperties": false,
-      "description": "Individual spatial constraint. Discriminated by ruleType (Rule 8).",
-      "properties": {
-        "ruleType": {
-          "type": "string",
-          "enum": ["proximity", "exclusion_zone", "facing_constraint", "camera_boundary", "relative_position", "sightline", "custom"]
-        },
-        "subjectRef": {
-          "$ref": "#/$defs/EntityRef",
-          "description": "Entity this rule applies to."
-        },
-        "targetRef": {
-          "$ref": "#/$defs/EntityRef",
-          "description": "Reference entity/anchor for relative constraints."
-        },
-        "distanceMinM": { "type": "number", "minimum": 0, "description": "Rule 7: metres." },
-        "distanceMaxM": { "type": "number", "minimum": 0, "description": "Rule 7: metres." },
-        "angleToleranceDeg": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 180,
-          "description": "Rule 7: degrees."
-        },
-        "severity": {
-          "type": "string",
-          "enum": ["info", "warning", "error"],
-          "default": "warning"
-        },
-        "notes": { "type": "string" }
-      }
-    },
-
-    "SpatialConsistency": {
-      "type": "object",
-      "required": ["required"],
-      "additionalProperties": false,
-      "description": "Spatial consistency contract. Parallels TemporalConsistency and CharacterCoherence. Defines enforceable spatial rules for a scene or shot.",
-      "properties": {
-        "required": { "type": "boolean" },
-        "rules": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/SpatialRule" },
-          "description": "Specific spatial constraints to enforce."
-        },
-        "maxPositionDriftM": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Rule 7: metres. Max displacement of a static entity between shots in the same scene."
-        },
-        "enforce180DegreeRule": {
-          "type": "boolean",
-          "default": false,
-          "description": "Validate camera stays on one side of action_line SpatialAnchors."
-        },
-        "enforceScreenDirection": {
-          "type": "boolean",
-          "default": false,
-          "description": "Validate character screen-direction consistency across cuts."
-        },
-        "anchorRefs": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/EntityRef" },
-          "description": "SpatialAnchors this consistency contract references."
-        },
-        "strategies": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Enforcement strategies: 'depth_map_conditioning', 'controlnet_depth', 'layout_guidance', 'manual_review'."
-        }
-      }
-    },
-
-    "SceneSpace": {
-      "type": "object",
-      "required": ["coordinateSystem"],
-      "additionalProperties": false,
-      "description": "3D spatial context for a scene. All spatial data (camera extrinsics, entity placements, spatial constraints) is expressed in this coordinate system.",
-      "properties": {
-        "coordinateSystem": {
-          "$ref": "#/$defs/CoordinateSystem",
-          "description": "All Position3D/Orientation3D/Transform3D values in this scene are in this system."
-        },
-        "bounds": {
-          "$ref": "#/$defs/BoundingVolume",
-          "description": "Spatial extent of the scene."
-        },
-        "placements": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/SpatialPlacement" },
-          "description": "Positioned entities within this scene."
-        },
-        "spatialAnchors": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/SpatialAnchor" },
-          "description": "Named reference points for spatial continuity."
-        },
-        "gravityVector": {
-          "$ref": "#/$defs/Position3D",
-          "description": "Direction and magnitude of gravity. Typical: {x:0,y:-9.81,z:0} for +Y-up."
-        },
-        "floorPlaneCoord": {
-          "type": "number",
-          "default": 0,
-          "description": "Ground plane coordinate value. The axis is determined by CoordinateSystem.upAxis (Y-coord for +Y-up, Z-coord for +Z-up). Rule 7: scene-space units."
-        },
-        "universeRef": {
-          "$ref": "#/$defs/EntityRef",
-          "description": "Reference to a SharedSpatialUniverse in the root spatialUniverses array. When set, coordinateSystem must be compatible and sceneOriginInUniverse is required."
-        },
-        "sceneOriginInUniverse": {
-          "$ref": "#/$defs/Transform3D",
-          "description": "Transform from this scene's origin to the SharedSpatialUniverse origin. Required when universeRef is set."
-        },
-        "extensions": { "$ref": "#/$defs/Extensions" }
-      }
-    },
-
-    "SharedSpatialUniverse": {
-      "type": "object",
-      "required": ["universeId", "name", "coordinateSystem"],
-      "additionalProperties": false,
-      "description": "Cross-project spatial contract. Defines a shared world-space for multiple projects (movies, episodes, games). Stored in root spatialUniverses[]. Referenced by SceneSpace.universeRef.",
-      "properties": {
-        "universeId": { "$ref": "#/$defs/Identifier" },
-        "name": { "type": "string" },
-        "description": { "type": "string" },
-        "coordinateSystem": {
-          "$ref": "#/$defs/CoordinateSystem",
-          "description": "Canonical coordinate system. Referencing scenes must declare a compatible system."
-        },
-        "bounds": { "$ref": "#/$defs/BoundingVolume" },
-        "landmarks": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/SpatialAnchor" },
-          "description": "Universe-level named locations. Scenes align relative to these."
-        },
-        "version": { "$ref": "#/$defs/VersionInfo" },
-        "extensions": { "$ref": "#/$defs/Extensions" }
       }
     }
   }
