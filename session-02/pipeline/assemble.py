@@ -372,7 +372,10 @@ def assemble(
     grade_params = _parse_color_direction(color_direction)
 
     quality_profiles = instance.get("qualityProfiles") or []
-    qp = quality_profiles[0] if quality_profiles else {}
+    qp = (quality_profiles[0] if quality_profiles else {}).get("profile") or {}
+
+    render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
+    render_plan = render_plans[0] if render_plans else {}
 
     project_name = (
         (instance.get("project") or {}).get("name", "output")
@@ -380,16 +383,29 @@ def assemble(
     )
     output_filename = f"{project_name}.mp4"
 
-    # ── step 1: concatenate shot clips ────────────────────────────────────────
+    # ── Extract scene transitions ─────────────────────────────────────────────
+    scenes = sorted(
+        (instance.get("production") or {}).get("scenes", []),
+        key=lambda s: s.get("sceneNumber", 0),
+    )
+    scene_transitions = [
+        {
+            "transitionIn": s.get("transitionIn") or {},
+            "transitionOut": s.get("transitionOut") or {},
+        }
+        for s in scenes
+    ]
+
+    # ── step 1: concatenate shot clips with transitions ───────────────────────
     ordered_clips = _shots_in_scene_order(instance, shot_clips)
     if not ordered_clips:
         raise RuntimeError("No shot clips available to assemble")
 
     concat_path = inter / "01_concat.mp4"
     log.info("▶ load — concatenating %d clips → %s", len(ordered_clips), concat_path.name)
-    _concat_clips_ffmpeg(ordered_clips, concat_path)
+    _concat_clips_ffmpeg(ordered_clips, concat_path, transitions=scene_transitions)
 
-    # ── step 2: overlay audio ─────────────────────────────────────────────────
+    # ── step 2: overlay audio with timing + gain from protocol ────────────────
     mixed_path = inter / "02_mixed.mp4"
     log.info("▶ overlay_audio — mixing %d track(s) → %s", len(audio_files), mixed_path.name)
     cmd = _build_audio_mix_cmd(concat_path, audio_files, instance, mixed_path)
@@ -411,10 +427,10 @@ def assemble(
         log.error("color grade failed:\n%s", result.stderr.decode())
         shutil.copy(mixed_path, graded_path)
 
-    # ── step 4: final encode ──────────────────────────────────────────────────
+    # ── step 4: final encode (reads codec/bitrate from renderPlan) ────────────
     final_path = output_dir / output_filename
     log.info("▶ encode → %s", final_path.name)
-    cmd = _encode_cmd(graded_path, qp, final_path)
+    cmd = _encode_cmd(graded_path, qp, final_path, render_plan=render_plan)
     result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
         log.error("encode failed:\n%s", result.stderr.decode())
