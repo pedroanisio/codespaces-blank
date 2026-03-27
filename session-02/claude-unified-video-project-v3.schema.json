@@ -21,7 +21,7 @@
   "properties": {
     "schemaVersion": {
       "$ref": "#/$defs/SemVer",
-      "description": "Schema version — SemVer. D1 fix: was const:1.0.0, now typed SemVer. Current: 3.0.0"
+      "description": "Schema version — SemVer. D1 fix: was const:1.0.0, now typed SemVer. Current: 3.1.0"
     },
     "package": {
       "$ref": "#/$defs/PackageInfo"
@@ -35,6 +35,13 @@
         "$ref": "#/$defs/QualityProfileEntity"
       },
       "description": "Reusable quality profiles. All entities reference these by ID — no inline embedding."
+    },
+    "spatialUniverses": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SharedSpatialUniverse"
+      },
+      "description": "Shared spatial universe contracts. Optional. When present, SceneSpace.universeRef points to an entry here by ID, enabling cross-project spatial interoperability (franchise locations, shared city layouts, etc.)."
     },
     "team": {
       "$ref": "#/$defs/Team"
@@ -1058,6 +1065,10 @@
             },
             "qualityControls": {
               "$ref": "#/$defs/VideoQualityControls"
+            },
+            "spatialConsistency": {
+              "$ref": "#/$defs/SpatialConsistency",
+              "description": "Default spatial consistency requirements for all scenes in projects using this quality profile."
             }
           }
         },
@@ -1762,6 +1773,7 @@
             "environment",
             "prop",
             "camera",
+            "spatial",
             "custom"
           ]
         },
