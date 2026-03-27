@@ -1,0 +1,1104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.example/video-production/v1.0.0",
+  "title": "VideoProductionManifest",
+  "description": "A tool-agnostic, extensible schema for programmatic creation, storage, management, versioning, and orchestration of all assets required to generate and assemble high-quality videos up to 30 minutes in length.",
+  "type": "object",
+
+  "$defs": {
+
+    "SemVer": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "description": "Semantic version string, e.g. '1.4.2-alpha.1'."
+    },
+
+    "ULID": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Universally Unique Lexicographically Sortable Identifier."
+    },
+
+    "ISOTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 date-time string, e.g. '2025-03-27T14:30:00Z'."
+    },
+
+    "Timecode": {
+      "type": "string",
+      "pattern": "^\\d{2}:\\d{2}:\\d{2}[;:]\\d{2,3}$",
+      "description": "SMPTE timecode HH:MM:SS:FF or HH:MM:SS;FF (drop-frame)."
+    },
+
+    "DurationSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1800,
+      "description": "Duration in seconds. Upper bound 1800 s (30 min) at project level; unconstrained at lower levels."
+    },
+
+    "AssetRef": {
+      "type": "object",
+      "description": "A typed reference to any asset by its ID. The 'type' discriminator allows resolvers to locate the asset in the correct collection.",
+      "required": ["asset_id", "asset_type"],
+      "properties": {
+        "asset_id": { "$ref": "#/$defs/ULID" },
+        "asset_type": {
+          "type": "string",
+          "enum": [
+            "character", "environment", "prop",
+            "visual_asset", "audio_asset",
+            "scene", "shot",
+            "script", "story",
+            "render_output", "marketing_asset",
+            "style_guide", "director_instruction"
+          ]
+        },
+        "version_pin": {
+          "$ref": "#/$defs/SemVer",
+          "description": "If present, pins this reference to a specific version. If absent, resolves to the latest approved version."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "Resolution": {
+      "type": "object",
+      "description": "Pixel dimensions. Named presets are informational; width/height are authoritative.",
+      "required": ["width", "height"],
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": ["4K-UHD", "4K-DCI", "2K-DCI", "1080p", "720p", "480p", "custom"],
+          "description": "Informational preset label."
+        },
+        "width":  { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+
+    "AspectRatio": {
+      "type": "object",
+      "description": "Frame aspect ratio expressed as a rational number w:h.",
+      "required": ["width_ratio", "height_ratio"],
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": ["16:9", "9:16", "4:3", "1:1", "2.35:1", "2.39:1", "1.85:1", "21:9", "custom"]
+        },
+        "width_ratio":  { "type": "number", "exclusiveMinimum": 0 },
+        "height_ratio": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "additionalProperties": false
+    },
+
+    "FrameRate": {
+      "type": "object",
+      "description": "Frame rate expressed as a rational number numerator/denominator.",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": ["23.976", "24", "25", "29.97", "30", "48", "50", "59.94", "60", "120", "custom"]
+        },
+        "numerator":   { "type": "integer", "minimum": 1 },
+        "denominator": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+
+    "ColorSpec": {
+      "type": "object",
+      "description": "Color science specification for a render or asset.",
+      "properties": {
+        "color_space":     { "type": "string", "examples": ["Rec.709", "Rec.2020", "DCI-P3", "sRGB", "ACES2065-1", "ACEScg"] },
+        "transfer_function": { "type": "string", "examples": ["SDR-gamma", "PQ", "HLG", "log-C3", "S-Log3"] },
+        "bit_depth":       { "type": "integer", "enum": [8, 10, 12, 16, 32] },
+        "hdr_standard":    { "type": "string", "examples": ["HDR10", "Dolby Vision", "HLG", "none"] },
+        "lut_ref":         { "$ref": "#/$defs/AssetRef", "description": "Reference to a LUT visual_asset." }
+      },
+      "additionalProperties": true
+    },
+
+    "AudioSpec": {
+      "type": "object",
+      "description": "Audio technical specification.",
+      "properties": {
+        "sample_rate_hz":  { "type": "integer", "examples": [44100, 48000, 96000] },
+        "bit_depth":       { "type": "integer", "enum": [16, 24, 32] },
+        "channels":        { "type": "integer", "minimum": 1, "examples": [1, 2, 6, 8] },
+        "channel_layout":  { "type": "string", "examples": ["stereo", "5.1", "7.1", "mono"] },
+        "loudness_standard": { "type": "string", "examples": ["EBU R128", "ATSC A/85", "none"] },
+        "target_lufs":     { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+
+    "QualityControls": {
+      "type": "object",
+      "description": "Extensible quality control parameters applicable at project, scene, or shot level.",
+      "properties": {
+        "motion_blur":            { "type": "boolean" },
+        "motion_blur_shutter_angle": { "type": "number", "minimum": 0, "maximum": 360 },
+        "depth_of_field":         { "type": "boolean" },
+        "grain_level":            { "type": "string", "enum": ["none", "subtle", "moderate", "heavy"] },
+        "lens_flare":             { "type": "boolean" },
+        "temporal_consistency_threshold": {
+          "type": "number", "minimum": 0, "maximum": 1,
+          "description": "Minimum acceptable inter-frame feature consistency score [0,1]. Interpretation is pipeline-defined."
+        },
+        "character_coherence_threshold": {
+          "type": "number", "minimum": 0, "maximum": 1,
+          "description": "Minimum acceptable character identity consistency across shots [0,1]."
+        },
+        "color_grade_profile":    { "type": "string", "description": "Named color grade profile key, resolved in style_guide." },
+        "denoise_passes":         { "type": "integer", "minimum": 0 },
+        "upscale_algorithm":      { "type": "string", "examples": ["ESRGAN", "Topaz", "Lanczos", "none"] },
+        "stabilization":          { "type": "boolean" }
+      },
+      "additionalProperties": true,
+      "description": "additionalProperties:true permits forward-compatible extension with any future quality parameter."
+    },
+
+    "GenerativeParameters": {
+      "type": "object",
+      "description": "Tool-agnostic generative-AI parameters. The 'tool' object is the primary discriminator; all other fields are interpretive hints. Unknown fields MUST be preserved under 'tool_specific'.",
+      "required": ["tool"],
+      "properties": {
+
+        "tool": {
+          "type": "object",
+          "description": "Identifies the generative tool and its version. Fully open: any tool is expressible.",
+          "required": ["name"],
+          "properties": {
+            "name":           { "type": "string", "description": "Tool identifier, e.g. 'runway-gen3', 'kling-v1.6', 'midjourney-v6.1', 'elevenlabs', 'stable-diffusion-xl', 'pika-2.1', 'luma-dream-machine', 'manim', 'custom'." },
+            "version":        { "type": "string" },
+            "api_endpoint":   { "type": "string", "format": "uri" },
+            "api_version":    { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+
+        "prompt":               { "type": "string" },
+        "negative_prompt":      { "type": "string" },
+        "seed":                 { "type": "integer", "description": "Fixed seed for reproducibility. Null means random." },
+        "cfg_scale":            { "type": "number", "description": "Classifier-free guidance scale, where applicable." },
+        "steps":                { "type": "integer", "minimum": 1 },
+        "sampler":              { "type": "string" },
+        "scheduler":            { "type": "string" },
+
+        "duration_seconds":     { "type": "number", "minimum": 0, "description": "Requested output duration for video/audio generation tools." },
+        "frame_rate":           { "$ref": "#/$defs/FrameRate" },
+        "resolution":           { "$ref": "#/$defs/Resolution" },
+        "aspect_ratio":         { "$ref": "#/$defs/AspectRatio" },
+
+        "consistency_anchors": {
+          "type": "array",
+          "description": "Assets used to anchor identity consistency (character refs, style refs, IP-Adapter images, ControlNet inputs, etc.).",
+          "items": {
+            "type": "object",
+            "required": ["role", "asset_ref"],
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "character_reference", "style_reference", "composition_reference",
+                  "ip_adapter", "controlnet_depth", "controlnet_pose", "controlnet_canny",
+                  "init_image", "init_video", "mask", "lora_weight",
+                  "face_swap_source", "voice_clone_source", "custom"
+                ]
+              },
+              "asset_ref":      { "$ref": "#/$defs/AssetRef" },
+              "weight":         { "type": "number", "description": "Influence weight [0,1] if supported by the tool." },
+              "custom_role":    { "type": "string", "description": "Free-form role name when role='custom'." }
+            },
+            "additionalProperties": true
+          }
+        },
+
+        "model_checkpoint":     { "type": "string", "description": "Specific model checkpoint or fine-tune identifier." },
+        "lora_weights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["identifier"],
+            "properties": {
+              "identifier": { "type": "string" },
+              "weight":     { "type": "number" }
+            }
+          }
+        },
+
+        "camera_motion": {
+          "type": "object",
+          "description": "Camera motion instructions for video generation tools.",
+          "properties": {
+            "preset": {
+              "type": "string",
+              "enum": ["static", "pan_left", "pan_right", "tilt_up", "tilt_down",
+                       "dolly_in", "dolly_out", "crane_up", "crane_down",
+                       "orbit_left", "orbit_right", "handheld", "custom"]
+            },
+            "speed":           { "type": "number", "description": "Normalized motion speed [0,1]." },
+            "custom_motion_vector": { "type": "string", "description": "Free-form motion vector specification for tools supporting custom camera paths." }
+          },
+          "additionalProperties": true
+        },
+
+        "tool_specific": {
+          "type": "object",
+          "description": "Opaque bucket for any tool-specific parameters not covered by the standardised fields above. Keys are tool-defined. Processors MUST preserve this object verbatim.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "VersionRecord": {
+      "type": "object",
+      "description": "Immutable version record attached to any versioned entity.",
+      "required": ["version", "created_at", "created_by", "change_summary", "status"],
+      "properties": {
+        "version":        { "$ref": "#/$defs/SemVer" },
+        "created_at":     { "$ref": "#/$defs/ISOTimestamp" },
+        "created_by":     { "type": "string" },
+        "change_summary": { "type": "string" },
+        "parent_version": { "$ref": "#/$defs/SemVer" },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "in_review", "approved", "rejected", "deprecated", "locked"]
+        },
+        "approved_by":    { "type": "string" },
+        "approved_at":    { "$ref": "#/$defs/ISOTimestamp" },
+        "tags":           { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "Dependency": {
+      "type": "object",
+      "description": "Declares that an asset depends on another asset being available and at a satisfactory version before this asset can be generated or rendered.",
+      "required": ["asset_ref", "dependency_type"],
+      "properties": {
+        "asset_ref":        { "$ref": "#/$defs/AssetRef" },
+        "dependency_type": {
+          "type": "string",
+          "enum": [
+            "requires_approved",
+            "requires_generated",
+            "consistency_source",
+            "temporal_predecessor",
+            "audio_sync_target",
+            "style_source",
+            "script_source"
+          ]
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "StorageLocation": {
+      "type": "object",
+      "description": "Tool-agnostic storage pointer for any binary or file-based asset.",
+      "required": ["uri"],
+      "properties": {
+        "uri":          { "type": "string", "format": "uri-reference", "description": "Relative or absolute URI: file://, s3://, gs://, https://, etc." },
+        "mime_type":    { "type": "string" },
+        "size_bytes":   { "type": "integer", "minimum": 0 },
+        "sha256":       { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "encoding":     { "type": "string", "examples": ["H.264", "H.265", "ProRes 4444", "DNxHR", "PNG", "EXR", "WAV", "FLAC", "MP3"] },
+        "container":    { "type": "string", "examples": ["mp4", "mov", "mkv", "mxf", "wav", "flac", "png", "exr"] }
+      },
+      "additionalProperties": true
+    },
+
+    "CameraSpec": {
+      "type": "object",
+      "description": "Camera configuration for a shot. Maps to the formal apparatus of the companion camera document.",
+      "properties": {
+        "angle_predicate": {
+          "type": "string",
+          "enum": ["bird_eye", "high_angle", "eye_level", "low_angle", "worm_eye", "dutch", "over_the_shoulder", "custom"],
+          "description": "Corresponds to C_bev, C_high, C_eye, C_low, C_wev, C_dutch, C_ots in the camera formal document."
+        },
+        "movement_predicate": {
+          "type": "string",
+          "enum": ["static", "pan", "tilt", "roll", "dolly", "crane", "handheld", "dolly_zoom", "custom"]
+        },
+        "optical_predicate": {
+          "type": "string",
+          "enum": ["shallow_dof", "deep_focus", "rack_focus", "telephoto_compression", "wide_angle_distortion", "standard", "custom"]
+        },
+        "focal_length_mm":   { "type": "number", "exclusiveMinimum": 0, "description": "35mm full-frame equivalent focal length." },
+        "f_stop":            { "type": "number", "exclusiveMinimum": 0 },
+        "focus_distance_m":  { "type": "number", "exclusiveMinimum": 0 },
+        "lens_class":        { "type": "string", "enum": ["spherical", "anamorphic", "fisheye", "macro", "custom"] },
+        "elevation_deg":     { "type": "number", "minimum": -90, "maximum": 90 },
+        "roll_deg":          { "type": "number", "minimum": -180, "maximum": 180 },
+        "notes":             { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "LightingSpec": {
+      "type": "object",
+      "description": "Lighting configuration for a shot or scene.",
+      "properties": {
+        "key_light_direction":    { "type": "string", "examples": ["45-front-left", "overhead", "backlit", "rembrandt", "split"] },
+        "color_temperature_k":   { "type": "number", "description": "Dominant color temperature in Kelvin." },
+        "motivated":             { "type": "boolean", "description": "true = light sources exist diegetically in the scene." },
+        "style_label":           { "type": "string", "examples": ["high-key", "low-key", "naturalistic", "neon", "golden-hour", "moonlit", "practical-only"] },
+        "hdri_ref":              { "$ref": "#/$defs/AssetRef", "description": "Reference to an HDRI environment map visual_asset." },
+        "notes":                 { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "SyncPoint": {
+      "type": "object",
+      "description": "A synchronisation anchor between a video time offset and an audio time offset.",
+      "required": ["video_offset_s", "audio_offset_s"],
+      "properties": {
+        "sync_point_id":    { "$ref": "#/$defs/ULID" },
+        "label":            { "type": "string" },
+        "video_offset_s":   { "type": "number", "minimum": 0 },
+        "audio_offset_s":   { "type": "number", "minimum": 0 },
+        "drift_tolerance_ms": { "type": "number", "minimum": 0, "description": "Acceptable timing error in milliseconds." }
+      },
+      "additionalProperties": false
+    },
+
+    "AssemblyInstruction": {
+      "type": "object",
+      "description": "A single assembly operation in a render or composition pipeline. Operations are applied in array order.",
+      "required": ["op", "target_ref"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": [
+            "concat", "overlay", "trim", "speed_ramp", "dissolve", "cut",
+            "wipe", "fade_in", "fade_out", "cross_dissolve",
+            "color_grade", "stabilize", "denoise", "upscale",
+            "audio_mix", "audio_duck", "audio_fade", "audio_normalize",
+            "subtitle_burn", "watermark",
+            "manim_compose", "opencv_filter", "pyav_transcode",
+            "moviepy_fx", "movis_compose", "custom"
+          ]
+        },
+        "target_ref":   { "$ref": "#/$defs/AssetRef" },
+        "secondary_ref":{ "$ref": "#/$defs/AssetRef" },
+        "in_point_s":   { "type": "number", "minimum": 0 },
+        "out_point_s":  { "type": "number", "minimum": 0 },
+        "at_timecode":  { "$ref": "#/$defs/Timecode" },
+        "parameters": {
+          "type": "object",
+          "description": "Operation-specific parameters. Kept open for full extensibility.",
+          "additionalProperties": true
+        },
+        "library_hint": {
+          "type": "string",
+          "enum": ["moviepy", "movis", "opencv", "pyav", "manim", "any"],
+          "description": "Advisory hint to the assembly pipeline. Does not mandate the library; resolvers may substitute equivalents."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "required": ["manifest_id", "schema_version", "project"],
+  "properties": {
+
+    "manifest_id": {
+      "$ref": "#/$defs/ULID",
+      "description": "Unique identifier for this manifest instance."
+    },
+
+    "schema_version": {
+      "$ref": "#/$defs/SemVer",
+      "description": "Version of this JSON Schema definition. Consumers MUST validate against this version."
+    },
+
+    "project": {
+      "type": "object",
+      "description": "Top-level project envelope. All assets exist within a project context.",
+      "required": ["project_id", "title", "version", "technical_spec"],
+      "properties": {
+
+        "project_id":   { "$ref": "#/$defs/ULID" },
+        "title":        { "type": "string" },
+        "logline":      { "type": "string", "description": "One-sentence summary." },
+        "description":  { "type": "string" },
+        "created_at":   { "$ref": "#/$defs/ISOTimestamp" },
+        "updated_at":   { "$ref": "#/$defs/ISOTimestamp" },
+        "owners":       { "type": "array", "items": { "type": "string" } },
+        "tags":         { "type": "array", "items": { "type": "string" } },
+        "version":      { "$ref": "#/$defs/VersionRecord" },
+        "version_history": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/VersionRecord" }
+        },
+
+        "technical_spec": {
+          "type": "object",
+          "description": "Project-wide default technical parameters. All assets inherit these unless they override at their own level.",
+          "required": ["resolution", "frame_rate", "aspect_ratio", "max_duration_seconds"],
+          "properties": {
+            "resolution":           { "$ref": "#/$defs/Resolution" },
+            "frame_rate":           { "$ref": "#/$defs/FrameRate" },
+            "aspect_ratio":         { "$ref": "#/$defs/AspectRatio" },
+            "color_spec":           { "$ref": "#/$defs/ColorSpec" },
+            "audio_spec":           { "$ref": "#/$defs/AudioSpec" },
+            "quality_controls":     { "$ref": "#/$defs/QualityControls" },
+            "max_duration_seconds": { "$ref": "#/$defs/DurationSeconds" }
+          },
+          "additionalProperties": true
+        },
+
+        "story": { "$ref": "#/$defs/Story" },
+        "script": { "$ref": "#/$defs/Script" },
+        "director_instructions": { "$ref": "#/$defs/DirectorInstructions" },
+        "style_guide": { "$ref": "#/$defs/StyleGuide" },
+
+        "entities": {
+          "type": "object",
+          "description": "Master registry of all diegetic entities.",
+          "properties": {
+            "characters":    { "type": "array", "items": { "$ref": "#/$defs/Character" } },
+            "environments":  { "type": "array", "items": { "$ref": "#/$defs/Environment" } },
+            "props":         { "type": "array", "items": { "$ref": "#/$defs/Prop" } }
+          },
+          "additionalProperties": false
+        },
+
+        "scenes":          { "type": "array", "items": { "$ref": "#/$defs/Scene" } },
+        "visual_assets":   { "type": "array", "items": { "$ref": "#/$defs/VisualAsset" } },
+        "audio_assets":    { "type": "array", "items": { "$ref": "#/$defs/AudioAsset" } },
+        "render_outputs":  { "type": "array", "items": { "$ref": "#/$defs/RenderOutput" } },
+        "marketing_assets":{ "type": "array", "items": { "$ref": "#/$defs/MarketingAsset" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs_extended": {
+
+    "Story": {
+      "$anchor": "Story",
+      "type": "object",
+      "description": "The narrative arc of the project. Defines the high-level story structure independently of the script.",
+      "required": ["story_id", "premise", "acts"],
+      "properties": {
+        "story_id":      { "$ref": "#/$defs/ULID" },
+        "premise":       { "type": "string" },
+        "genre":         { "type": "array", "items": { "type": "string" } },
+        "themes":        { "type": "array", "items": { "type": "string" } },
+        "tone":          { "type": "string" },
+        "target_audience": { "type": "string" },
+        "world_context": { "type": "string", "description": "Description of the diegetic world W in which the story is set." },
+        "acts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["act_id", "label", "summary"],
+            "properties": {
+              "act_id":           { "$ref": "#/$defs/ULID" },
+              "label":            { "type": "string" },
+              "summary":          { "type": "string" },
+              "narrative_function": {
+                "type": "string",
+                "enum": ["setup", "confrontation", "resolution", "prologue", "epilogue", "custom"],
+                "description": "Maps to the eta (narrative function) apparatus in the companion scene document."
+              },
+              "scene_refs":       { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+              "notes":            { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "character_arcs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["character_ref", "arc_summary"],
+            "properties": {
+              "character_ref":  { "$ref": "#/$defs/AssetRef" },
+              "arc_summary":    { "type": "string" },
+              "start_state":    { "type": "string" },
+              "end_state":      { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "version":         { "$ref": "#/$defs/VersionRecord" }
+      },
+      "additionalProperties": true
+    },
+
+    "Script": {
+      "$anchor": "Script",
+      "type": "object",
+      "description": "Full production script including dialogue, action descriptions, and timing.",
+      "required": ["script_id", "elements"],
+      "properties": {
+        "script_id":    { "$ref": "#/$defs/ULID" },
+        "format":       { "type": "string", "enum": ["screenplay", "shooting_script", "storyboard_script", "animatic_script", "custom"] },
+        "total_pages":  { "type": "number" },
+        "version":      { "$ref": "#/$defs/VersionRecord" },
+        "elements": {
+          "type": "array",
+          "description": "Ordered sequence of script elements. Each element is typed.",
+          "items": {
+            "type": "object",
+            "required": ["element_id", "element_type", "text"],
+            "properties": {
+              "element_id":     { "$ref": "#/$defs/ULID" },
+              "element_type": {
+                "type": "string",
+                "enum": [
+                  "scene_heading", "action", "character_cue",
+                  "dialogue", "parenthetical", "transition",
+                  "title_card", "voiceover", "note"
+                ]
+              },
+              "text":           { "type": "string" },
+              "scene_ref":      { "$ref": "#/$defs/AssetRef" },
+              "character_ref":  { "$ref": "#/$defs/AssetRef" },
+              "timing": {
+                "type": "object",
+                "description": "Optional timing annotation for this element.",
+                "properties": {
+                  "estimated_duration_s": { "type": "number", "minimum": 0 },
+                  "locked_timecode":      { "$ref": "#/$defs/Timecode" }
+                },
+                "additionalProperties": false
+              },
+              "page_number":    { "type": "number" },
+              "notes":          { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "DirectorInstructions": {
+      "$anchor": "DirectorInstructions",
+      "type": "object",
+      "description": "Global creative direction. Overridden at scene or shot level by local instructions.",
+      "required": ["instruction_id"],
+      "properties": {
+        "instruction_id":        { "$ref": "#/$defs/ULID" },
+        "creative_vision":       { "type": "string" },
+        "influences":            { "type": "array", "items": { "type": "string" }, "description": "Reference directors, films, artworks, or other creative works." },
+        "pacing_notes":          { "type": "string" },
+        "performance_direction": { "type": "string" },
+        "color_philosophy":      { "type": "string" },
+        "sound_philosophy":      { "type": "string" },
+        "camera_philosophy":     { "type": "string" },
+        "do_not_do":             { "type": "array", "items": { "type": "string" }, "description": "Explicit prohibitions for the AI generation pipeline." },
+        "version":               { "$ref": "#/$defs/VersionRecord" }
+      },
+      "additionalProperties": true
+    },
+
+    "StyleGuide": {
+      "$anchor": "StyleGuide",
+      "type": "object",
+      "description": "Master style guide. Defines visual and audio style predicates that apply project-wide unless overridden.",
+      "required": ["style_guide_id"],
+      "properties": {
+        "style_guide_id":        { "$ref": "#/$defs/ULID" },
+
+        "animation_production_method": {
+          "type": "string",
+          "description": "Axis A tag from the animation taxonomy companion document, e.g. 'A2.1' (keyframed 3D), 'A1.3' (digital frame-by-frame)."
+        },
+        "animation_subject_application": {
+          "type": "string",
+          "description": "Axis B tag from the animation taxonomy companion document."
+        },
+        "visual_style_tag": {
+          "type": "string",
+          "description": "Axis D tag from the animation taxonomy companion document, e.g. 'D3.1' (classic manga), 'D6.1' (cel-shaded), 'D8.2' (cyberpunk)."
+        },
+        "video_style_predicate": {
+          "type": "string",
+          "description": "S_X predicate from the video styles companion document, e.g. 'S_narr', 'S_doc', 'S_anim'."
+        },
+
+        "visual_style_description": { "type": "string" },
+        "color_palette": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "hex"],
+            "properties": {
+              "label":    { "type": "string" },
+              "hex":      { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+              "role":     { "type": "string", "examples": ["primary", "secondary", "accent", "shadow", "highlight"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "typography": {
+          "type": "object",
+          "properties": {
+            "primary_font":    { "type": "string" },
+            "secondary_font":  { "type": "string" },
+            "title_style":     { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "color_grade_profiles": {
+          "type": "object",
+          "description": "Named color grade profiles. Keys are profile names referenced by quality_controls.color_grade_profile.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "description":  { "type": "string" },
+              "lut_ref":      { "$ref": "#/$defs/AssetRef" },
+              "color_spec":   { "$ref": "#/$defs/ColorSpec" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "generative_style_anchors": {
+          "type": "array",
+          "description": "Visual assets used as style references across all generative calls.",
+          "items": { "$ref": "#/$defs/AssetRef" }
+        },
+        "version": { "$ref": "#/$defs/VersionRecord" }
+      },
+      "additionalProperties": true
+    },
+
+    "Character": {
+      "$anchor": "Character",
+      "type": "object",
+      "description": "A diegetic character entity. Provides the consistency anchor for all character appearances across shots.",
+      "required": ["character_id", "name"],
+      "properties": {
+        "character_id":           { "$ref": "#/$defs/ULID" },
+        "name":                   { "type": "string" },
+        "aliases":                { "type": "array", "items": { "type": "string" } },
+        "description":            { "type": "string" },
+        "visual_description":     { "type": "string", "description": "Prose description fed to generative prompts." },
+        "reference_visual_assets":{ "type": "array", "items": { "$ref": "#/$defs/AssetRef" }, "description": "Canonical character reference images." },
+        "voice_ref":              { "$ref": "#/$defs/AssetRef", "description": "Reference audio asset for voice cloning or voice matching." },
+        "default_generative_params": { "$ref": "#/$defs/GenerativeParameters", "description": "Default generative parameters for generating this character. Overridden per-shot." },
+        "coherence_threshold":    { "type": "number", "minimum": 0, "maximum": 1 },
+        "version":                { "$ref": "#/$defs/VersionRecord" }
+      },
+      "additionalProperties": true
+    },
+
+    "Environment": {
+      "$anchor": "Environment",
+      "type": "object",
+      "description": "A diegetic location/environment entity.",
+      "required": ["environment_id", "name"],
+      "properties": {
+        "environment_id":          { "$ref": "#/$defs/ULID" },
+        "name":                    { "type": "string" },
+        "description":             { "type": "string" },
+        "visual_description":      { "type": "string" },
+        "reference_visual_assets": { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "diegetic_location_label": { "type": "string", "description": "lambda value from the scene formal document." },
+        "default_lighting":        { "$ref": "#/$defs/LightingSpec" },
+        "default_generative_params":{ "$ref": "#/$defs/GenerativeParameters" },
+        "version":                 { "$ref": "#/$defs/VersionRecord" }
+      },
+      "additionalProperties": true
+    },
+
+    "Prop": {
+      "$anchor": "Prop",
+      "type": "object",
+      "description": "A diegetic prop entity.",
+      "required": ["prop_id", "name"],
+      "properties": {
+        "prop_id":                 { "$ref": "#/$defs/ULID" },
+        "name":                    { "type": "string" },
+        "description":             { "type": "string" },
+        "visual_description":      { "type": "string" },
+        "reference_visual_assets": { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "version":                 { "$ref": "#/$defs/VersionRecord" }
+      },
+      "additionalProperties": true
+    },
+
+    "Scene": {
+      "$anchor": "Scene",
+      "type": "object",
+      "description": "A scene: a temporally and spatially coherent unit of the narrative. Maps to the Sigma tuple in the companion scene document.",
+      "required": ["scene_id", "scene_number", "shots"],
+      "properties": {
+        "scene_id":      { "$ref": "#/$defs/ULID" },
+        "scene_number":  { "type": "integer", "minimum": 1 },
+        "title":         { "type": "string" },
+        "version":       { "$ref": "#/$defs/VersionRecord" },
+
+        "scene_style_predicate": {
+          "type": "string",
+          "description": "S_X predicate from the companion scene document, e.g. 'establishing', 'dialogue', 'action_sequence', 'montage', 'flashback'.",
+          "examples": ["establishing", "dialogue", "action_sequence", "montage_sequence", "flashback", "flash_forward", "dream_insert", "long_take", "cross_cut", "pov", "exposition", "set_piece", "cold_open", "coda", "musical_number", "split_screen", "documentary_insert", "title_credit", "transition", "reaction"]
+        },
+
+        "ontological_status": {
+          "type": "string",
+          "enum": ["objective", "subjective", "non_diegetic"],
+          "description": "omega value from the companion scene document."
+        },
+        "temporal_displacement": {
+          "type": "string",
+          "enum": ["synchronous", "analeptic", "proleptic"],
+          "description": "Relation between tau_d and tau_narr from the companion scene document."
+        },
+        "narrative_function": {
+          "type": "string",
+          "enum": ["orient", "advance", "develop", "inform", "climax", "connect", "paratext", "compress", "resolve", "respond", "establish_premise", "custom"]
+        },
+
+        "environment_ref":    { "$ref": "#/$defs/AssetRef" },
+        "character_refs":     { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "script_element_refs":{ "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+
+        "diegetic_time_label":{ "type": "string", "description": "Human-readable diegetic time, e.g. 'dawn', 'interior night', 'flashback - 10 years prior'." },
+        "estimated_duration_s":{ "type": "number", "minimum": 0 },
+
+        "local_technical_overrides": {
+          "type": "object",
+          "description": "Override any project-level technical_spec fields for this scene.",
+          "properties": {
+            "resolution":       { "$ref": "#/$defs/Resolution" },
+            "frame_rate":       { "$ref": "#/$defs/FrameRate" },
+            "aspect_ratio":     { "$ref": "#/$defs/AspectRatio" },
+            "color_spec":       { "$ref": "#/$defs/ColorSpec" },
+            "quality_controls": { "$ref": "#/$defs/QualityControls" }
+          },
+          "additionalProperties": true
+        },
+
+        "local_director_instructions": { "$ref": "#/$defs/DirectorInstructions" },
+        "lighting":    { "$ref": "#/$defs/LightingSpec" },
+        "dependencies":{ "type": "array", "items": { "$ref": "#/$defs/Dependency" } },
+
+        "shots":       { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Shot" } },
+        "notes":       { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "Shot": {
+      "$anchor": "Shot",
+      "type": "object",
+      "description": "A single continuous camera exposure. The minimal unit of the pipeline. Maps to the Xi tuple in the companion camera document.",
+      "required": ["shot_id", "shot_number"],
+      "properties": {
+        "shot_id":      { "$ref": "#/$defs/ULID" },
+        "shot_number":  { "type": "integer", "minimum": 1 },
+        "label":        { "type": "string", "description": "Human-readable label, e.g. 'INT_OFFICE_DAY_3A'." },
+        "version":      { "$ref": "#/$defs/VersionRecord" },
+
+        "scene_style_predicate": { "type": "string" },
+        "shot_scale": {
+          "type": "string",
+          "enum": ["XCU", "CU", "MCU", "MS", "MWS", "WS", "EWS"],
+          "description": "sigma component of psi from the companion camera document."
+        },
+        "camera":      { "$ref": "#/$defs/CameraSpec" },
+        "lighting":    { "$ref": "#/$defs/LightingSpec" },
+
+        "estimated_duration_s": { "type": "number", "minimum": 0 },
+        "timecode_in":  { "$ref": "#/$defs/Timecode" },
+        "timecode_out": { "$ref": "#/$defs/Timecode" },
+
+        "character_refs":  { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "prop_refs":       { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "environment_ref": { "$ref": "#/$defs/AssetRef" },
+        "script_element_refs": { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+
+        "local_technical_overrides": {
+          "type": "object",
+          "properties": {
+            "resolution":       { "$ref": "#/$defs/Resolution" },
+            "frame_rate":       { "$ref": "#/$defs/FrameRate" },
+            "aspect_ratio":     { "$ref": "#/$defs/AspectRatio" },
+            "color_spec":       { "$ref": "#/$defs/ColorSpec" },
+            "quality_controls": { "$ref": "#/$defs/QualityControls" }
+          },
+          "additionalProperties": true
+        },
+
+        "generative_params":     { "$ref": "#/$defs/GenerativeParameters" },
+        "storyboard_ref":        { "$ref": "#/$defs/AssetRef" },
+        "reference_visual_refs": { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "audio_sync_points":     { "type": "array", "items": { "$ref": "#/$defs/SyncPoint" } },
+
+        "generation_status": {
+          "type": "string",
+          "enum": ["pending", "generating", "generated", "approved", "rejected", "locked"]
+        },
+        "generated_output_ref":  { "$ref": "#/$defs/AssetRef" },
+        "dependencies":          { "type": "array", "items": { "$ref": "#/$defs/Dependency" } },
+        "notes":                 { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "VisualAsset": {
+      "$anchor": "VisualAsset",
+      "type": "object",
+      "description": "Any still or video visual artifact: storyboard frame, character reference, environment matte, generated image, LUT file, HDRI, etc.",
+      "required": ["asset_id", "asset_subtype"],
+      "properties": {
+        "asset_id":     { "$ref": "#/$defs/ULID" },
+        "asset_subtype": {
+          "type": "string",
+          "enum": [
+            "storyboard_frame", "character_reference", "environment_reference",
+            "prop_reference", "style_reference", "concept_art",
+            "generated_image", "generated_video_clip", "composited_shot",
+            "lut_file", "hdri_map", "texture_map",
+            "animatic_frame", "thumbnail", "custom"
+          ]
+        },
+        "title":        { "type": "string" },
+        "description":  { "type": "string" },
+        "version":      { "$ref": "#/$defs/VersionRecord" },
+
+        "storage":      { "$ref": "#/$defs/StorageLocation" },
+        "resolution":   { "$ref": "#/$defs/Resolution" },
+        "color_spec":   { "$ref": "#/$defs/ColorSpec" },
+        "frame_rate":   { "$ref": "#/$defs/FrameRate", "description": "Populated only for video clips." },
+        "duration_s":   { "type": "number", "minimum": 0, "description": "Populated only for video clips." },
+
+        "generative_params": { "$ref": "#/$defs/GenerativeParameters" },
+        "generation_status": {
+          "type": "string",
+          "enum": ["pending", "generating", "generated", "approved", "rejected", "locked"]
+        },
+        "related_refs":  { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "dependencies":  { "type": "array", "items": { "$ref": "#/$defs/Dependency" } },
+        "notes":         { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "AudioAsset": {
+      "$anchor": "AudioAsset",
+      "type": "object",
+      "description": "Any audio artifact: voiceover, music track, sound effect, Foley, ambient bed, etc.",
+      "required": ["asset_id", "asset_subtype"],
+      "properties": {
+        "asset_id":     { "$ref": "#/$defs/ULID" },
+        "asset_subtype": {
+          "type": "string",
+          "enum": [
+            "voiceover", "dialogue_sync", "music_score", "music_licensed",
+            "sound_effect", "foley", "ambient_bed", "silence_marker",
+            "voice_reference", "custom"
+          ]
+        },
+        "title":        { "type": "string" },
+        "description":  { "type": "string" },
+        "version":      { "$ref": "#/$defs/VersionRecord" },
+
+        "storage":      { "$ref": "#/$defs/StorageLocation" },
+        "audio_spec":   { "$ref": "#/$defs/AudioSpec" },
+        "duration_s":   { "type": "number", "minimum": 0 },
+        "bpm":          { "type": "number", "description": "Beats per minute; populated for music assets." },
+        "musical_key":  { "type": "string" },
+
+        "diegetic_status": {
+          "type": "string",
+          "enum": ["diegetic", "non_diegetic", "meta_diegetic"],
+          "description": "Maps to the epsilon component of delta in the companion video document."
+        },
+        "character_ref":  { "$ref": "#/$defs/AssetRef", "description": "Character this audio belongs to, for dialogue or voiceover." },
+        "script_element_refs": { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+
+        "sync_points":    { "type": "array", "items": { "$ref": "#/$defs/SyncPoint" } },
+        "generative_params": { "$ref": "#/$defs/GenerativeParameters" },
+        "generation_status": {
+          "type": "string",
+          "enum": ["pending", "generating", "generated", "approved", "rejected", "locked"]
+        },
+        "dependencies":   { "type": "array", "items": { "$ref": "#/$defs/Dependency" } },
+        "licensing": {
+          "type": "object",
+          "properties": {
+            "license_type":     { "type": "string", "examples": ["royalty_free", "licensed", "custom", "original"] },
+            "rights_holder":    { "type": "string" },
+            "usage_territory":  { "type": "string" },
+            "expiry_date":      { "type": "string", "format": "date" }
+          },
+          "additionalProperties": true
+        },
+        "notes":          { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "RenderOutput": {
+      "$anchor": "RenderOutput",
+      "type": "object",
+      "description": "A versioned final render or assembled video output. Produced by executing the assembly_instructions against resolved assets.",
+      "required": ["output_id", "output_type", "assembly_instructions"],
+      "properties": {
+        "output_id":    { "$ref": "#/$defs/ULID" },
+        "title":        { "type": "string" },
+        "description":  { "type": "string" },
+        "version":      { "$ref": "#/$defs/VersionRecord" },
+
+        "output_type": {
+          "type": "string",
+          "enum": [
+            "full_video", "scene_composite", "shot_composite",
+            "rough_cut", "picture_lock", "final_delivery",
+            "proxy", "archive_master"
+          ]
+        },
+
+        "resolution":       { "$ref": "#/$defs/Resolution" },
+        "frame_rate":       { "$ref": "#/$defs/FrameRate" },
+        "aspect_ratio":     { "$ref": "#/$defs/AspectRatio" },
+        "color_spec":       { "$ref": "#/$defs/ColorSpec" },
+        "audio_spec":       { "$ref": "#/$defs/AudioSpec" },
+        "quality_controls": { "$ref": "#/$defs/QualityControls" },
+        "duration_s":       { "type": "number", "minimum": 0 },
+        "total_frames":     { "type": "integer", "minimum": 0 },
+
+        "assembly_instructions": {
+          "type": "array",
+          "description": "Ordered sequence of assembly operations producing this output. Applied in array order.",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/AssemblyInstruction" }
+        },
+
+        "scene_sequence": {
+          "type": "array",
+          "description": "Ordered list of scene references. The canonical editorial order of scenes in this output.",
+          "items": {
+            "type": "object",
+            "required": ["scene_ref"],
+            "properties": {
+              "scene_ref":    { "$ref": "#/$defs/AssetRef" },
+              "in_point_s":   { "type": "number", "minimum": 0 },
+              "out_point_s":  { "type": "number", "minimum": 0 },
+              "notes":        { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+
+        "audio_tracks": {
+          "type": "array",
+          "description": "Audio tracks included in this output with mix metadata.",
+          "items": {
+            "type": "object",
+            "required": ["audio_ref", "track_role"],
+            "properties": {
+              "audio_ref":    { "$ref": "#/$defs/AssetRef" },
+              "track_role":   { "type": "string", "enum": ["dialogue", "music", "sfx", "foley", "ambient", "custom"] },
+              "mix_level_db": { "type": "number" },
+              "pan":          { "type": "number", "minimum": -1, "maximum": 1 },
+              "in_point_s":   { "type": "number", "minimum": 0 },
+              "sync_points":  { "type": "array", "items": { "$ref": "#/$defs/SyncPoint" } }
+            },
+            "additionalProperties": false
+          }
+        },
+
+        "storage":        { "$ref": "#/$defs/StorageLocation" },
+        "render_status": {
+          "type": "string",
+          "enum": ["pending", "rendering", "rendered", "approved", "rejected", "locked"]
+        },
+        "render_pipeline_hint": {
+          "type": "string",
+          "enum": ["moviepy", "movis", "opencv", "pyav", "manim", "ffmpeg", "custom"],
+          "description": "Advisory hint for the assembly pipeline. Does not mandate the tool."
+        },
+        "dependencies":   { "type": "array", "items": { "$ref": "#/$defs/Dependency" } },
+        "qa_checklist": {
+          "type": "array",
+          "description": "QA items to be verified before this output is approved.",
+          "items": {
+            "type": "object",
+            "required": ["check_id", "description", "status"],
+            "properties": {
+              "check_id":     { "$ref": "#/$defs/ULID" },
+              "description":  { "type": "string" },
+              "status":       { "type": "string", "enum": ["pending", "passed", "failed", "waived"] },
+              "notes":        { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "MarketingAsset": {
+      "$anchor": "MarketingAsset",
+      "type": "object",
+      "description": "Promotional derivative of the project: trailers, thumbnails, social clips, press stills.",
+      "required": ["marketing_asset_id", "asset_subtype"],
+      "properties": {
+        "marketing_asset_id": { "$ref": "#/$defs/ULID" },
+        "asset_subtype": {
+          "type": "string",
+          "enum": [
+            "trailer", "teaser", "thumbnail",
+            "promotional_still", "social_clip_horizontal",
+            "social_clip_vertical", "gif_loop",
+            "press_kit_image", "poster", "banner_ad", "custom"
+          ]
+        },
+        "title":        { "type": "string" },
+        "description":  { "type": "string" },
+        "version":      { "$ref": "#/$defs/VersionRecord" },
+
+        "platform_targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["platform"],
+            "properties": {
+              "platform": { "type": "string", "examples": ["youtube", "instagram", "tiktok", "twitter-x", "facebook", "linkedin", "theatrical", "custom"] },
+              "resolution":   { "$ref": "#/$defs/Resolution" },
+              "aspect_ratio": { "$ref": "#/$defs/AspectRatio" },
+              "max_duration_s": { "type": "number" },
+              "notes":        { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        },
+
+        "source_render_ref":  { "$ref": "#/$defs/AssetRef", "description": "The RenderOutput from which this marketing asset is derived." },
+        "assembly_instructions": { "type": "array", "items": { "$ref": "#/$defs/AssemblyInstruction" } },
+        "generative_params": { "$ref": "#/$defs/GenerativeParameters" },
+        "storage":           { "$ref": "#/$defs/StorageLocation" },
+        "resolution":        { "$ref": "#/$defs/Resolution" },
+        "aspect_ratio":      { "$ref": "#/$defs/AspectRatio" },
+        "duration_s":        { "type": "number", "minimum": 0 },
+
+        "generation_status": {
+          "type": "string",
+          "enum": ["pending", "generating", "generated", "approved", "rejected", "locked"]
+        },
+        "dependencies":      { "type": "array", "items": { "$ref": "#/$defs/Dependency" } },
+        "notes":             { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
