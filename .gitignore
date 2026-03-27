@@ -19,3 +19,4 @@ build/
 .DS_Store
 Thumbs.db
 session-02/output*
+session-02/evidence/*

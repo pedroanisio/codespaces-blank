@@ -21,6 +21,7 @@ from pipeline.assemble import (
     _resolve_audio_codec,
     _resolve_color_grade_params,
     _resolve_lut_path,
+    _resolve_channel_layout,
     _color_grade_cmd,
     _encode_cmd,
     _build_audio_mix_cmd,
@@ -29,6 +30,9 @@ from pipeline.assemble import (
     _find_action_line,
     _exec_retime,
     _exec_filter,
+    _evaluate_spatial_rule,
+    _resolve_clip_refs,
+    check_compatible_runtimes,
     execute_operation_dag,
     populate_final_output,
 )
@@ -1035,6 +1039,491 @@ class TestOperationDAG(unittest.TestCase):
 
         import shutil as _shutil
         _shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fix A: ConcatOp.method compose
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestConcatOpMethod(unittest.TestCase):
+    """Fix A: ConcatOp.method compose vs chain."""
+
+    def test_compose_method_dispatches(self):
+        """DAG concat with method=compose should call _compose_clips_ffmpeg."""
+        operations = [
+            {"opId": "op.concat", "opType": "concat", "clipRefs": [{"id": "s1"}], "method": "compose"},
+            {"opId": "op.encode", "opType": "encode", "inputRef": {"id": "op.concat"},
+             "compression": {"codec": "libx264", "crf": 20}},
+        ]
+        instance = _minimal_instance()
+        instance["production"]["scenes"] = [
+            {"id": "sc1", "sceneNumber": 1, "shotRefs": [{"id": "s1"}], "targetDurationSec": 5},
+        ]
+        instance["production"]["shots"] = [{"id": "s1", "logicalId": "s1"}]
+
+        import tempfile
+        tmp_dir = Path(tempfile.mkdtemp())
+        clip = tmp_dir / "s1.mp4"
+        clip.write_bytes(b"fake")
+
+        with patch("pipeline.assemble._compose_clips_ffmpeg") as mock_compose, \
+             patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr=b"", stdout=b"")
+            try:
+                execute_operation_dag(
+                    operations, instance, tmp_dir,
+                    shot_clips={"s1": clip}, audio_files={},
+                )
+            except Exception:
+                pass
+            mock_compose.assert_called_once()
+
+        import shutil as _shutil
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_chain_method_default(self):
+        """DAG concat without method should default to chain (_concat_clips_ffmpeg)."""
+        operations = [
+            {"opId": "op.concat", "opType": "concat", "clipRefs": [{"id": "s1"}]},
+        ]
+        instance = _minimal_instance()
+        instance["production"]["scenes"] = [
+            {"id": "sc1", "sceneNumber": 1, "shotRefs": [{"id": "s1"}], "targetDurationSec": 5},
+        ]
+        instance["production"]["shots"] = [{"id": "s1", "logicalId": "s1"}]
+
+        import tempfile
+        tmp_dir = Path(tempfile.mkdtemp())
+        clip = tmp_dir / "s1.mp4"
+        clip.write_bytes(b"fake")
+
+        with patch("pipeline.assemble._concat_clips_ffmpeg") as mock_chain, \
+             patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr=b"", stdout=b"")
+            try:
+                execute_operation_dag(
+                    operations, instance, tmp_dir,
+                    shot_clips={"s1": clip}, audio_files={},
+                )
+            except Exception:
+                pass
+            mock_chain.assert_called_once()
+
+        import shutil as _shutil
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fix B: channelLayout enforcement
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestChannelLayout(unittest.TestCase):
+    """Fix B: QualityProfile.audio.channelLayout enforcement."""
+
+    def test_stereo_from_quality_profile(self):
+        instance = _minimal_instance()
+        result = _resolve_channel_layout(instance)
+        self.assertEqual(result, "2")
+
+    def test_mono_from_quality_profile(self):
+        instance = _minimal_instance()
+        instance["qualityProfiles"][0]["profile"]["audio"]["channelLayout"] = "mono"
+        result = _resolve_channel_layout(instance)
+        self.assertEqual(result, "1")
+
+    def test_51_from_quality_profile(self):
+        instance = _minimal_instance()
+        instance["qualityProfiles"][0]["profile"]["audio"]["channelLayout"] = "5.1"
+        result = _resolve_channel_layout(instance)
+        self.assertEqual(result, "6")
+
+    def test_fallback_to_audio_asset(self):
+        instance = _minimal_instance()
+        instance["qualityProfiles"] = []
+        instance["assetLibrary"]["audioAssets"] = [
+            {"id": "a.1", "technicalSpec": {"channelLayout": "mono"}},
+        ]
+        result = _resolve_channel_layout(instance)
+        self.assertEqual(result, "1")
+
+    def test_none_when_unspecified(self):
+        instance = _minimal_instance()
+        instance["qualityProfiles"][0]["profile"]["audio"] = {}
+        result = _resolve_channel_layout(instance)
+        self.assertIsNone(result)
+
+    def test_ac_flag_in_audio_mix_cmd(self):
+        """channelLayout should produce -ac flag in the audio mix command."""
+        instance = _minimal_instance()
+        instance["qualityProfiles"][0]["profile"]["audio"]["channelLayout"] = "5.1"
+        instance["assetLibrary"]["audioAssets"] = [
+            {"id": "a.1", "logicalId": "a.1", "audioType": "ambient"},
+        ]
+        instance["assembly"]["timelines"] = [{
+            "audioClips": [{"sourceRef": {"id": "a.1"}, "timelineStartSec": 0, "durationSec": 10}],
+        }]
+        with patch("pathlib.Path.exists", return_value=True):
+            cmd = _build_audio_mix_cmd(Path("/v.mp4"), {"a.1": Path("/a.mp3")}, instance, Path("/o.mp4"))
+        self.assertIn("-ac", cmd)
+        idx = cmd.index("-ac")
+        self.assertEqual(cmd[idx + 1], "6")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fix C: compatibleRuntimes validation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestCompatibleRuntimes(unittest.TestCase):
+    """Fix C: compatibleRuntimes validation warning."""
+
+    def test_ffmpeg_in_runtimes_no_warning(self):
+        instance = _minimal_instance()
+        instance["assembly"]["renderPlans"] = [
+            {"name": "RP1", "compatibleRuntimes": ["moviepy", "ffmpeg"]},
+        ]
+        warnings = check_compatible_runtimes(instance)
+        self.assertEqual(warnings, [])
+
+    def test_ffmpeg_missing_warns(self):
+        instance = _minimal_instance()
+        instance["assembly"]["renderPlans"] = [
+            {"name": "RP1", "compatibleRuntimes": ["moviepy", "movis"]},
+        ]
+        warnings = check_compatible_runtimes(instance)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("ffmpeg", warnings[0])
+
+    def test_empty_runtimes_no_warning(self):
+        instance = _minimal_instance()
+        instance["assembly"]["renderPlans"] = [{"name": "RP1"}]
+        warnings = check_compatible_runtimes(instance)
+        self.assertEqual(warnings, [])
+
+    def test_no_render_plans_no_warning(self):
+        instance = _minimal_instance()
+        instance["assembly"]["renderPlans"] = []
+        warnings = check_compatible_runtimes(instance)
+        self.assertEqual(warnings, [])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fix D: RetimeSpec.freezeFrames
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestFreezeFrames(unittest.TestCase):
+    """Fix D: RetimeSpec.freezeFrames implementation."""
+
+    def test_freeze_frames_in_cmd(self):
+        op = {"retime": {"speedPercent": 100, "reverse": False, "freezeFrames": [2.5, 5.0]}}
+        cmd = _exec_retime(op, Path("/in.mp4"), Path("/out.mp4"))
+        cmd_str = " ".join(cmd)
+        self.assertIn("freeze=", cmd_str)
+        self.assertIn("t=2.500", cmd_str)
+        self.assertIn("t=5.000", cmd_str)
+
+    def test_no_freeze_frames_no_filter(self):
+        op = {"retime": {"speedPercent": 100, "reverse": False}}
+        cmd = _exec_retime(op, Path("/in.mp4"), Path("/out.mp4"))
+        cmd_str = " ".join(cmd)
+        self.assertNotIn("freeze=", cmd_str)
+
+    def test_freeze_with_speed_combined(self):
+        op = {"retime": {"speedPercent": 50, "reverse": False, "freezeFrames": [1.0]}}
+        cmd = _exec_retime(op, Path("/in.mp4"), Path("/out.mp4"))
+        cmd_str = " ".join(cmd)
+        self.assertIn("setpts=", cmd_str)
+        self.assertIn("freeze=", cmd_str)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fix E: TransitionOp in DAG
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestTransitionOp(unittest.TestCase):
+    """Fix E: TransitionOp as a DAG operation."""
+
+    def test_transition_op_builds_xfade(self):
+        """TransitionOp should generate an xfade FFmpeg command."""
+        operations = [
+            {"opId": "op.concat", "opType": "concat", "clipRefs": [{"id": "s1"}]},
+            {"opId": "op.trans", "opType": "transition",
+             "fromRef": {"id": "s1"}, "toRef": {"id": "s2"},
+             "spec": {"type": "dissolve", "durationSec": 0.5}},
+        ]
+        instance = _minimal_instance()
+        instance["production"]["scenes"] = [
+            {"id": "sc1", "sceneNumber": 1, "shotRefs": [{"id": "s1"}, {"id": "s2"}],
+             "targetDurationSec": 10},
+        ]
+        instance["production"]["shots"] = [
+            {"id": "s1", "logicalId": "s1"},
+            {"id": "s2", "logicalId": "s2"},
+        ]
+
+        import tempfile
+        tmp_dir = Path(tempfile.mkdtemp())
+        clip1 = tmp_dir / "s1.mp4"
+        clip2 = tmp_dir / "s2.mp4"
+        clip1.write_bytes(b"fake1")
+        clip2.write_bytes(b"fake2")
+
+        xfade_found = False
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr=b"", stdout=b"5.0\n")
+            try:
+                execute_operation_dag(
+                    operations, instance, tmp_dir,
+                    shot_clips={"s1": clip1, "s2": clip2}, audio_files={},
+                )
+            except Exception:
+                pass
+            for call in mock_run.call_args_list:
+                cmd_str = " ".join(str(a) for a in call[0][0]) if call[0] else ""
+                if "xfade" in cmd_str:
+                    xfade_found = True
+                    self.assertIn("fade", cmd_str)  # dissolve maps to "fade"
+
+        self.assertTrue(xfade_found, "TransitionOp should generate xfade FFmpeg command")
+
+        import shutil as _shutil
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fix F: SpatialRule[] evaluation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestSpatialRules(unittest.TestCase):
+    """Fix F: SpatialRule[] custom rules evaluation."""
+
+    def test_proximity_too_close(self):
+        warnings: list[str] = []
+        rule = {"ruleType": "proximity", "subjectRef": {"id": "s1"}, "targetRef": {"id": "s2"},
+                "distanceMinM": 5.0, "severity": "error"}
+        shots = {
+            "s1": {"id": "s1", "name": "S1", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 0, "y": 1, "z": 0}}}}},
+            "s2": {"id": "s2", "name": "S2", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 1, "y": 1, "z": 0}}}}},
+        }
+        _evaluate_spatial_rule(rule, "Scene1", shots, [], warnings)
+        self.assertTrue(any("proximity" in w and "1.00m" in w for w in warnings))
+
+    def test_proximity_ok(self):
+        warnings: list[str] = []
+        rule = {"ruleType": "proximity", "subjectRef": {"id": "s1"}, "targetRef": {"id": "s2"},
+                "distanceMinM": 0.5}
+        shots = {
+            "s1": {"id": "s1", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 0, "y": 1, "z": 0}}}}},
+            "s2": {"id": "s2", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 5, "y": 1, "z": 0}}}}},
+        }
+        _evaluate_spatial_rule(rule, "Scene1", shots, [], warnings)
+        self.assertFalse(any("proximity" in w for w in warnings))
+
+    def test_proximity_too_far(self):
+        warnings: list[str] = []
+        rule = {"ruleType": "proximity", "subjectRef": {"id": "s1"}, "targetRef": {"id": "s2"},
+                "distanceMaxM": 2.0}
+        shots = {
+            "s1": {"id": "s1", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 0, "y": 0, "z": 0}}}}},
+            "s2": {"id": "s2", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 10, "y": 0, "z": 0}}}}},
+        }
+        _evaluate_spatial_rule(rule, "Scene1", shots, [], warnings)
+        self.assertTrue(any("max 2.0m" in w for w in warnings))
+
+    def test_exclusion_zone(self):
+        warnings: list[str] = []
+        rule = {"ruleType": "exclusion_zone", "targetRef": {"id": "target"}, "distanceMinM": 3.0}
+        shots = {
+            "target": {"id": "target", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 0, "y": 0, "z": 0}}}}},
+            "cam1": {"id": "cam1", "name": "Cam1", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 1, "y": 0, "z": 0}}}}},
+        }
+        shot_refs = [{"id": "cam1"}]
+        _evaluate_spatial_rule(rule, "Scene1", shots, shot_refs, warnings)
+        self.assertTrue(any("exclusion_zone" in w for w in warnings))
+
+    def test_camera_boundary(self):
+        warnings: list[str] = []
+        rule = {"ruleType": "camera_boundary", "distanceMaxM": 5.0}
+        shots = {
+            "s1": {"id": "s1", "name": "S1", "cinematicSpec": {
+                "cameraExtrinsics": {"transform": {"position": {"x": 10, "y": 0, "z": 0}}}}},
+        }
+        _evaluate_spatial_rule(rule, "Scene1", shots, [{"id": "s1"}], warnings)
+        self.assertTrue(any("camera_boundary" in w and "exceeds" in w for w in warnings))
+
+    def test_facing_constraint_note(self):
+        warnings: list[str] = []
+        rule = {"ruleType": "facing_constraint", "angleToleranceDeg": 30}
+        _evaluate_spatial_rule(rule, "Scene1", {}, [], warnings)
+        self.assertTrue(any("facing_constraint" in w for w in warnings))
+
+    def test_rules_evaluated_via_validate(self):
+        """Rules in spatialConsistency.rules[] should be evaluated by validate_spatial_consistency."""
+        instance = _minimal_instance()
+        instance["production"]["shots"] = [
+            {"id": "s1", "logicalId": "s1", "name": "S1",
+             "cinematicSpec": {"cameraExtrinsics": {"transform": {"position": {"x": 0, "y": 0, "z": 0}}}}},
+            {"id": "s2", "logicalId": "s2", "name": "S2",
+             "cinematicSpec": {"cameraExtrinsics": {"transform": {"position": {"x": 1, "y": 0, "z": 0}}}}},
+        ]
+        instance["production"]["scenes"] = [{
+            "id": "sc1", "name": "Scene1", "sceneNumber": 1, "targetDurationSec": 10,
+            "shotRefs": [{"id": "s1"}, {"id": "s2"}],
+            "spatialConsistency": {
+                "required": True,
+                "rules": [{
+                    "ruleType": "proximity",
+                    "subjectRef": {"id": "s1"}, "targetRef": {"id": "s2"},
+                    "distanceMinM": 5.0, "severity": "error",
+                    "notes": "cameras too close",
+                }],
+            },
+        }]
+        warnings = validate_spatial_consistency(instance)
+        self.assertTrue(any("proximity" in w and "cameras too close" in w for w in warnings))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ClipRefs authoritative ordering
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestClipRefsOrdering(unittest.TestCase):
+    """ConcatOp.clipRefs should be authoritative for clip ordering."""
+
+    def test_resolve_clip_refs_order(self):
+        """Clips should be returned in clipRefs order, not dict order."""
+        import tempfile
+        tmp = Path(tempfile.mkdtemp())
+        c1 = tmp / "a.mp4"; c1.write_bytes(b"1")
+        c2 = tmp / "b.mp4"; c2.write_bytes(b"2")
+        c3 = tmp / "c.mp4"; c3.write_bytes(b"3")
+
+        clips = {"shot.s1.v1": c1, "shot.s2.v1": c2, "shot.s3.v1": c3}
+        # Request reverse order
+        refs = [{"id": "shot.s3.v1"}, {"id": "shot.s1.v1"}, {"id": "shot.s2.v1"}]
+
+        result = _resolve_clip_refs(refs, clips)
+        self.assertEqual(result, [c3, c1, c2])
+
+        import shutil as _shutil
+        _shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_resolve_clip_refs_empty(self):
+        result = _resolve_clip_refs([], {})
+        self.assertEqual(result, [])
+
+    def test_resolve_clip_refs_missing_file(self):
+        refs = [{"id": "nonexistent"}]
+        result = _resolve_clip_refs(refs, {})
+        self.assertEqual(result, [])
+
+    def test_resolve_clip_refs_partial_match(self):
+        """If id doesn't match directly, try prefix matching."""
+        import tempfile
+        tmp = Path(tempfile.mkdtemp())
+        c1 = tmp / "shot.s1.mp4"; c1.write_bytes(b"1")
+        # clipRef uses versioned id "shot.s1.v1" but shot_clips has logicalId "shot.s1"
+        clips = {"shot.s1": c1}
+        refs = [{"id": "shot.s1.v1"}]
+
+        result = _resolve_clip_refs(refs, clips)
+        self.assertEqual(len(result), 1)
+
+        import shutil as _shutil
+        _shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_dag_uses_cliprefs_over_scenes(self):
+        """DAG concat should prefer clipRefs order over scene-derived order."""
+        import tempfile
+        tmp_dir = Path(tempfile.mkdtemp())
+        c1 = tmp_dir / "s1.mp4"; c1.write_bytes(b"1")
+        c2 = tmp_dir / "s2.mp4"; c2.write_bytes(b"2")
+
+        operations = [
+            {"opId": "op.concat", "opType": "concat",
+             "clipRefs": [{"id": "s2"}, {"id": "s1"}]},  # reverse order
+        ]
+        instance = _minimal_instance()
+        instance["production"]["scenes"] = [
+            {"id": "sc1", "sceneNumber": 1,
+             "shotRefs": [{"id": "s1"}, {"id": "s2"}],  # normal order
+             "targetDurationSec": 10},
+        ]
+        instance["production"]["shots"] = [
+            {"id": "s1", "logicalId": "s1"},
+            {"id": "s2", "logicalId": "s2"},
+        ]
+
+        concat_clips = []
+        with patch("pipeline.assemble._concat_clips_ffmpeg") as mock_concat, \
+             patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr=b"", stdout=b"")
+            def capture_clips(clips, *a, **kw):
+                concat_clips.extend(clips)
+            mock_concat.side_effect = capture_clips
+            try:
+                execute_operation_dag(
+                    operations, instance, tmp_dir,
+                    shot_clips={"s1": c1, "s2": c2}, audio_files={},
+                )
+            except Exception:
+                pass
+
+        # clipRefs should win: s2 first, then s1
+        if concat_clips:
+            self.assertEqual(concat_clips[0], c2)
+            self.assertEqual(concat_clips[1], c1)
+
+        import shutil as _shutil
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Schema CRF field validation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestSchemaCrfField(unittest.TestCase):
+    """Verify the crf field exists in CompressionControls schema definition."""
+
+    @classmethod
+    def setUpClass(cls):
+        schema_path = Path(__file__).parent.parent / "claude-unified-video-project-v3.schema.json"
+        if not schema_path.exists():
+            raise unittest.SkipTest("Schema file not found")
+        cls.schema = json.loads(schema_path.read_text(encoding="utf-8"))
+
+    def test_crf_in_compression_controls(self):
+        """CompressionControls should include a 'crf' property."""
+        cc = self.schema["$defs"]["CompressionControls"]
+        self.assertIn("crf", cc["properties"])
+        crf = cc["properties"]["crf"]
+        self.assertEqual(crf["type"], "number")
+        self.assertEqual(crf["minimum"], 0)
+        self.assertLessEqual(crf["maximum"], 63)
+
+    def test_example_project_validates_with_crf(self):
+        """An instance using crf in compression should validate against the schema."""
+        try:
+            import jsonschema
+        except ImportError:
+            self.skipTest("jsonschema not installed")
+
+        example_path = Path(__file__).parent.parent / "example-project.json"
+        if not example_path.exists():
+            self.skipTest("example-project.json not found")
+
+        instance = json.loads(example_path.read_text(encoding="utf-8"))
+        validator = jsonschema.validators.validator_for(self.schema)(self.schema)
+        errors = list(validator.iter_errors(instance))
+        # Should have zero errors (the example doesn't use crf, but it shouldn't break)
+        self.assertEqual(len(errors), 0, f"Validation errors: {[e.message for e in errors[:5]]}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

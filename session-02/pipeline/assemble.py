@@ -147,7 +147,115 @@ def validate_spatial_consistency(instance: dict) -> list[str]:
                 f"runtime drift validation requires generated frames (not enforceable pre-render)"
             )
 
+        # Fix F: Evaluate SpatialRule[] custom rules
+        for rule in sc.get("rules") or []:
+            _evaluate_spatial_rule(rule, scene_name, shots_by_id, shot_refs, warnings)
+
     return warnings
+
+
+def _evaluate_spatial_rule(
+    rule: dict,
+    scene_name: str,
+    shots_by_id: dict[str, dict],
+    shot_refs: list[dict],
+    warnings: list[str],
+) -> None:
+    """Evaluate a single SpatialRule against the scene's shots.
+
+    Supports ruleTypes: proximity, exclusion_zone, facing_constraint,
+    camera_boundary, relative_position, sightline.
+    """
+    rule_type = rule.get("ruleType", "")
+    severity = rule.get("severity", "warning")
+    notes = rule.get("notes", "")
+    subject_ref = (rule.get("subjectRef") or {}).get("id", "")
+    target_ref = (rule.get("targetRef") or {}).get("id", "")
+
+    subject = shots_by_id.get(subject_ref)
+    target = shots_by_id.get(target_ref)
+
+    def _pos(entity: dict | None) -> dict | None:
+        if not entity:
+            return None
+        spec = entity.get("cinematicSpec") or {}
+        ext = spec.get("cameraExtrinsics") or {}
+        t = ext.get("transform") or {}
+        return t.get("position")
+
+    def _distance(a: dict, b: dict) -> float:
+        dx = a.get("x", 0) - b.get("x", 0)
+        dy = a.get("y", 0) - b.get("y", 0)
+        dz = a.get("z", 0) - b.get("z", 0)
+        return (dx**2 + dy**2 + dz**2) ** 0.5
+
+    tag = f"[{scene_name}] [{severity}]"
+
+    if rule_type == "proximity":
+        sp = _pos(subject)
+        tp = _pos(target)
+        if sp and tp:
+            dist = _distance(sp, tp)
+            min_d = rule.get("distanceMinM")
+            max_d = rule.get("distanceMaxM")
+            if min_d is not None and dist < min_d:
+                warnings.append(
+                    f"{tag} proximity: {subject_ref} is {dist:.2f}m from {target_ref} "
+                    f"(min {min_d}m). {notes}"
+                )
+            if max_d is not None and dist > max_d:
+                warnings.append(
+                    f"{tag} proximity: {subject_ref} is {dist:.2f}m from {target_ref} "
+                    f"(max {max_d}m). {notes}"
+                )
+
+    elif rule_type == "exclusion_zone":
+        tp = _pos(target)
+        if tp:
+            radius = rule.get("distanceMinM", 0)
+            for ref in shot_refs:
+                shot = shots_by_id.get(ref.get("id", ""))
+                sp = _pos(shot)
+                if sp and shot and _distance(sp, tp) < radius:
+                    warnings.append(
+                        f"{tag} exclusion_zone: {shot.get('name', '?')} camera at "
+                        f"{_distance(sp, tp):.2f}m violates {radius}m exclusion around "
+                        f"{target_ref}. {notes}"
+                    )
+
+    elif rule_type == "camera_boundary":
+        max_d = rule.get("distanceMaxM")
+        if max_d is not None:
+            for ref in shot_refs:
+                shot = shots_by_id.get(ref.get("id", ""))
+                sp = _pos(shot)
+                if sp:
+                    dist_from_origin = (sp.get("x", 0)**2 + sp.get("z", 0)**2) ** 0.5
+                    if dist_from_origin > max_d:
+                        warnings.append(
+                            f"{tag} camera_boundary: {shot.get('name', '?')} at "
+                            f"{dist_from_origin:.2f}m exceeds boundary {max_d}m. {notes}"
+                        )
+
+    elif rule_type in ("facing_constraint", "sightline"):
+        tol = rule.get("angleToleranceDeg")
+        if tol is not None:
+            warnings.append(
+                f"{tag} {rule_type}: angleToleranceDeg={tol}° specified — "
+                f"requires orientation data to validate. {notes}"
+            )
+
+    elif rule_type == "relative_position":
+        sp = _pos(subject)
+        tp = _pos(target)
+        if sp and tp:
+            dist = _distance(sp, tp)
+            min_d = rule.get("distanceMinM")
+            max_d = rule.get("distanceMaxM")
+            if min_d is not None and dist < min_d:
+                warnings.append(f"{tag} relative_position: distance {dist:.2f}m < min {min_d}m. {notes}")
+            if max_d is not None and dist > max_d:
+                warnings.append(f"{tag} relative_position: distance {dist:.2f}m > max {max_d}m. {notes}")
 
 
 def _find_action_line(scene: dict) -> tuple[dict, dict] | None:
@@ -298,19 +406,108 @@ def _resolve_audio_codec(instance: dict) -> tuple[str, str]:
     return "aac", "192k"
 
 
+# ── Fix B: channelLayout enforcement ─────────────────────────────────────────
+
+def _resolve_channel_layout(instance: dict) -> str | None:
+    """Resolve audio channel layout from qualityProfile or first audioAsset.
+
+    Returns FFmpeg -ac value string or None (let FFmpeg decide).
+    """
+    layout_map = {
+        "mono": "1", "stereo": "2", "5.1": "6", "7.1": "8",
+        "quad": "4", "surround": "3",
+    }
+    # Check qualityProfile first
+    qps = instance.get("qualityProfiles") or []
+    qp = (qps[0] if qps else {}).get("profile") or {}
+    layout = (qp.get("audio") or {}).get("channelLayout", "")
+    if layout and layout in layout_map:
+        return layout_map[layout]
+
+    # Check first audioAsset technicalSpec
+    for asset in (instance.get("assetLibrary") or {}).get("audioAssets") or []:
+        spec = asset.get("technicalSpec") or {}
+        cl = spec.get("channelLayout", "")
+        if cl and cl in layout_map:
+            return layout_map[cl]
+
+    return None
+
+
+# ── Fix C: compatibleRuntimes validation ─────────────────────────────────────
+
+class RuntimeWarning(UserWarning):
+    """Raised when the renderPlan's compatibleRuntimes exclude ffmpeg."""
+
+
+def check_compatible_runtimes(instance: dict) -> list[str]:
+    """Validate that 'ffmpeg' is in the renderPlan's compatibleRuntimes.
+
+    Returns a list of warnings.
+    """
+    warnings: list[str] = []
+    render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
+    for rp in render_plans:
+        runtimes = rp.get("compatibleRuntimes") or []
+        if runtimes and "ffmpeg" not in runtimes:
+            name = rp.get("name", rp.get("id", "?"))
+            warnings.append(
+                f"renderPlan '{name}' declares compatibleRuntimes={runtimes} "
+                f"which does not include 'ffmpeg'. This pipeline uses FFmpeg — "
+                f"results may not match the intended runtime."
+            )
+    return warnings
+
+
+# ── Clip reference resolution ─────────────────────────────────────────────────
+
+def _resolve_clip_refs(
+    clip_refs: list[dict],
+    shot_clips: dict[str, Path],
+) -> list[Path]:
+    """Resolve ConcatOp.clipRefs (array of EntityRef) to ordered file paths.
+
+    Returns the paths in the order declared by clipRefs.
+    Returns empty list if none of the refs resolve to existing files.
+    """
+    ordered: list[Path] = []
+    for ref in clip_refs:
+        ref_id = ref.get("id") or ref.get("logicalId") or ""
+        if not ref_id:
+            continue
+        clip = shot_clips.get(ref_id)
+        if clip and clip.exists():
+            ordered.append(clip)
+        else:
+            # Try matching by logicalId derivation (strip version suffix)
+            for key, path in shot_clips.items():
+                if ref_id.startswith(key) or key.startswith(ref_id):
+                    if path.exists():
+                        ordered.append(path)
+                        break
+            else:
+                log.warning("clipRef %s could not be resolved to a clip file", ref_id)
+    return ordered
+
+
 # ── Shot ordering ─────────────────────────────────────────────────────────────
 
-def _shots_in_scene_order(instance: dict, shot_clips: dict[str, Path]) -> list[Path]:
-    """Return clip paths ordered by scene number then shot order."""
+def _shots_in_scene_order(
+    instance: dict, shot_clips: dict[str, Path],
+) -> tuple[list[Path], list[float]]:
+    """Return (clip_paths, target_durations) ordered by scene then shot."""
     production = instance.get("production") or {}
     id_to_logical: dict[str, str] = {}
+    shot_by_id: dict[str, dict] = {}
     for s in production.get("shots") or []:
         lid = s.get("logicalId", "")
         sid = s.get("id", "")
         if lid:
             id_to_logical[lid] = lid
+            shot_by_id[lid] = s
         if sid:
             id_to_logical[sid] = lid
+            shot_by_id[sid] = s
 
     scenes = sorted(
         production.get("scenes") or [],
@@ -318,6 +515,7 @@ def _shots_in_scene_order(instance: dict, shot_clips: dict[str, Path]) -> list[P
     )
 
     ordered: list[Path] = []
+    durations: list[float] = []
     seen: set[str] = set()
     for scene in scenes:
         for ref in scene.get("shotRefs") or []:
@@ -328,6 +526,8 @@ def _shots_in_scene_order(instance: dict, shot_clips: dict[str, Path]) -> list[P
             clip = shot_clips.get(logical)
             if clip and clip.exists():
                 ordered.append(clip)
+                shot = shot_by_id.get(ref_id) or shot_by_id.get(logical) or {}
+                durations.append(float(shot.get("targetDurationSec", 0)))
                 seen.add(logical)
             else:
                 log.warning("missing clip for shot %s — skipped", ref_id)
@@ -336,8 +536,10 @@ def _shots_in_scene_order(instance: dict, shot_clips: dict[str, Path]) -> list[P
         for lid, path in shot_clips.items():
             if path.exists():
                 ordered.append(path)
+                shot = shot_by_id.get(lid) or {}
+                durations.append(float(shot.get("targetDurationSec", 0)))
 
-    return ordered
+    return ordered, durations
 
 
 # ── Transition support (#5) ───────────────────────────────────────────────────
@@ -355,11 +557,26 @@ def _get_clip_duration(path: Path) -> float:
         return 5.0
 
 
+def _normalize_filter(
+    idx: int,
+    target_dur: float,
+    actual_dur: float,
+) -> str:
+    """Build per-clip normalize filter: trim → scale → fps."""
+    trim = f"trim=duration={target_dur}," if 0 < target_dur < actual_dur else ""
+    return (
+        f"[{idx}:v]{trim}setpts=PTS-STARTPTS,"
+        f"scale=1920:1080:force_original_aspect_ratio=decrease,"
+        f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[n{idx}]"
+    )
+
+
 def _concat_clips_ffmpeg(
     clip_paths: list[Path],
     out_path: Path,
     *,
     scenes: list[dict] | None = None,
+    target_durations: list[float] | None = None,
 ) -> None:
     """Concatenate clips with per-scene transitions.
 
@@ -368,6 +585,9 @@ def _concat_clips_ffmpeg(
     """
     if not clip_paths:
         return
+
+    actual_durs = [_get_clip_duration(p) for p in clip_paths]
+    targets = target_durations or [0.0] * len(clip_paths)
 
     has_transitions = False
     if scenes:
@@ -378,23 +598,30 @@ def _concat_clips_ffmpeg(
                 has_transitions = True
                 break
 
+    inputs = []
+    for p in clip_paths:
+        inputs += ["-i", str(p)]
+
+    norm_filters = [
+        _normalize_filter(i, targets[i], actual_durs[i])
+        for i in range(len(clip_paths))
+    ]
+
+    # Effective durations after trimming (used for xfade offsets)
+    durations = [
+        min(targets[i], actual_durs[i]) if targets[i] > 0 else actual_durs[i]
+        for i in range(len(clip_paths))
+    ]
+
     if not has_transitions or len(clip_paths) <= 1:
-        inputs = []
-        scale_filters = []
-        for i, p in enumerate(clip_paths):
-            inputs += ["-i", str(p)]
-            scale_filters.append(
-                f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
-                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[n{i}]"
-            )
         concat_filter = "".join(f"[n{i}]" for i in range(len(clip_paths)))
         concat_filter += f"concat=n={len(clip_paths)}:v=1:a=0[vout]"
-        scale_filters.append(concat_filter)
+        all_filters = norm_filters + [concat_filter]
 
         cmd = [
             "ffmpeg", "-y",
             *inputs,
-            "-filter_complex", ";".join(scale_filters),
+            "-filter_complex", ";".join(all_filters),
             "-map", "[vout]",
             "-c:v", "libx264", "-preset", "fast", "-crf", "20",
             "-pix_fmt", "yuv420p", "-an",
@@ -404,8 +631,6 @@ def _concat_clips_ffmpeg(
         return
 
     # Build xfade filter chain
-    durations = [_get_clip_duration(p) for p in clip_paths]
-
     xfade_map = {
         "dissolve": "fade",
         "fade": "fade",
@@ -421,24 +646,11 @@ def _concat_clips_ffmpeg(
         for s in scenes:
             transition_specs.append(s.get("transitionOut") or {"type": "cut"})
 
-    inputs = []
-    for p in clip_paths:
-        inputs += ["-i", str(p)]
-
-    # Normalize all inputs to the same resolution so xfade works across
-    # mixed sources (e.g. Veo 720p + stub 1080p).
-    scale_parts = []
-    for i in range(len(clip_paths)):
-        scale_parts.append(
-            f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
-            f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[n{i}]"
-        )
-
     # Every clip pair gets an xfade so the chain stays continuous.
     # "cut" transitions use a near-zero duration (1 frame ≈ 0.04s).
     _CUT_DUR = 0.04
 
-    filter_parts = list(scale_parts)
+    filter_parts = list(norm_filters)
     current_offset = 0.0
     prev_label = "[n0]"
 
@@ -472,6 +684,53 @@ def _concat_clips_ffmpeg(
         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
         "-pix_fmt", "yuv420p",
         "-an",
+        str(out_path),
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+
+
+# ── Fix A: ConcatOp.method=compose (vertical stack) ──────────────────────────
+
+def _compose_clips_ffmpeg(clip_paths: list[Path], out_path: Path) -> None:
+    """Stack clips vertically (compose method) using FFmpeg overlay.
+
+    Schema ConcatOp.method='compose' means clips are composited/stacked,
+    not sequentially chained.  The longest clip determines the duration.
+    """
+    if not clip_paths:
+        return
+    if len(clip_paths) == 1:
+        shutil.copy(clip_paths[0], out_path)
+        return
+
+    inputs = []
+    for p in clip_paths:
+        inputs += ["-i", str(p)]
+
+    # Build overlay chain: stack each clip on top of the previous
+    filter_parts = []
+    # Normalize all inputs
+    for i in range(len(clip_paths)):
+        filter_parts.append(
+            f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
+            f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24,format=yuva420p,"
+            f"colorchannelmixer=aa=0.5[l{i}]"
+        )
+
+    # Overlay layers: l0 is base, overlay l1..lN
+    prev = f"[l0]"
+    for i in range(1, len(clip_paths)):
+        out_label = "[vout]" if i == len(clip_paths) - 1 else f"[ov{i}]"
+        filter_parts.append(f"{prev}[l{i}]overlay=0:0:shortest=0{out_label}")
+        prev = out_label
+
+    cmd = [
+        "ffmpeg", "-y",
+        *inputs,
+        "-filter_complex", ";".join(filter_parts),
+        "-map", "[vout]",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "1",
+        "-pix_fmt", "yuv420p", "-an",
         str(out_path),
     ]
     subprocess.run(cmd, check=True, capture_output=True)
@@ -588,6 +847,10 @@ def _build_audio_mix_cmd(
     mix_filter = "".join(mix_inputs) + f"amix=inputs={valid_tracks}:normalize=0[aout]"
     filter_parts.append(mix_filter)
 
+    # Fix B: enforce channelLayout from schema
+    channel_count = _resolve_channel_layout(instance)
+    ac_flag = ["-ac", channel_count] if channel_count else []
+
     return [
         "ffmpeg", "-y",
         *inputs,
@@ -596,6 +859,7 @@ def _build_audio_mix_cmd(
         "-map", "[aout]",
         "-c:v", "copy",
         "-c:a", audio_codec, "-b:a", audio_bitrate,
+        *ac_flag,
         str(out_path),
     ]
 
@@ -827,11 +1091,12 @@ def populate_final_output(instance: dict, final_path: Path) -> dict:
 # ctx holds instance, paths, intermediate dir, etc.
 
 def _exec_retime(op: dict, input_path: Path, out_path: Path) -> list[str]:
-    """Build FFmpeg command for RetimeOp (speed change / reverse)."""
+    """Build FFmpeg command for RetimeOp (speed change / reverse / freeze frames)."""
     retime = op.get("retime") or {}
     speed_pct = float(retime.get("speedPercent", 100))
     reverse = retime.get("reverse", False)
     interpolation = retime.get("frameInterpolation", "none")
+    freeze_frames = retime.get("freezeFrames") or []
 
     pts_factor = 100.0 / speed_pct if speed_pct > 0 else 1.0
     atempo = speed_pct / 100.0
@@ -846,11 +1111,29 @@ def _exec_retime(op: dict, input_path: Path, out_path: Path) -> list[str]:
     elif interpolation == "optical_flow" and abs(speed_pct - 100) > 0.1:
         vf_parts.append("minterpolate='mi_mode=mci:mc_mode=aobmc:vsbmc=1'")
 
+    # Fix D: freezeFrames — freeze at specified timestamps for 1 second each
+    # Uses FFmpeg tpad filter to duplicate frames at the given timestamps
+    if freeze_frames:
+        # Build a select expression that pauses at each timestamp
+        # Each freeze holds for ~1 second (24 frames at 24fps)
+        hold_frames = 24
+        for ts in sorted(freeze_frames):
+            # freeze: duplicate the frame at timestamp ts for hold_frames extra frames
+            vf_parts.append(
+                f"tpad=stop_mode=clone:stop_duration=0,"
+                f"setpts=PTS+if(gte(T\\,{ts:.3f})*lt(T\\,{ts:.3f}+1/{hold_frames})\\,1\\,0)/TB"
+            )
+        # Simpler approach: use the freeze filter (available in newer FFmpeg)
+        # freeze=n=FRAME:d=DURATION for each freeze point
+        vf_parts_clean = [p for p in vf_parts if not p.startswith("tpad=")]
+        for ts in sorted(freeze_frames):
+            vf_parts_clean.append(f"freeze=t={ts:.3f}:d=1")
+        vf_parts = vf_parts_clean
+
     af_parts = []
     if reverse:
         af_parts.append("areverse")
     if abs(speed_pct - 100) > 0.1:
-        # atempo only accepts 0.5..100; chain for extremes
         t = atempo
         while t > 2.0:
             af_parts.append("atempo=2.0")
@@ -936,12 +1219,24 @@ def execute_operation_dag(
         step_num += 1
 
         if op_type == "concat":
-            ordered_clips = _shots_in_scene_order(instance, shot_clips)
+            # Use clipRefs from the operation as authoritative ordering
+            # when provided (schema: ConcatOp.clipRefs is required).
+            # Fall back to scene-derived order only if clipRefs can't resolve.
+            clip_refs = op.get("clipRefs") or []
+            ordered_clips = _resolve_clip_refs(clip_refs, shot_clips)
+            if not ordered_clips:
+                ordered_clips, clip_targets = _shots_in_scene_order(instance, shot_clips)
+            else:
+                clip_targets = [0.0] * len(ordered_clips)
             if not ordered_clips:
                 raise RuntimeError("No shot clips available to assemble")
             out = inter / f"{step_num:02d}_{op_id}.mp4"
-            log.info("▶ [%s] concat — %d clips", op_id, len(ordered_clips))
-            _concat_clips_ffmpeg(ordered_clips, out, scenes=scenes)
+            method = op.get("method", "chain")
+            log.info("▶ [%s] concat — %d clips (method=%s)", op_id, len(ordered_clips), method)
+            if method == "compose":
+                _compose_clips_ffmpeg(ordered_clips, out)
+            else:
+                _concat_clips_ffmpeg(ordered_clips, out, scenes=scenes, target_durations=clip_targets)
             current_path = out
 
         elif op_type == "audioMix":
@@ -1019,6 +1314,49 @@ def execute_operation_dag(
                 shutil.copy(current_path, out)
             current_path = out
 
+        elif op_type == "transition":
+            # Fix E: TransitionOp — apply xfade between fromRef and toRef clips
+            if current_path is None:
+                continue
+            spec = op.get("spec") or {}
+            t_type = spec.get("type", "dissolve")
+            t_dur = float(spec.get("durationSec", 0.5))
+            from_ref = (op.get("fromRef") or {}).get("id", "")
+            to_ref = (op.get("toRef") or {}).get("id", "")
+
+            xfade_map = {
+                "dissolve": "fade", "fade": "fade", "wipe": "wipeleft",
+                "push": "slideleft", "zoom": "zoomin", "custom": "fade",
+            }
+            xfade_name = xfade_map.get(t_type, "fade")
+
+            # Resolve the two clips from shot_clips
+            from_clip = shot_clips.get(from_ref)
+            to_clip = shot_clips.get(to_ref)
+            if from_clip and to_clip and from_clip.exists() and to_clip.exists():
+                out = inter / f"{step_num:02d}_{op_id}.mp4"
+                from_dur = _get_clip_duration(from_clip)
+                t_dur = min(t_dur, from_dur * 0.5)
+                offset = from_dur - t_dur
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-i", str(from_clip), "-i", str(to_clip),
+                    "-filter_complex",
+                    f"[0:v][1:v]xfade=transition={xfade_name}:duration={t_dur:.2f}:offset={offset:.2f}[vout]",
+                    "-map", "[vout]",
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "1",
+                    "-pix_fmt", "yuv420p", "-an",
+                    str(out),
+                ]
+                log.info("▶ [%s] transition — %s (%s, %.1fs)", op_id, t_type, xfade_name, t_dur)
+                result = subprocess.run(cmd, capture_output=True)
+                if result.returncode != 0:
+                    log.error("[%s] transition failed:\n%s", op_id, result.stderr.decode())
+                else:
+                    current_path = out
+            else:
+                log.warning("[%s] transition: cannot resolve fromRef=%s or toRef=%s", op_id, from_ref, to_ref)
+
         else:
             log.warning("▶ [%s] unsupported opType '%s' — skipped", op_id, op_type)
 
@@ -1053,6 +1391,9 @@ def assemble(
     spatial_warnings = validate_spatial_consistency(instance)
     for w in spatial_warnings:
         log.warning("spatial: %s", w)
+    # Fix C: warn if FFmpeg not in compatibleRuntimes
+    for w in check_compatible_runtimes(instance):
+        log.warning("runtime: %s", w)
 
     # ── Check for renderPlan operations ───────────────────────────────────────
     render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
@@ -1087,13 +1428,13 @@ def assemble(
         key=lambda s: s.get("sceneNumber", 0),
     )
 
-    ordered_clips = _shots_in_scene_order(instance, shot_clips)
+    ordered_clips, clip_targets = _shots_in_scene_order(instance, shot_clips)
     if not ordered_clips:
         raise RuntimeError("No shot clips available to assemble")
 
     concat_path = inter / "01_concat.mp4"
     log.info("▶ concat — %d clips → %s", len(ordered_clips), concat_path.name)
-    _concat_clips_ffmpeg(ordered_clips, concat_path, scenes=scenes)
+    _concat_clips_ffmpeg(ordered_clips, concat_path, scenes=scenes, target_durations=clip_targets)
 
     mixed_path = inter / "02_mixed.mp4"
     log.info("▶ audio_mix — %d track(s) → %s", len(audio_files), mixed_path.name)

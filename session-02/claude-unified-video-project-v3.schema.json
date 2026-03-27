@@ -913,6 +913,12 @@
         "gopLength": {
           "type": "integer",
           "minimum": 1
+        },
+        "crf": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 63,
+          "description": "Constant rate factor. Quality-based encoding (0=lossless, 18=visually lossless, 23=default, 51+=low quality). When specified, takes precedence over bitrateMbps for single-pass encoding."
         }
       }
     },
@@ -3554,6 +3560,10 @@
             "isCanonicalReference": {
               "type": "boolean"
             },
+            "povCharacterRef": {
+              "$ref": "#/$defs/EntityRef",
+              "description": "When visualType is 'environment_pov_plate', references the character whose eye-level and spatial position define the camera placement. Camera height derived from character.heightM × 0.94 (eye-to-height ratio)."
+            },
             "spec": {
               "$ref": "#/$defs/VisualAssetSpec"
             },
@@ -5647,7 +5657,7 @@
         },
         "anchorType": {
           "type": "string",
-          "enum": ["landmark", "action_line", "staging_mark", "entry_point", "sightline", "custom"]
+          "enum": ["landmark", "action_line", "staging_mark", "entry_point", "sightline", "eyeline", "pov", "custom"]
         },
         "linkedAnchorId": {
           "$ref": "#/$defs/Identifier",

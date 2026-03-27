@@ -166,11 +166,14 @@ def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
         "Content-Type": "application/json",
         "X-Runway-Version": "2024-11-06",
     }
+    log.debug("runway payload for %s: %s", _shot_id(shot), payload)
     resp = requests.post(
         "https://api.dev.runwayml.com/v1/text_to_video",
         json=payload, headers=headers, timeout=30,
     )
-    resp.raise_for_status()
+    if not resp.ok:
+        log.error("runway %d for %s: %s", resp.status_code, _shot_id(shot), resp.text)
+        resp.raise_for_status()
     task_id = resp.json()["id"]
     log.info("runway task %s started for %s", task_id, _shot_id(shot))
 

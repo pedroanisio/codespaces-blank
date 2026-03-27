@@ -773,7 +773,8 @@ class TestS13ReferenceGeneration:
     def test_total_reference_count(self, minimal_instance, tmp_path):
         """
         minimal_instance has 1 character + 1 environment + 0 props.
-        Should generate: 3 char views + 2 env plates = 5 total.
+        1 char appears in 1 env via 1 scene → 1 POV plate.
+        Should generate: 3 char views + 2 env plates + 1 POV plate = 6 total.
         """
         from pipeline.generate import _generate_reference_images
         fake_img = b"\x89PNG" + b"\x00" * 500
@@ -781,5 +782,146 @@ class TestS13ReferenceGeneration:
         with patch("pipeline.providers.generate_image", return_value=fake_img) as mock_gen:
             lib = _generate_reference_images(minimal_instance, tmp_path)
 
-        assert mock_gen.call_count == 5, f"Expected 5 generate_image calls, got {mock_gen.call_count}"
-        assert len(lib.all_refs_flat()) == 5
+        assert mock_gen.call_count == 6, f"Expected 6 generate_image calls, got {mock_gen.call_count}"
+        assert len(lib.all_refs_flat()) == 6
+
+
+# ── S13 Step 3b: POV plate tests ─────────────────────────────────────────────
+
+class TestPovPlateGeneration:
+    """Test POV environment plate generation (S13 Step 3b)."""
+
+    def test_generates_pov_plate_for_char_env_pair(self, minimal_instance, tmp_path):
+        """Should generate 1 POV plate for ALICE in Office."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img):
+            lib = _generate_reference_images(minimal_instance, tmp_path)
+
+        assert lib.pov_plate("char.a", "env.office") is not None
+
+    def test_pov_prompt_uses_eye_height(self, minimal_instance, tmp_path):
+        """POV prompt should derive eye height from character.heightM × 0.94."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        captured: list[str] = []
+
+        def capture(prompt, **kw):
+            captured.append(prompt)
+            return fake_img
+
+        # Set ALICE height to 1.7m → eye height = 1.598m ≈ 1.6m
+        minimal_instance["production"]["characters"][0]["heightM"] = 1.7
+
+        with patch("pipeline.providers.generate_image", side_effect=capture):
+            _generate_reference_images(minimal_instance, tmp_path)
+
+        pov_prompts = [p for p in captured if "POV" in p or "First-person" in p]
+        assert len(pov_prompts) >= 1, "Should have at least 1 POV prompt"
+        assert "1.6" in pov_prompts[0], f"Eye height should be ~1.6m: {pov_prompts[0][:200]}"
+
+    def test_pov_prompt_excludes_characters(self, minimal_instance, tmp_path):
+        """POV plates must say NO people / NO characters."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        captured: list[str] = []
+
+        def capture(prompt, **kw):
+            captured.append(prompt)
+            return fake_img
+
+        with patch("pipeline.providers.generate_image", side_effect=capture):
+            _generate_reference_images(minimal_instance, tmp_path)
+
+        pov_prompts = [p for p in captured if "First-person" in p]
+        for p in pov_prompts:
+            assert "NO people" in p or "NO characters" in p, \
+                f"POV prompt must exclude characters: {p[:150]}"
+
+    def test_pov_prompt_references_character_name(self, minimal_instance, tmp_path):
+        """POV plate should mention which character's perspective."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        captured: list[str] = []
+
+        def capture(prompt, **kw):
+            captured.append(prompt)
+            return fake_img
+
+        with patch("pipeline.providers.generate_image", side_effect=capture):
+            _generate_reference_images(minimal_instance, tmp_path)
+
+        pov_prompts = [p for p in captured if "First-person" in p]
+        assert any("ALICE" in p for p in pov_prompts), "POV prompt should name the character"
+
+    def test_deduplicates_same_char_env_pair(self, tmp_path):
+        """If same char appears in multiple scenes with same env, only 1 POV plate."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        instance = {
+            "production": {
+                "characters": [{
+                    "id": "char.a.v1", "logicalId": "char.a", "entityType": "character",
+                    "name": "A", "version": {"number": "1.0.0", "state": "draft"},
+                    "heightM": 1.7,
+                }],
+                "environments": [{
+                    "id": "env.x.v1", "logicalId": "env.x", "entityType": "environment",
+                    "name": "X", "version": {"number": "1.0.0", "state": "draft"},
+                    "description": "A room.",
+                }],
+                "props": [],
+                "styleGuides": [],
+                "scenes": [
+                    {
+                        "id": "s1.v1", "sceneNumber": 1,
+                        "characterRefs": [{"id": "char.a.v1"}],
+                        "environmentRef": {"id": "env.x.v1"},
+                    },
+                    {
+                        "id": "s2.v1", "sceneNumber": 2,
+                        "characterRefs": [{"id": "char.a.v1"}],
+                        "environmentRef": {"id": "env.x.v1"},
+                    },
+                ],
+            },
+            "canonicalDocuments": {"directorInstructions": {}},
+        }
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img) as mock_gen:
+            lib = _generate_reference_images(instance, tmp_path)
+
+        # 3 char views + 2 env plates + 1 POV (deduplicated) = 6
+        assert len(lib.pov_plates) == 1
+        assert mock_gen.call_count == 6
+
+    def test_pov_plate_included_in_all_refs_flat(self, minimal_instance, tmp_path):
+        """POV plates should appear in all_refs_flat()."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img):
+            lib = _generate_reference_images(minimal_instance, tmp_path)
+
+        flat = lib.all_refs_flat()
+        assert len(flat) == 6  # 3 char + 2 env + 1 POV
+        # POV plate should be in there
+        pov = lib.pov_plate("char.a", "env.office")
+        assert pov in flat
+
+    def test_pov_cached_on_disk(self, minimal_instance, tmp_path):
+        """POV plates should be cached like other references."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img):
+            _generate_reference_images(minimal_instance, tmp_path)
+
+        # Second run should use cache
+        with patch("pipeline.providers.generate_image", return_value=fake_img) as mock_gen:
+            lib = _generate_reference_images(minimal_instance, tmp_path)
+
+        assert mock_gen.call_count == 0, "Second run should fully cache"
+        assert lib.pov_plate("char.a", "env.office") is not None
