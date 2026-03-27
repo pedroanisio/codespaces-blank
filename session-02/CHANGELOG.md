@@ -86,3 +86,16 @@ This work is subject to the methodological caveats and commitments described in 
 - `manus-video_orchestration_schema_complete.md` (v1.0)
 - `perplexity-VideoProject JSON Schema…md` (v1.0)
 - `prompt-video-schema.md` — original requirements brief
+
+---
+
+## [2026-03-26] — v3 schema merge, skills report, and ChatGPT draft integration
+
+### Added
+
+- **`claude-unified-video-project-v3.schema.json`** (v3.0.0) — Merges `video-project-schema-v2.json` with `chatgpt-generative_video_project_package.schema.json`. Resolves 14 identified review defects. Supercedes v2 as the most complete schema version.
+- **`claude-unified-schema.md`** — Merge review document: lists each defect, its source (v2 or ChatGPT draft), and its resolution in v3.
+- **`claude-SKILLs-report.md`** — Full skill decomposition report answering `prompt-create-skills.md`. Derives the required agent skills from the v2 entity graph with formal SRP criterion. Result: 23 MUST-have skills, 8 SHOULD-have skills; 23/23 · 8/8 checks passed.
+- **`chatgpt-generative_video_project_package.schema.json`** — ChatGPT v1 draft schema (package-oriented, 21 KB). Added as v1 input.
+- **`chatgpt-schema-guide.md`** — ChatGPT design rationale document.
+- **`prompt-create-skills.md`** — Design prompt for autonomous pipeline skill decomposition.

@@ -42,7 +42,8 @@ python validate.py my-project.json -v     # verbose: error details + instance su
 
 | File | Version | Size | Description |
 |------|---------|------|-------------|
-| [video-project-schema-v2.json](./video-project-schema-v2.json) | **v2.0.0** | ~57 KB | **Canonical unified schema.** Merges all drafts; adds cost tracking, retry/async logic, rights, collaboration, QA gates, platform delivery, localization, accessibility, and formal taxonomy enums (`VideoStyleEnum`, `AnimationProductionMethodEnum`, `AnimationPlaybackModalityEnum`). |
+| [video-project-schema-v2.json](./video-project-schema-v2.json) | **v2.0.0** | ~57 KB | **Canonical schema (this session's baseline).** Merges all drafts; adds cost tracking, retry/async logic, rights, collaboration, QA gates, platform delivery, localization, accessibility, and formal taxonomy enums. |
+| [claude-unified-video-project-v3.schema.json](./claude-unified-video-project-v3.schema.json) | **v3.0.0** | — | **Latest merged schema.** Merges v2 with the ChatGPT draft (`chatgpt-generative_video_project_package.schema.json`), resolving 14 review defects. See `claude-unified-schema.md` for the merge report. |
 | [example-project.json](./example-project.json) | — | ~45 KB | **Valid instance document.** "The Last Signal" — a 90-second sci-fi short. Demonstrates 3 scenes, 9 shots, temporal bridges, character anchors, 4 audio assets, render pipeline, platform delivery, and dependency graph. |
 | [validate.py](./validate.py) | — | — | **CLI validator.** Validates any instance against `video-project-schema-v2.json` using `jsonschema` Draft 2020-12. Run `python validate.py --help`. |
 | [grok-video-schema.json](./grok-video-schema.json) | v1.0 + patch | 19 KB | Grok draft — strict `additionalProperties: false`. Patched with canonical status enum, `cost`, `retryConfig`, `asyncConfig`, `promptVersion`. |
@@ -53,6 +54,8 @@ python validate.py my-project.json -v     # verbose: error details + instance su
 | [perplexity-VideoProject JSON Schema — Comprehensive Generative-AI Video Production Schema.md](./perplexity-VideoProject%20JSON%20Schema%20%E2%80%94%20Comprehensive%20Generative-AI%20Video%20Production%20Schema.md) | v1.0 | 50 KB | Perplexity draft — five design principles, temporal bridge pattern, QualitySpec presets, CinematicSpec, LoRA/ControlNet anchors. |
 | [prompt-video-schema.md](./prompt-video-schema.md) | — | 2 KB | Original requirements spec: what the schema must support. Start here for context. |
 | [prompt-create-skills.md](./prompt-create-skills.md) | — | — | Design prompt: how many modular AI agent skills would a full autonomous video production pipeline require? |
+| [claude-SKILLs-report.md](./claude-SKILLs-report.md) | — | — | **Skill decomposition report.** Formal answer to `prompt-create-skills.md`. Derives the required agent skills directly from the `video-project-schema-v2.json` entity graph. 23/23 MUST · 8/8 SHOULD checks passed. |
+| [claude-unified-schema.md](./claude-unified-schema.md) | — | — | **Schema merge review.** Documents the 14 defects identified during the v2 + ChatGPT draft merge and how each was resolved in `claude-unified-video-project-v3.schema.json`. |
 
 ### Taxonomies
 
