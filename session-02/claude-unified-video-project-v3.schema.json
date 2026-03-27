@@ -99,6 +99,11 @@
           "items": {
             "$ref": "#/$defs/ShotEntity"
           }
+        },
+        "styleGuides": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StyleGuideEntity" },
+          "description": "Versioned, rights-bearing style guides. Restores the regression from v2's asset_registry.style_guides[]. Populated by S07 (Director). Referenced by CinematicSpec.styleGuideRef."
         }
       }
     },
@@ -832,6 +837,36 @@
         }
       }
     },
+    "StyleGuideEntity": {
+      "description": "Style guide as a versioned, rights-bearing production entity. Restores rights + approval_chain + versioning that StyleGuidelines (plain embedded type) lost relative to v2's asset_registry.style_guides[]. Populated by S07 (Director). Referenced by CinematicSpec.styleGuideRef.",
+      "allOf": [
+        { "$ref": "#/$defs/BaseEntity" },
+        {
+          "type": "object",
+          "required": ["entityType"],
+          "properties": {
+            "entityType": { "const": "styleGuide" },
+            "scope": {
+              "type": "string",
+              "enum": ["project", "act", "scene", "shot", "character"],
+              "description": "What level of production this guide governs. A project-scoped guide is the baseline; scene or shot-scoped guides override it."
+            },
+            "guidelines": { "$ref": "#/$defs/StyleGuidelines" },
+            "negativeStylePrompt": {
+              "type": "string",
+              "description": "Traits, aesthetics, or looks to actively suppress in all generation using this guide."
+            },
+            "appliesTo": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/EntityRef" },
+              "description": "Optional allow-list of entity refs (scenes, shots, characters) this guide applies to. Empty = applies globally within scope."
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+
     "MotionBlurControl": {
       "type": "object",
       "additionalProperties": false,
@@ -2912,7 +2947,12 @@
           "$ref": "#/$defs/LightingGuidelines"
         },
         "style": {
-          "$ref": "#/$defs/StyleGuidelines"
+          "$ref": "#/$defs/StyleGuidelines",
+          "description": "Inline style guidelines. Use styleGuideRef instead when referencing a versioned StyleGuideEntity from production.styleGuides[]."
+        },
+        "styleGuideRef": {
+          "$ref": "#/$defs/EntityRef",
+          "description": "Reference to a StyleGuideEntity in production.styleGuides[]. Takes precedence over inline 'style' embed when both are set. Enables rights tracking, approval workflow, and versioning on style."
         },
         "colorPalette": {
           "type": "array",

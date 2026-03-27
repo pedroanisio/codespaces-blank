@@ -101,6 +101,7 @@
       "style_consistency_required": true
     },
     "max_duration_sec": 90,
+    "video_style": ["narrative_fiction"],
     "style_guidelines": [
       "Cinematic 2.35:1 feel on 16:9 canvas via black letterbox bars",
       "Cool desaturated palette with single warm practical light source",

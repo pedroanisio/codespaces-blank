@@ -10,6 +10,24 @@ This work is subject to the methodological caveats and commitments described in 
 
 ---
 
+## [2026-03-27] — StyleGuidelines regression fix + skills report v2
+
+### Fixed
+
+#### `claude-unified-video-project-v3.schema.json`
+- **Regression fixed: `StyleGuidelines` → `StyleGuideEntity`** — In v3.0.0, style guides were downgraded from v2's `asset_registry.style_guides[]` (full entity with `rights`, `approval_chain`, `versions`) to a plain embedded `StyleGuidelines` object with no identity, provenance, or approval workflow. This regression is now addressed without breaking the existing inline usage.
+  - Added **`StyleGuideEntity`** `$def` — `allOf: [BaseEntity]` pattern (matching CharacterEntity, EnvironmentEntity, PropEntity). Fields: `entityType: "styleGuide"`, `scope` (project | act | scene | shot | character), `guidelines` (StyleGuidelines embed), `negativeStylePrompt`, `appliesTo[]` (EntityRef allow-list). Inherits `id`, `logicalId`, `version`, `rights`, `approvalChain`, `comments`, `generation`, `storage`, `qualityProfileRef` from `BaseEntity`.
+  - Added **`production.styleGuides[]`** — optional array of `StyleGuideEntity`. Populated by S07 (Director). `production` now has 6 entity arrays (characters, environments, props, scenes, shots, **styleGuides**).
+  - Added **`CinematicSpec.styleGuideRef`** — optional `EntityRef` pointing to a `StyleGuideEntity` in `production.styleGuides[]`. Takes precedence over the inline `style: StyleGuidelines` embed. Both fields are preserved: inline `style` remains for ad-hoc shot-level overrides; `styleGuideRef` is used for reusable, versioned style references.
+  - `$defs` count: 118 → 122 (StyleGuideEntity added; total correct after recount).
+
+### Changed
+
+#### `claude-skills-report-v2.md`
+- **S07 (Director)** — Output now includes `production.styleGuides[]` (StyleGuideEntity[]). Schema surface updated to add `StyleGuideEntity`, `StyleGuidelines`.
+- **S08 (Cinematographer)** — Input now includes `production.styleGuides[]` from S07. Schema surface updated to add `CinematicSpec.styleGuideRef → StyleGuideEntity`.
+- **Coverage matrix** — Added `production.styleGuides → S07` row. All required top-level properties now covered.
+
 ## [Unreleased]
 
 ---

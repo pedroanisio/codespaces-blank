@@ -102,16 +102,16 @@ These skills establish the creative and technical vision that governs all downst
 #### S07: Director
 
 - **Input:** `story`, `script`, `characters[]`, `environments[]`, `project` (genre, audience)
-- **Output:** `directorInstructions` — vision statement, must-haves, must-avoids, camera language, editing language, performance direction, music direction, color direction, targeted notes (with priority and category), quality rules
-- **Schema surface:** `DirectorInstructionsEntity`, `TargetedNote[]`, `ValidationRule[]`
-- **Rationale:** The director skill synthesizes all creative inputs into binding constraints. It operates at the level of intent ("I want chiaroscuro lighting in act 2") rather than parameter specification ("f/2.8, 3200K"). Its output governs every downstream skill.
+- **Output:** `directorInstructions` — vision statement, must-haves, must-avoids, camera language, editing language, performance direction, music direction, color direction, targeted notes (with priority and category), quality rules. Also creates `production.styleGuides[]` — versioned, scoped style guides that carry rights provenance and approval workflow.
+- **Schema surface:** `DirectorInstructionsEntity`, `TargetedNote[]`, `ValidationRule[]`, `StyleGuideEntity[]` (→ `production.styleGuides`), `StyleGuidelines`
+- **Rationale:** The director skill synthesizes all creative inputs into binding constraints. It operates at the level of intent ("I want chiaroscuro lighting in act 2") rather than parameter specification ("f/2.8, 3200K"). Its output governs every downstream skill. Style guides are a director's creative authority artifact — registering them as `StyleGuideEntity` (with `scope`, `rights`, `approvalChain`, `version`) restores rights provenance and approval workflow that was lost when style was modelled as an inline embed (`StyleGuidelines`) in v3.0.0.
 
 #### S08: Cinematographer
 
-- **Input:** `script`, `directorInstructions`, `characters[]`, `environments[]`, `story.beats[]`
+- **Input:** `script`, `directorInstructions`, `characters[]`, `environments[]`, `story.beats[]`, `production.styleGuides[]` (from S07)
 - **Output:** `shots[]` — shot number, purpose, description, target duration, character/environment/prop refs, cinematic spec (shot type, camera angle, camera movement, focal length, aperture, DOF, sensor format, hyperfocal distance, FOV, stabilization, focus mode, framing, composition, lighting guidelines, style guidelines, color palette, temporal bridge anchor refs), VFX notes, continuity notes
-- **Schema surface:** `ShotEntity`, `CinematicSpec`, `LightingGuidelines`, `StyleGuidelines`, `ManimConfig` (if procedural)
-- **Rationale:** Shot design is technical cinematography — optics (the formal tuple Ξ = (F, T, α, p, R, L, A_sub) referenced in the schema), camera movement vocabulary, and visual storytelling through framing. Fundamentally different expertise from narrative direction.
+- **Schema surface:** `ShotEntity`, `CinematicSpec`, `LightingGuidelines`, `StyleGuidelines` (inline), `CinematicSpec.styleGuideRef` → `StyleGuideEntity`, `ManimConfig` (if procedural)
+- **Rationale:** Shot design is technical cinematography — optics (the formal tuple Ξ = (F, T, α, p, R, L, A_sub) referenced in the schema), camera movement vocabulary, and visual storytelling through framing. Fundamentally different expertise from narrative direction. The cinematographer selects which `StyleGuideEntity` from the registry (by `styleGuideRef`) applies to each shot, overriding it inline via `style` only for shot-specific deviations.
 
 ---
 
@@ -361,6 +361,7 @@ Every required top-level property of the schema must be populated by at least on
 | `production.props` | S06 |
 | `production.scenes` | S09 |
 | `production.shots` | S08 |
+| `production.styleGuides` | S07 |
 | `assetLibrary.visualAssets` | S13 + S14 |
 | `assetLibrary.audioAssets` | S10 + S11 + S12 |
 | `assetLibrary.marketingAssets` | S23 |
