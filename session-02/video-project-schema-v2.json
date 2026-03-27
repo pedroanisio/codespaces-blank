@@ -599,6 +599,14 @@
         "lens_flare":     { "type": "boolean" },
         "anamorphic":     { "type": "boolean" },
         "vfx_notes":      { "type": "string" },
+        "animation_method": {
+          "$ref": "#/$defs/AnimationProductionMethodEnum",
+          "description": "How frames are produced when this shot or asset is animated. Only relevant when the shot is animated (video_style includes 'animation' or 'motion_graphics_explainer')."
+        },
+        "animation_playback_modality": {
+          "$ref": "#/$defs/AnimationPlaybackModalityEnum",
+          "description": "Playback modality of the animated content (fixed, interactive, generative, or live-rendered)."
+        },
         "manim_config": {
           "type": "object",
           "additionalProperties": false,
@@ -719,6 +727,11 @@
         "quality_spec":          { "$ref": "#/$defs/QualitySpec" },
         "temporal_consistency":  { "$ref": "#/$defs/TemporalConsistency" },
         "max_duration_sec":      { "type": "number", "maximum": 1800, "default": 1800 },
+        "video_style": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/VideoStyleEnum" },
+          "description": "One or more primary video styles for this project. Values are drawn from the formal taxonomy in claude-20-styles-video-v1.1.md."
+        },
         "style_guidelines":      { "type": "array", "items": { "type": "string" } },
         "render_constraints":    { "$ref": "#/$defs/RenderConstraints" }
       }
@@ -1161,6 +1174,58 @@
         "comments":         { "type": "array", "items": { "$ref": "#/$defs/Comment" } },
         "metadata":         { "type": "object", "additionalProperties": true }
       }
+    },
+
+    "VideoStyleEnum": {
+      "type": "string",
+      "description": "Formal video style classification derived from claude-20-styles-video-v1.1.md. Uses biconditional predicate definitions keyed on capture modality (κ), production intent (π), and distribution context (δ).",
+      "enum": [
+        "documentary",
+        "narrative_fiction",
+        "animation",
+        "commercial",
+        "music_video",
+        "news_broadcast",
+        "essay_film",
+        "experimental",
+        "tutorial",
+        "vlog",
+        "live_stream",
+        "short_form_vertical",
+        "interview_talking_head",
+        "motion_graphics_explainer",
+        "sports_broadcast",
+        "surveillance_cctv",
+        "vr_360",
+        "screencast",
+        "found_footage",
+        "mockumentary"
+      ]
+    },
+
+    "AnimationProductionMethodEnum": {
+      "type": "string",
+      "description": "Animation production method classification derived from claude-animation-taxonomy-v1.0.md (field G in the animation artifact tuple A = (F, T, μ, s, ι, χ, β, δ)). Defines how frames are physically or algorithmically produced.",
+      "enum": [
+        "optical",
+        "drawn_2d",
+        "rendered_3d",
+        "physical_manipulation",
+        "direct_on_medium",
+        "screen_capture",
+        "hybrid"
+      ]
+    },
+
+    "AnimationPlaybackModalityEnum": {
+      "type": "string",
+      "description": "Playback modality classification derived from claude-animation-taxonomy-v1.0.md (field β in the animation artifact tuple A).",
+      "enum": [
+        "fixed",
+        "interactive",
+        "generative",
+        "live_rendered"
+      ]
     },
 
     "DependencyEdge": {

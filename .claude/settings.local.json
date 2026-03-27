@@ -17,7 +17,11 @@
       "Bash(ffmpeg -i \"/tmp/wa_test2/notebook-O_código_que_audita_silêncios_na_história.ogg\" -af \"asetnsamples=n=910500,astats=metadata=1:reset=1\" -f null -)",
       "Bash(python tools/prepare_whatsapp_audio.py \"session-01/assets/notebook-O_código_que_audita_silêncios_na_história.m4a\" --output-dir /tmp/wa_test3)",
       "Bash(cat /workspaces/codespaces-blank/session-02/perplexity-VideoProject*)",
-      "Bash(find /workspaces/codespaces-blank -name README* -o -name CLAUDE.md)"
+      "Bash(find /workspaces/codespaces-blank -name README* -o -name CLAUDE.md)",
+      "Bash(pip install:*)",
+      "Bash(python validate.py --verbose)",
+      "Bash(python -c \"import json; json.load\\(open\\(''video-project-schema-v2.json''\\)\\)\")",
+      "Bash(python validate.py)"
     ]
   }
 }

@@ -1,0 +1,5256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/unified-video-project-v3.schema.json",
+  "title": "Unified Generative Video Project Package",
+  "description": "Tool-agnostic, Draft 2020-12 JSON Schema for autonomous generative-AI video production. Merges video-project-schema-v2.json (session-02) and generative_video_project_package_schema.json with all 14 review defects resolved. Schema version 3.0.0.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "package",
+    "project",
+    "qualityProfiles",
+    "canonicalDocuments",
+    "production",
+    "assetLibrary",
+    "orchestration",
+    "assembly",
+    "deliverables",
+    "relationships"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "$ref": "#/$defs/SemVer",
+      "description": "Schema version — SemVer. D1 fix: was const:1.0.0, now typed SemVer. Current: 3.0.0"
+    },
+    "package": {
+      "$ref": "#/$defs/PackageInfo"
+    },
+    "project": {
+      "$ref": "#/$defs/ProjectEntity"
+    },
+    "qualityProfiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/QualityProfileEntity"
+      },
+      "description": "Reusable quality profiles. All entities reference these by ID — no inline embedding."
+    },
+    "team": {
+      "$ref": "#/$defs/Team"
+    },
+    "canonicalDocuments": {
+      "type": "object",
+      "required": [
+        "story",
+        "script",
+        "directorInstructions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "story": {
+          "$ref": "#/$defs/StoryEntity"
+        },
+        "script": {
+          "$ref": "#/$defs/ScriptEntity"
+        },
+        "directorInstructions": {
+          "$ref": "#/$defs/DirectorInstructionsEntity"
+        }
+      }
+    },
+    "production": {
+      "type": "object",
+      "required": [
+        "characters",
+        "environments",
+        "props",
+        "scenes",
+        "shots"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "characters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CharacterEntity"
+          }
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EnvironmentEntity"
+          }
+        },
+        "props": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PropEntity"
+          }
+        },
+        "scenes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SceneEntity"
+          }
+        },
+        "shots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShotEntity"
+          }
+        }
+      }
+    },
+    "assetLibrary": {
+      "type": "object",
+      "required": [
+        "visualAssets",
+        "audioAssets",
+        "marketingAssets",
+        "genericAssets"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "visualAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VisualAssetEntity"
+          }
+        },
+        "audioAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AudioAssetEntity"
+          }
+        },
+        "marketingAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MarketingAssetEntity"
+          }
+        },
+        "genericAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GenericAssetEntity"
+          }
+        }
+      }
+    },
+    "orchestration": {
+      "$ref": "#/$defs/Orchestration"
+    },
+    "assembly": {
+      "$ref": "#/$defs/Assembly"
+    },
+    "deliverables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FinalOutputEntity"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Relationship"
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DependencyEdge"
+      },
+      "description": "Explicit typed DAG. Cycle-free; validated by dependency-resolver skill."
+    },
+    "extensions": {
+      "$ref": "#/$defs/Extensions"
+    }
+  },
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,200}$",
+      "description": "Opaque, stable identifier. Never reused. Rule 10."
+    },
+    "SemVer": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?(?:\\+[A-Za-z0-9.-]+)?$",
+      "description": "Semantic version string per semver.org."
+    },
+    "ISOTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 with UTC offset required. Rule 6."
+    },
+    "FuzzyDate": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "description": "Temporal uncertainty representation. Rejects false precision. G9 addition from session-02.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "approximate",
+            "range",
+            "unknown"
+          ]
+        },
+        "exact": {
+          "$ref": "#/$defs/ISOTimestamp",
+          "description": "Populated when kind=exact"
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable when kind=approximate or unknown. E.g. 'late Q3 2026'"
+        },
+        "rangeStart": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "rangeEnd": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "Extensions": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Intentional extension point. Rule 29."
+    },
+    "StringMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "VersionInfo": {
+      "type": "object",
+      "required": [
+        "number",
+        "state"
+      ],
+      "additionalProperties": false,
+      "description": "Per-entity version metadata. Rule 19.",
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/SemVer"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "in_progress",
+            "generating",
+            "review",
+            "changes_requested",
+            "approved",
+            "published",
+            "archived",
+            "deprecated"
+          ],
+          "description": "Merged lifecycle from both source schemas."
+        },
+        "branch": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "changeSummary": {
+          "type": "string"
+        },
+        "derivedFrom": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "contentHash": {
+          "type": "string",
+          "description": "SHA-256 hex of canonical JSON. Required when state=published if policy.requireContentHashForPublished=true"
+        },
+        "releasedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        }
+      }
+    },
+    "VersionSelector": {
+      "type": "object",
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false,
+      "description": "How to resolve an EntityRef to a concrete version.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "latest",
+            "latestApproved",
+            "latestPublished",
+            "semverRange",
+            "tag",
+            "branch"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "description": "Semver range, tag name, or branch name depending on mode"
+        }
+      }
+    },
+    "EntityRef": {
+      "type": "object",
+      "anyOf": [
+        {
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "required": [
+            "logicalId"
+          ]
+        }
+      ],
+      "additionalProperties": false,
+      "description": "Cross-entity foreign key. Rule 13. Either exact id or logical id + selector.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier",
+          "description": "x-immutable: true. Exact versioned entity ID."
+        },
+        "logicalId": {
+          "$ref": "#/$defs/Identifier",
+          "description": "Stable conceptual ID, resolved via versionSelector."
+        },
+        "versionSelector": {
+          "$ref": "#/$defs/VersionSelector"
+        },
+        "role": {
+          "type": "string",
+          "description": "Semantic role of this reference in context."
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "Checksum": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": [
+            "sha256",
+            "sha512",
+            "md5",
+            "blake3"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "Contributor": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "description": "Rule 26: multi-actor provenance.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "contact": {
+          "type": "string",
+          "description": "x-sensitive: contact. PII. Rule 23."
+        }
+      }
+    },
+    "Rights": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        },
+        "usageRestrictions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expiresAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "talentRelease": {
+          "type": "boolean"
+        },
+        "territory": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "unreviewed",
+            "needs_changes",
+            "approved",
+            "rejected",
+            "waived"
+          ]
+        },
+        "approvedBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "approvedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "ApprovalRecord": {
+      "type": "object",
+      "required": [
+        "role",
+        "status"
+      ],
+      "additionalProperties": false,
+      "description": "Per-role approval record with deadline enforcement. From session-02.",
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected",
+            "waived"
+          ]
+        },
+        "approvedBy": {
+          "$ref": "#/$defs/Contributor"
+        },
+        "approvedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "deadline": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "Comment": {
+      "type": "object",
+      "required": [
+        "commentId",
+        "body"
+      ],
+      "additionalProperties": false,
+      "description": "Timecoded, threaded annotation. From session-02.",
+      "properties": {
+        "commentId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "authorRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "timecodeRef": {
+          "$ref": "#/$defs/TimeRange",
+          "description": "Position in timeline this comment refers to."
+        },
+        "entityRef": {
+          "$ref": "#/$defs/EntityRef",
+          "description": "The entity this comment is attached to if different from parent."
+        },
+        "body": {
+          "type": "string"
+        },
+        "parentCommentId": {
+          "$ref": "#/$defs/Identifier",
+          "description": "Thread parent. Topology: DAG (no cycles). Rule 14."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "FrameRate": {
+      "type": "object",
+      "required": [
+        "fps"
+      ],
+      "additionalProperties": false,
+      "description": "Rule 7: fps unit declared.",
+      "properties": {
+        "fps": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Frames per second."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "constant",
+            "variable"
+          ]
+        },
+        "timebaseNumerator": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "PyAV time_base numerator."
+        },
+        "timebaseDenominator": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "PyAV time_base denominator."
+        }
+      }
+    },
+    "Resolution": {
+      "type": "object",
+      "required": [
+        "widthPx",
+        "heightPx"
+      ],
+      "additionalProperties": false,
+      "description": "Rule 7: px unit in field names.",
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": [
+            "4K_UHD",
+            "2K_DCI",
+            "1080p",
+            "720p",
+            "480p",
+            "custom"
+          ]
+        },
+        "widthPx": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "heightPx": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pixelAspectRatio": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "1.0 = square pixels."
+        }
+      }
+    },
+    "AspectRatio": {
+      "type": "object",
+      "required": [
+        "expression"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": [
+            "16:9",
+            "9:16",
+            "4:3",
+            "1:1",
+            "2.35:1",
+            "2.39:1",
+            "custom"
+          ]
+        },
+        "expression": {
+          "type": "string",
+          "description": "e.g. '16:9' or '2.35:1'"
+        },
+        "numerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "Timecode": {
+      "type": "object",
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^\\d{2}:\\d{2}:\\d{2}[:;]\\d{2}$"
+        },
+        "dropFrame": {
+          "type": "boolean"
+        }
+      }
+    },
+    "TimeRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "startSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "endSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "startTimecode": {
+          "$ref": "#/$defs/Timecode"
+        },
+        "endTimecode": {
+          "$ref": "#/$defs/Timecode"
+        },
+        "toleranceFrames": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "TemporalConsistency": {
+      "type": "object",
+      "required": [
+        "required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "minConsistencyScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maxFlickerScore": {
+          "type": "number",
+          "minimum": 0
+        },
+        "maxIdentityDriftScore": {
+          "type": "number",
+          "minimum": 0
+        },
+        "strategies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anchorRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      }
+    },
+    "CharacterCoherence": {
+      "type": "object",
+      "required": [
+        "required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "characterRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "minSimilarityScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "lockedAttributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anchorRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      }
+    },
+    "LightingGuidelines": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mood": {
+          "type": "string"
+        },
+        "style": {
+          "type": "string"
+        },
+        "keyToFillRatio": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Rule 7: ratio unit."
+        },
+        "backlightRatio": {
+          "type": "number",
+          "minimum": 0
+        },
+        "colorTemperatureKelvin": {
+          "type": "integer",
+          "minimum": 1000,
+          "description": "Rule 7: Kelvin."
+        },
+        "contrastStyle": {
+          "type": "string"
+        },
+        "referenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      }
+    },
+    "StyleGuidelines": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "genres": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "adjectives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Hex color or named swatch."
+          }
+        },
+        "textureDescriptors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cameraLanguage": {
+          "type": "string"
+        },
+        "editingLanguage": {
+          "type": "string"
+        },
+        "referenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      }
+    },
+    "MotionBlurControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "shutterAngleDegrees": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rule 7: degrees."
+        },
+        "syntheticAllowed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CompressionControls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "codec": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "bitrateMbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rule 7: Mbps."
+        },
+        "maxBitrateMbps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "gopLength": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "VideoQualityControls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colorGradingIntent": {
+          "type": "string"
+        },
+        "lutRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "motionBlur": {
+          "$ref": "#/$defs/MotionBlurControl"
+        },
+        "denoiseLevel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sharpenLevel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stabilizationMaxCropPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "antiFlicker": {
+          "type": "boolean"
+        },
+        "maxNoiseLevel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "continuityChecks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "compression": {
+          "$ref": "#/$defs/CompressionControls"
+        }
+      }
+    },
+    "AudioQualityControls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sampleRateHz": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Rule 7: Hz."
+        },
+        "bitDepth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channelLayout": {
+          "type": "string"
+        },
+        "loudnessIntegratedLUFS": {
+          "type": "number",
+          "description": "Rule 7: LUFS."
+        },
+        "truePeakDbTP": {
+          "type": "number",
+          "description": "Rule 7: dBTP."
+        },
+        "dialogIntelligibilityMinScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "QualityProfile": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "description": "Reusable quality specification. Referenced by ID from entities. D4 fix: never embedded inline.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "video": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resolution": {
+              "$ref": "#/$defs/Resolution"
+            },
+            "aspectRatio": {
+              "$ref": "#/$defs/AspectRatio"
+            },
+            "frameRate": {
+              "$ref": "#/$defs/FrameRate"
+            },
+            "scanType": {
+              "type": "string",
+              "enum": [
+                "progressive",
+                "interlaced"
+              ]
+            },
+            "bitDepth": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "colorSpace": {
+              "type": "string"
+            },
+            "dynamicRange": {
+              "type": "string",
+              "enum": [
+                "SDR",
+                "HDR10",
+                "HLG",
+                "Dolby Vision",
+                "custom"
+              ]
+            },
+            "runtimeTargetSec": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1800
+            },
+            "runtimeToleranceSec": {
+              "type": "number",
+              "minimum": 0
+            },
+            "temporalConsistency": {
+              "$ref": "#/$defs/TemporalConsistency"
+            },
+            "characterCoherence": {
+              "$ref": "#/$defs/CharacterCoherence"
+            },
+            "lighting": {
+              "$ref": "#/$defs/LightingGuidelines"
+            },
+            "style": {
+              "$ref": "#/$defs/StyleGuidelines"
+            },
+            "qualityControls": {
+              "$ref": "#/$defs/VideoQualityControls"
+            }
+          }
+        },
+        "audio": {
+          "$ref": "#/$defs/AudioQualityControls"
+        },
+        "validationRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationRule"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "ValidationRule": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "description": "Rule 2: constraints in schema. D2 fix: targetValue typed union.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "metric": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "eq",
+            "neq",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "in",
+            "nin",
+            "matches",
+            "exists"
+          ]
+        },
+        "targetValue": {
+          "description": "D2 fix: was {} (universal schema). Now typed union.",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {}
+            }
+          ]
+        },
+        "expression": {
+          "type": "string",
+          "description": "JSONPath or CEL expression for complex rules."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "QCResult": {
+      "type": "object",
+      "required": [
+        "metric",
+        "pass"
+      ],
+      "additionalProperties": false,
+      "description": "D3 fix: actualValue and expectedValue typed union.",
+      "properties": {
+        "metric": {
+          "type": "string"
+        },
+        "actualValue": {
+          "description": "D3 fix: was {} (universal schema).",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expectedValue": {
+          "description": "D3 fix: was {} (universal schema).",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "measuredAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      }
+    },
+    "QaCheck": {
+      "type": "object",
+      "required": [
+        "name",
+        "pass"
+      ],
+      "additionalProperties": false,
+      "description": "Per-check result within a QaGate. From session-02.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      }
+    },
+    "QaGate": {
+      "type": "object",
+      "required": [
+        "requiredChecks",
+        "passThreshold"
+      ],
+      "additionalProperties": false,
+      "description": "Quality gate on scenes and shots. Blocks assembly when overallPass=false. From session-02.",
+      "properties": {
+        "requiredChecks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "passThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QaCheck"
+          }
+        },
+        "overallPass": {
+          "type": "boolean",
+          "description": "x-computed: true. Derived from checks vs passThreshold."
+        },
+        "evaluatedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        }
+      }
+    },
+    "FileObject": {
+      "type": "object",
+      "required": [
+        "uri",
+        "mediaType"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "uri": {
+          "type": "string",
+          "format": "uri"
+        },
+        "storageProvider": {
+          "type": "string"
+        },
+        "mediaType": {
+          "type": "string",
+          "description": "IANA media type (MIME)."
+        },
+        "fileRole": {
+          "type": "string"
+        },
+        "byteSizeB": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rule 7: bytes unit."
+        },
+        "checksum": {
+          "$ref": "#/$defs/Checksum"
+        },
+        "containerFormat": {
+          "type": "string"
+        },
+        "codec": {
+          "type": "string"
+        },
+        "widthPx": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "heightPx": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "frameRate": {
+          "$ref": "#/$defs/FrameRate"
+        },
+        "sampleRateHz": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bitDepth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channelLayout": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string",
+          "description": "BCP-47 language tag."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "NamingConventions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "G7 fix: was fully open additionalProperties:true. Now typed structure.",
+      "properties": {
+        "idPrefix": {
+          "type": "string",
+          "description": "Prefix applied to all generated identifiers."
+        },
+        "separator": {
+          "type": "string",
+          "enum": [
+            "-",
+            "_",
+            "."
+          ],
+          "default": "-"
+        },
+        "caseStyle": {
+          "type": "string",
+          "enum": [
+            "camelCase",
+            "snake_case",
+            "kebab-case",
+            "PascalCase"
+          ]
+        },
+        "fileNameTemplate": {
+          "type": "string",
+          "description": "Handlebars-style template, e.g. '{projectId}_{sceneNumber}_{shotNumber}'."
+        },
+        "versionSuffix": {
+          "type": "boolean",
+          "default": true
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "Governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "namingConventions": {
+          "$ref": "#/$defs/NamingConventions"
+        },
+        "releaseCriteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validationRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationRule"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "VersioningPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "immutablePublishedVersions": {
+          "type": "boolean",
+          "default": true
+        },
+        "defaultReferenceMode": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "latestApproved",
+            "latestPublished",
+            "semverRange",
+            "tag",
+            "branch"
+          ]
+        },
+        "requireContentHashForPublished": {
+          "type": "boolean",
+          "default": true
+        },
+        "requireSupersedesForSameLogicalId": {
+          "type": "boolean"
+        },
+        "allowParallelBranches": {
+          "type": "boolean"
+        },
+        "approvalRequiredForDeliverables": {
+          "type": "boolean",
+          "default": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "Budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "From session-02. Tracks project-level spend.",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "description": "ISO 4217 currency code."
+        },
+        "totalAmount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rule 7: amount in currency."
+        },
+        "spentAmount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "breakdown": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Category → amount."
+        }
+      }
+    },
+    "Compliance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "classifications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "certifications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string"
+        },
+        "reviewedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "reviewedBy": {
+          "$ref": "#/$defs/Contributor"
+        }
+      }
+    },
+    "GenerationCost": {
+      "type": "object",
+      "required": [
+        "currency",
+        "amount"
+      ],
+      "additionalProperties": false,
+      "description": "G4 fix: cost tracking absent from original schema. From session-02.",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "description": "ISO 4217."
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "provider": {
+          "type": "string"
+        },
+        "units": {
+          "type": "string",
+          "description": "tokens | frames | seconds | images | requests"
+        },
+        "unitCount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "billedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        }
+      }
+    },
+    "RetryConfig": {
+      "type": "object",
+      "required": [
+        "maxAttempts"
+      ],
+      "additionalProperties": false,
+      "description": "G5 fix: per-step retry config absent from original. From session-02.",
+      "properties": {
+        "maxAttempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "backoffStrategy": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "exponential",
+            "linear"
+          ],
+          "default": "exponential"
+        },
+        "initialDelayMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1000
+        },
+        "maxDelayMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallbackTool": {
+          "type": "string",
+          "description": "Provider/tool string to use if all retries fail."
+        },
+        "retryOnStatuses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "AsyncConfig": {
+      "type": "object",
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false,
+      "description": "G5 fix: async orchestration config for long-running gen calls. From session-02.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "polling",
+            "webhook",
+            "callback"
+          ]
+        },
+        "pollingIntervalMs": {
+          "type": "integer",
+          "minimum": 100
+        },
+        "webhookUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "PromptFragment": {
+      "type": "object",
+      "required": [
+        "fragment"
+      ],
+      "additionalProperties": false,
+      "description": "G3 fix: replaces flat string[] with composable, ordered, weighted fragments.",
+      "properties": {
+        "fragment": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Attention weight for models that support it."
+        },
+        "insertionOrder": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Deterministic concatenation order."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "appearance",
+            "style",
+            "action",
+            "environment",
+            "mood",
+            "constraint",
+            "custom"
+          ]
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false,
+          "description": "Locked fragments are not modified by prompt-engineer skill."
+        }
+      }
+    },
+    "PromptRecord": {
+      "type": "object",
+      "required": [
+        "versionId",
+        "prompt"
+      ],
+      "additionalProperties": false,
+      "description": "Immutable prompt version record. Full audit trail. From session-02.",
+      "properties": {
+        "versionId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "negativePrompt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "parentVersionId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "changeNote": {
+          "type": "string"
+        }
+      }
+    },
+    "ModelDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "modelVersion": {
+          "type": "string"
+        },
+        "checkpoint": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "adapterRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "ReferenceInput": {
+      "type": "object",
+      "required": [
+        "ref"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "role": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lockAttributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ConsistencyAnchor": {
+      "type": "object",
+      "required": [
+        "anchorType"
+      ],
+      "additionalProperties": false,
+      "description": "lockLevel is 3-valued. Binary bool of session-02 v2 replaced by soft/medium/hard.",
+      "properties": {
+        "anchorType": {
+          "type": "string",
+          "enum": [
+            "character",
+            "style",
+            "environment",
+            "prop",
+            "camera",
+            "custom"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lockLevel": {
+          "type": "string",
+          "enum": [
+            "soft",
+            "medium",
+            "hard"
+          ],
+          "description": "soft=advisory, medium=warn on violation, hard=block generation."
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "AdapterInput": {
+      "type": "object",
+      "required": [
+        "adapterType"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "adapterType": {
+          "type": "string",
+          "enum": [
+            "LoRA",
+            "ControlNet",
+            "IP-Adapter",
+            "T2I-Adapter",
+            "custom"
+          ]
+        },
+        "ref": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "LogEntry": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "timestamp": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "level": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "GenerationStep": {
+      "type": "object",
+      "required": [
+        "stepId",
+        "operationType"
+      ],
+      "additionalProperties": false,
+      "description": "Single generation call record. G4+G5 additions: costEstimate, costActual, retryConfig, asyncConfig. promptHistory for full audit trail.",
+      "properties": {
+        "stepId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "operationType": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelDescriptor"
+        },
+        "executionEnvironment": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "inputRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "outputRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "negativePrompt": {
+          "type": "string"
+        },
+        "systemPrompt": {
+          "type": "string"
+        },
+        "structuredPrompt": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "promptHistory": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PromptRecord"
+          },
+          "description": "Full versioned prompt audit trail."
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "guidanceScale": {
+          "type": "number"
+        },
+        "inferenceSteps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sampler": {
+          "type": "string"
+        },
+        "scheduler": {
+          "type": "string"
+        },
+        "strength": {
+          "type": "number"
+        },
+        "cfg": {
+          "type": "number"
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "resolution": {
+          "$ref": "#/$defs/Resolution"
+        },
+        "aspectRatio": {
+          "$ref": "#/$defs/AspectRatio"
+        },
+        "frameRate": {
+          "$ref": "#/$defs/FrameRate"
+        },
+        "referenceAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReferenceInput"
+          }
+        },
+        "consistencyAnchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConsistencyAnchor"
+          }
+        },
+        "adapterInputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AdapterInput"
+          }
+        },
+        "voiceSettings": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cameraMotionHints": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "costEstimate": {
+          "$ref": "#/$defs/GenerationCost",
+          "description": "G4 addition."
+        },
+        "costActual": {
+          "$ref": "#/$defs/GenerationCost",
+          "description": "G4 addition. Populated after completion."
+        },
+        "retryConfig": {
+          "$ref": "#/$defs/RetryConfig",
+          "description": "G5 addition."
+        },
+        "asyncConfig": {
+          "$ref": "#/$defs/AsyncConfig",
+          "description": "G5 addition."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "succeeded",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LogEntry"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "GenerationManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "ai_generated",
+            "hybrid",
+            "captured",
+            "licensed",
+            "procedural",
+            "unknown"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GenerationStep"
+          }
+        },
+        "consistencyAnchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConsistencyAnchor"
+          }
+        },
+        "reproducibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Reproducibility declarations. From new schema.",
+          "properties": {
+            "deterministic": {
+              "type": "boolean"
+            },
+            "requiresExactModelVersion": {
+              "type": "boolean"
+            },
+            "requiresExactSeed": {
+              "type": "boolean"
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "BaseEntity": {
+      "type": "object",
+      "required": [
+        "id",
+        "logicalId",
+        "entityType",
+        "name",
+        "version"
+      ],
+      "description": "D4 fix: qualityProfile inline embed removed. Now qualityProfileRef → EntityRef → QualityProfileEntity. Comments and approvalChain added. Rule 24: id and logicalId are x-immutable.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Identifier",
+          "description": "x-immutable: true. Versioned entity ID."
+        },
+        "logicalId": {
+          "$ref": "#/$defs/Identifier",
+          "description": "x-immutable: true. Stable conceptual ID across versions."
+        },
+        "entityType": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "in_progress",
+            "generating",
+            "review",
+            "changes_requested",
+            "approved",
+            "published",
+            "archived",
+            "deprecated"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "createdBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "version": {
+          "$ref": "#/$defs/VersionInfo"
+        },
+        "approval": {
+          "$ref": "#/$defs/Approval"
+        },
+        "approvalChain": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ApprovalRecord"
+          },
+          "description": "Ordered per-role approval workflow."
+        },
+        "qualityProfileRef": {
+          "$ref": "#/$defs/EntityRef",
+          "description": "D4 fix: replaces inline qualityProfile embed. Points to qualityProfiles[]."
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "dependencyRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "generation": {
+          "$ref": "#/$defs/GenerationManifest"
+        },
+        "storage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FileObject"
+          }
+        },
+        "rights": {
+          "$ref": "#/$defs/Rights"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Comment"
+          },
+          "description": "Threaded, timecoded annotations."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "QualityProfileEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "profile"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "qualityProfile"
+            },
+            "profile": {
+              "$ref": "#/$defs/QualityProfile"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "TeamMember": {
+      "type": "object",
+      "required": [
+        "memberId",
+        "name",
+        "role"
+      ],
+      "additionalProperties": false,
+      "description": "From session-02 Team.",
+      "properties": {
+        "memberId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "producer",
+            "director",
+            "writer",
+            "art-director",
+            "cinematographer",
+            "editor",
+            "sound-designer",
+            "qa-lead",
+            "developer",
+            "viewer",
+            "custom"
+          ]
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "approve",
+              "publish",
+              "admin"
+            ]
+          }
+        },
+        "contact": {
+          "type": "string",
+          "description": "x-sensitive: contact. PII."
+        },
+        "organization": {
+          "type": "string"
+        }
+      }
+    },
+    "Team": {
+      "type": "object",
+      "required": [
+        "members"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TeamMember"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "PackageInfo": {
+      "type": "object",
+      "required": [
+        "packageId",
+        "createdAt",
+        "versioningPolicy"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "packageId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/ISOTimestamp"
+        },
+        "scheduledStartDate": {
+          "$ref": "#/$defs/FuzzyDate",
+          "description": "G9 addition: FuzzyDate for uncertain schedules."
+        },
+        "scheduledDeliveryDate": {
+          "$ref": "#/$defs/FuzzyDate"
+        },
+        "createdBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Contributor"
+          }
+        },
+        "schemaUri": {
+          "type": "string",
+          "format": "uri"
+        },
+        "versioningPolicy": {
+          "$ref": "#/$defs/VersioningPolicy"
+        },
+        "governance": {
+          "$ref": "#/$defs/Governance"
+        },
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "compliance": {
+          "$ref": "#/$defs/Compliance"
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "ProjectEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "targetRuntimeSec",
+            "defaultQualityProfileRef"
+          ],
+          "description": "D5 fix: runtimeHardLimitSec const removed. Maximum enforced on targetRuntimeSec.",
+          "properties": {
+            "entityType": {
+              "const": "project"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "BCP-47."
+              }
+            },
+            "genres": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "audiences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "targetRuntimeSec": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1800,
+              "description": "D5 fix: hard 1800s (30min) limit enforced here, not via const field."
+            },
+            "defaultQualityProfileRef": {
+              "$ref": "#/$defs/EntityRef",
+              "description": "Points to qualityProfiles[]. D4 fix: never inline."
+            },
+            "globalCharacterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "globalEnvironmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "globalStyleRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "governance": {
+              "$ref": "#/$defs/Governance"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "StoryBeat": {
+      "type": "object",
+      "required": [
+        "beatId",
+        "name",
+        "order"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "beatId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "targetRange": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "scheduledRange": {
+          "$ref": "#/$defs/FuzzyDate",
+          "description": "G9: uncertain production schedule for this beat."
+        },
+        "sceneRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "emotionalObjective": {
+          "type": "string"
+        }
+      }
+    },
+    "NarrativeArc": {
+      "type": "object",
+      "required": [
+        "arcId",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "arcId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "characterRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "startBeatRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "endBeatRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "trajectory": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "StoryEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "logline",
+            "beats"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "story"
+            },
+            "logline": {
+              "type": "string"
+            },
+            "synopsis": {
+              "type": "string"
+            },
+            "premise": {
+              "type": "string"
+            },
+            "themes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tone": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "beats": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/StoryBeat"
+              }
+            },
+            "arcs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/NarrativeArc"
+              }
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "marketingHooks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "G8: hooks referenced by MarketingAssetEntity.originatingHook."
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ScriptSegment": {
+      "type": "object",
+      "required": [
+        "segmentId",
+        "order",
+        "segmentType"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "segmentId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "segmentType": {
+          "type": "string",
+          "enum": [
+            "scene_heading",
+            "action",
+            "dialogue",
+            "parenthetical",
+            "transition",
+            "title_card",
+            "voice_over",
+            "on_screen_text",
+            "custom"
+          ]
+        },
+        "sceneRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "shotRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "speakerRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "text": {
+          "type": "string"
+        },
+        "spokenText": {
+          "type": "string"
+        },
+        "actionDescription": {
+          "type": "string"
+        },
+        "onScreenText": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "performanceNotes": {
+          "type": "string"
+        },
+        "audioAssetRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "subtitleText": {
+          "type": "string"
+        }
+      }
+    },
+    "ScriptEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "segments"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "script"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "fountain",
+                "fdx",
+                "pdf",
+                "markdown",
+                "custom"
+              ]
+            },
+            "segments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScriptSegment"
+              }
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "language": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "TargetedNote": {
+      "type": "object",
+      "required": [
+        "note"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "targetRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "category": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "DirectorInstructionsEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "visionStatement"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "directorInstructions"
+            },
+            "visionStatement": {
+              "type": "string"
+            },
+            "mustHaves": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "mustAvoid": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cameraLanguage": {
+              "type": "string"
+            },
+            "editingLanguage": {
+              "type": "string"
+            },
+            "performanceDirection": {
+              "type": "string"
+            },
+            "musicDirection": {
+              "type": "string"
+            },
+            "colorDirection": {
+              "type": "string"
+            },
+            "targetedNotes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TargetedNote"
+              }
+            },
+            "qualityRules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ValidationRule"
+              },
+              "description": "Director-level quality rules propagated to QaGates."
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "VoiceProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "voiceDescription": {
+          "type": "string"
+        },
+        "accent": {
+          "type": "string"
+        },
+        "pitchRange": {
+          "type": "string"
+        },
+        "speakingRateWpm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rule 7: words per minute."
+        },
+        "referenceAudioRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        }
+      }
+    },
+    "ManimConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Manim CE scene configuration for procedural animation. From session-02 CinematicSpec.",
+      "properties": {
+        "sceneClass": {
+          "type": "string"
+        },
+        "rendererBackend": {
+          "type": "string",
+          "enum": [
+            "cairo",
+            "opengl",
+            "webgl"
+          ]
+        },
+        "outputFormat": {
+          "type": "string",
+          "enum": [
+            "mp4",
+            "gif",
+            "png_sequence"
+          ]
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "CinematicSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Merged ShotTechnicalSpec (new schema) + CinematicSpec (session-02). Formal shot tuple Ξ = (F, T, α, p, R, L, A_sub) per claude-20-styles-camera-v1.0.md.",
+      "properties": {
+        "shotType": {
+          "type": "string",
+          "description": "From taxonomy: XCU|CU|MCU|MS|MWS|WS|EWS|insert|POV|OTS|aerial|dutch|etc."
+        },
+        "cameraAngle": {
+          "type": "string",
+          "enum": [
+            "eye_level",
+            "low",
+            "high",
+            "dutch",
+            "over_the_shoulder",
+            "bird_eye",
+            "worm_eye",
+            "custom"
+          ]
+        },
+        "cameraMovement": {
+          "type": "string",
+          "enum": [
+            "static",
+            "pan",
+            "tilt",
+            "dolly",
+            "crane",
+            "orbit",
+            "handheld",
+            "zoom",
+            "truck",
+            "pedestal",
+            "custom"
+          ]
+        },
+        "focalLengthMm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rule 7: mm. Part of formal shot tuple α."
+        },
+        "aperture": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "f-number. Part of tuple p."
+        },
+        "sensorFormat": {
+          "type": "string"
+        },
+        "depthOfField": {
+          "type": "string",
+          "enum": [
+            "shallow",
+            "medium",
+            "deep"
+          ]
+        },
+        "hyperfocalDistanceM": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rule 7: metres. Paraxial optics: H = f²/(Nc)."
+        },
+        "fieldOfViewDeg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180,
+          "description": "Rule 7: degrees. AoV from focal length."
+        },
+        "stabilization": {
+          "type": "string",
+          "enum": [
+            "locked",
+            "fluid_head",
+            "gimbal",
+            "handheld",
+            "drone",
+            "custom"
+          ]
+        },
+        "focusMode": {
+          "type": "string"
+        },
+        "focusDistanceM": {
+          "type": "number",
+          "minimum": 0
+        },
+        "whiteBalanceKelvin": {
+          "type": "integer",
+          "minimum": 1000,
+          "description": "Rule 7: Kelvin."
+        },
+        "exposureNotes": {
+          "type": "string"
+        },
+        "framing": {
+          "type": "string"
+        },
+        "compositionNotes": {
+          "type": "string"
+        },
+        "lighting": {
+          "$ref": "#/$defs/LightingGuidelines"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleGuidelines"
+        },
+        "colorPalette": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "temporalBridgeAnchorRef": {
+          "$ref": "#/$defs/EntityRef",
+          "description": "Temporal bridge pattern: anchor_frame_ref conditions generation on last frame of preceding shot. Session-02 core pattern."
+        },
+        "manim": {
+          "$ref": "#/$defs/ManimConfig"
+        }
+      }
+    },
+    "CharacterEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "character"
+            },
+            "appearance": {
+              "type": "string"
+            },
+            "wardrobe": {
+              "type": "string"
+            },
+            "personality": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "ageRange": {
+              "type": "string"
+            },
+            "voiceProfile": {
+              "$ref": "#/$defs/VoiceProfile"
+            },
+            "canonicalPromptFragments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PromptFragment"
+              },
+              "description": "G3 fix: was string[]. Now PromptFragment[] with weight, insertionOrder, category, locked."
+            },
+            "bannedTraits": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "coherenceRequirements": {
+              "$ref": "#/$defs/CharacterCoherence"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "EnvironmentEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "environment"
+            },
+            "locationType": {
+              "type": "string",
+              "enum": [
+                "interior",
+                "exterior",
+                "mixed",
+                "virtual",
+                "abstract"
+              ]
+            },
+            "architectureStyle": {
+              "type": "string"
+            },
+            "timeOfDayDefaults": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "weatherDefaults": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "continuityNotes": {
+              "type": "string"
+            },
+            "canonicalPromptFragments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PromptFragment"
+              }
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "PropEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "prop"
+            },
+            "category": {
+              "type": "string"
+            },
+            "continuityNotes": {
+              "type": "string"
+            },
+            "canonicalPromptFragments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PromptFragment"
+              }
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "SyncPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "time": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "anchorRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "toleranceFrames": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "beat": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Musical beat position. Enables beat-locked editing."
+        }
+      }
+    },
+    "TransitionSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "cut",
+            "dissolve",
+            "fade",
+            "wipe",
+            "push",
+            "zoom",
+            "custom"
+          ]
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "AssemblyHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Direct hints for MoviePy/Movis compositor. From new schema.",
+      "properties": {
+        "track": {
+          "type": "string"
+        },
+        "layerOrder": {
+          "type": "integer"
+        },
+        "speedPercent": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reverse": {
+          "type": "boolean"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "blendMode": {
+          "type": "string"
+        },
+        "transitionIn": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "transitionOut": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "runtimeHints": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "SceneEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "sceneNumber",
+            "shotRefs",
+            "targetDurationSec"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "scene"
+            },
+            "sceneNumber": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "synopsis": {
+              "type": "string"
+            },
+            "storyBeatRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "scriptSegmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "directorNoteRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "characterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "environmentRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "propRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "timeOfDay": {
+              "type": "string"
+            },
+            "weather": {
+              "type": "string"
+            },
+            "mood": {
+              "type": "string"
+            },
+            "targetDurationSec": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "plannedPosition": {
+              "$ref": "#/$defs/TimeRange"
+            },
+            "shotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "transitionIn": {
+              "$ref": "#/$defs/TransitionSpec"
+            },
+            "transitionOut": {
+              "$ref": "#/$defs/TransitionSpec"
+            },
+            "qaGate": {
+              "$ref": "#/$defs/QaGate",
+              "description": "Scene-level QA gate. Blocks assembly when overallPass=false."
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ShotEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "sceneRef",
+            "shotNumber",
+            "targetDurationSec",
+            "cinematicSpec"
+          ],
+          "description": "cinematicSpec replaces technicalSpec (was ShotTechnicalSpec). genParams added for per-shot generation. qaGate added.",
+          "properties": {
+            "entityType": {
+              "const": "shot"
+            },
+            "sceneRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "shotNumber": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "targetDurationSec": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "plannedPosition": {
+              "$ref": "#/$defs/TimeRange"
+            },
+            "characterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "environmentRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "propRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "scriptSegmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "audioCueRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "referenceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "cinematicSpec": {
+              "$ref": "#/$defs/CinematicSpec"
+            },
+            "genParams": {
+              "$ref": "#/$defs/GenerationStep",
+              "description": "Inline shot-level generation parameters. Full record including cost, retry, async."
+            },
+            "continuityNotes": {
+              "type": "string"
+            },
+            "vfxNotes": {
+              "type": "string"
+            },
+            "assemblyHints": {
+              "$ref": "#/$defs/AssemblyHints"
+            },
+            "qaGate": {
+              "$ref": "#/$defs/QaGate",
+              "description": "Shot-level QA gate."
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "VisualAssetSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resolution": {
+          "$ref": "#/$defs/Resolution"
+        },
+        "aspectRatio": {
+          "$ref": "#/$defs/AspectRatio"
+        },
+        "frameRate": {
+          "$ref": "#/$defs/FrameRate"
+        },
+        "dominantPalette": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lighting": {
+          "$ref": "#/$defs/LightingGuidelines"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleGuidelines"
+        },
+        "continuityNotes": {
+          "type": "string"
+        }
+      }
+    },
+    "VisualAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "visualType",
+            "modality"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "visualAsset"
+            },
+            "visualType": {
+              "type": "string"
+            },
+            "modality": {
+              "type": "string",
+              "enum": [
+                "image",
+                "video",
+                "vector",
+                "3d",
+                "depth",
+                "mask",
+                "alpha",
+                "storyboard",
+                "document",
+                "other"
+              ]
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "referenceRole": {
+              "type": "string"
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "shotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "characterRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "environmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "isCanonicalReference": {
+              "type": "boolean"
+            },
+            "spec": {
+              "$ref": "#/$defs/VisualAssetSpec"
+            },
+            "variantSetId": {
+              "$ref": "#/$defs/Identifier"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "AudioTechnicalSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sampleRateHz": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bitDepth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channelLayout": {
+          "type": "string"
+        },
+        "loudnessIntegratedLUFS": {
+          "type": "number"
+        },
+        "truePeakDbTP": {
+          "type": "number"
+        },
+        "codec": {
+          "type": "string"
+        },
+        "containerFormat": {
+          "type": "string"
+        },
+        "dynamicsProcessing": {
+          "type": "string"
+        }
+      }
+    },
+    "AudioAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "audioType"
+          ],
+          "properties": {
+            "entityType": {
+              "const": "audioAsset"
+            },
+            "audioType": {
+              "type": "string",
+              "enum": [
+                "voice_over",
+                "dialogue",
+                "music",
+                "sfx",
+                "ambient",
+                "foley",
+                "stem",
+                "custom"
+              ]
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "speakerRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "characterRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "transcript": {
+              "type": "string"
+            },
+            "lyrics": {
+              "type": "string"
+            },
+            "mood": {
+              "type": "string"
+            },
+            "sceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "shotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "syncPoints": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SyncPoint"
+              }
+            },
+            "technicalSpec": {
+              "$ref": "#/$defs/AudioTechnicalSpec"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "CopyPack": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Marketing copy bundle per asset.",
+      "properties": {
+        "headline": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "cta": {
+          "type": "string"
+        },
+        "hashtags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "altText": {
+          "type": "string"
+        }
+      }
+    },
+    "MarketingAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "marketingType",
+            "targetPlatforms"
+          ],
+          "description": "G8 fix: storyRef and originatingHook added to close story→marketing provenance chain.",
+          "properties": {
+            "entityType": {
+              "const": "marketingAsset"
+            },
+            "marketingType": {
+              "type": "string",
+              "enum": [
+                "trailer",
+                "teaser",
+                "thumbnail",
+                "social_clip",
+                "poster",
+                "banner",
+                "press_kit",
+                "custom"
+              ]
+            },
+            "campaignId": {
+              "$ref": "#/$defs/Identifier"
+            },
+            "targetPlatforms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "durationSec": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1800
+            },
+            "storyRef": {
+              "$ref": "#/$defs/EntityRef",
+              "description": "G8 fix: back-reference to StoryEntity."
+            },
+            "originatingHook": {
+              "type": "string",
+              "description": "G8 fix: maps to StoryEntity.marketingHooks[] value."
+            },
+            "sourceSceneRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "sourceShotRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "sourceAssetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "copy": {
+              "$ref": "#/$defs/CopyPack"
+            },
+            "assemblyPlanRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "thumbnailSourceRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "GenericAssetEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "assetClass"
+          ],
+          "description": "LUTs, subtitles, fonts, ControlNet models, custom artifacts.",
+          "properties": {
+            "entityType": {
+              "const": "genericAsset"
+            },
+            "assetClass": {
+              "type": "string"
+            },
+            "modality": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "Transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "type": "object",
+          "properties": {
+            "xPx": {
+              "type": "number"
+            },
+            "yPx": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scale": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "rotationDeg": {
+          "type": "number"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "crop": {
+          "type": "object",
+          "properties": {
+            "topPx": {
+              "type": "number"
+            },
+            "bottomPx": {
+              "type": "number"
+            },
+            "leftPx": {
+              "type": "number"
+            },
+            "rightPx": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "blendMode": {
+          "type": "string"
+        },
+        "maskRef": {
+          "$ref": "#/$defs/EntityRef"
+        }
+      }
+    },
+    "RetimeSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speedPercent": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reverse": {
+          "type": "boolean"
+        },
+        "frameInterpolation": {
+          "type": "string",
+          "enum": [
+            "none",
+            "blend",
+            "optical_flow",
+            "custom"
+          ]
+        },
+        "freezeFrames": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "OperationBase": {
+      "type": "object",
+      "required": [
+        "opId",
+        "opType"
+      ],
+      "properties": {
+        "opId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "opType": {
+          "type": "string"
+        },
+        "compatibleRuntimes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "moviepy",
+              "movis",
+              "opencv",
+              "pyav",
+              "manim",
+              "ffmpeg",
+              "custom"
+            ]
+          }
+        },
+        "runtimeHints": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "ConcatOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "clipRefs"
+          ],
+          "description": "MoviePy: concatenate_videoclips(). Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "concat"
+            },
+            "clipRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              },
+              "minItems": 1
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "chain",
+                "compose"
+              ],
+              "default": "chain"
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "OverlayOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "backgroundRef",
+            "foregroundRef"
+          ],
+          "description": "Movis/MoviePy composite layer. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "overlay"
+            },
+            "backgroundRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "foregroundRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "transform": {
+              "$ref": "#/$defs/Transform"
+            },
+            "timeRange": {
+              "$ref": "#/$defs/TimeRange"
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ColorGradeOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "inputRef"
+          ],
+          "description": "Apply LUT or color grade. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "colorGrade"
+            },
+            "inputRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "lutRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "intent": {
+              "type": "string"
+            },
+            "strength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "AudioMixTrack": {
+      "type": "object",
+      "required": [
+        "audioRef"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "audioRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "gainDb": {
+          "type": "number"
+        },
+        "pan": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "timeRange": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "syncPoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SyncPoint"
+          }
+        }
+      }
+    },
+    "AudioMixOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "tracks"
+          ],
+          "description": "MoviePy: CompositeAudioClip(). Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "audioMix"
+            },
+            "tracks": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/AudioMixTrack"
+              },
+              "minItems": 1
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "TransitionOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "fromRef",
+            "toRef",
+            "spec"
+          ],
+          "description": "Apply edit transition between two clips. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "transition"
+            },
+            "fromRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "toRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "spec": {
+              "$ref": "#/$defs/TransitionSpec"
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "FilterOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "inputRef",
+            "filterType"
+          ],
+          "description": "OpenCV frame-level filter. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "filter"
+            },
+            "inputRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "filterType": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "EncodeOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "inputRef",
+            "compression"
+          ],
+          "description": "PyAV/FFmpeg encode. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "encode"
+            },
+            "inputRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "compression": {
+              "$ref": "#/$defs/CompressionControls"
+            },
+            "targetQualityProfileRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ManimOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "sceneClass",
+            "manimConfig"
+          ],
+          "description": "Manim CE procedural animation node. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "manim"
+            },
+            "sceneClass": {
+              "type": "string"
+            },
+            "manimConfig": {
+              "$ref": "#/$defs/ManimConfig"
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "RetimeOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "inputRef",
+            "retime"
+          ],
+          "description": "MoviePy: fx.AccelDecel, PyAV retime. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "retime"
+            },
+            "inputRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "retime": {
+              "$ref": "#/$defs/RetimeSpec"
+            },
+            "outputRef": {
+              "$ref": "#/$defs/EntityRef"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "CustomOp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/OperationBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "opType",
+            "executor"
+          ],
+          "description": "Escape hatch for future operations. Rule 8: opType discriminator.",
+          "properties": {
+            "opType": {
+              "const": "custom"
+            },
+            "executor": {
+              "type": "string"
+            },
+            "inputRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "outputRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "Operation": {
+      "description": "G2 fix: was single object with untyped opType string. Now discriminated oneOf. Rule 8.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConcatOp"
+        },
+        {
+          "$ref": "#/$defs/OverlayOp"
+        },
+        {
+          "$ref": "#/$defs/ColorGradeOp"
+        },
+        {
+          "$ref": "#/$defs/AudioMixOp"
+        },
+        {
+          "$ref": "#/$defs/TransitionOp"
+        },
+        {
+          "$ref": "#/$defs/FilterOp"
+        },
+        {
+          "$ref": "#/$defs/EncodeOp"
+        },
+        {
+          "$ref": "#/$defs/ManimOp"
+        },
+        {
+          "$ref": "#/$defs/RetimeOp"
+        },
+        {
+          "$ref": "#/$defs/CustomOp"
+        }
+      ]
+    },
+    "TimelineClip": {
+      "type": "object",
+      "required": [
+        "clipId",
+        "sourceRef",
+        "timelineStartSec",
+        "durationSec"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "clipId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "sourceInSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sourceOutSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "timelineStartSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "durationSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "layerOrder": {
+          "type": "integer"
+        },
+        "transform": {
+          "$ref": "#/$defs/Transform"
+        },
+        "retime": {
+          "$ref": "#/$defs/RetimeSpec"
+        },
+        "syncPoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SyncPoint"
+          }
+        },
+        "transitionIn": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "transitionOut": {
+          "$ref": "#/$defs/TransitionSpec"
+        },
+        "assemblyHints": {
+          "$ref": "#/$defs/AssemblyHints"
+        }
+      }
+    },
+    "StreamBinding": {
+      "type": "object",
+      "required": [
+        "streamType"
+      ],
+      "additionalProperties": false,
+      "description": "PyAV stream/time-base binding. Carries codec-level detail for low-level operations.",
+      "properties": {
+        "streamType": {
+          "type": "string",
+          "enum": [
+            "video",
+            "audio",
+            "subtitle",
+            "data"
+          ]
+        },
+        "streamIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "codec": {
+          "type": "string"
+        },
+        "timebaseNumerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "timebaseDenominator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "TimelineEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "durationSec"
+          ],
+          "description": "Clip/track based edit graph. Layer 1 of 4-layer assembly model.",
+          "properties": {
+            "entityType": {
+              "const": "timeline"
+            },
+            "durationSec": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1800
+            },
+            "frameRate": {
+              "$ref": "#/$defs/FrameRate"
+            },
+            "resolution": {
+              "$ref": "#/$defs/Resolution"
+            },
+            "aspectRatio": {
+              "$ref": "#/$defs/AspectRatio"
+            },
+            "videoClips": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TimelineClip"
+              }
+            },
+            "audioClips": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TimelineClip"
+              }
+            },
+            "subtitleClips": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TimelineClip"
+              }
+            },
+            "streamBindings": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/StreamBinding"
+              }
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Operation"
+              }
+            },
+            "runtimeHints": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "EditVersionEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "timelineRef"
+          ],
+          "description": "Versioned cut. Layer 2 of 4-layer assembly model.",
+          "properties": {
+            "entityType": {
+              "const": "editVersion"
+            },
+            "timelineRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "changeList": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "approvedForRender": {
+              "type": "boolean"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "RenderPlanEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "sourceTimelineRef",
+            "operations"
+          ],
+          "description": "Typed operation list + compatible runtimes. Layer 3 of 4-layer assembly model.",
+          "properties": {
+            "entityType": {
+              "const": "renderPlan"
+            },
+            "sourceTimelineRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "targetOutputRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "compatibleRuntimes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "moviepy",
+                  "movis",
+                  "opencv",
+                  "pyav",
+                  "manim",
+                  "ffmpeg",
+                  "custom"
+                ]
+              }
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Operation"
+              },
+              "description": "Typed discriminated ops. G2 fix."
+            },
+            "colorPipeline": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "runtimeHints": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "Assembly": {
+      "type": "object",
+      "required": [
+        "timelines",
+        "editVersions",
+        "renderPlans"
+      ],
+      "additionalProperties": false,
+      "description": "4-layer assembly model: Timeline → EditVersion → RenderPlan → FinalOutput.",
+      "properties": {
+        "timelines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TimelineEntity"
+          }
+        },
+        "editVersions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EditVersionEntity"
+          }
+        },
+        "renderPlans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RenderPlanEntity"
+          }
+        }
+      }
+    },
+    "WorkflowNodeBase": {
+      "type": "object",
+      "required": [
+        "nodeId",
+        "nodeType"
+      ],
+      "properties": {
+        "nodeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nodeType": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "retryPolicy": {
+          "$ref": "#/$defs/RetryConfig"
+        },
+        "cacheKey": {
+          "type": "string"
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "GenerationNode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/WorkflowNodeBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "nodeType",
+            "generationStep"
+          ],
+          "description": "G1 fix: was untyped. Carries full GenerationStep with cost+retry+async.",
+          "properties": {
+            "nodeType": {
+              "const": "generation"
+            },
+            "generationStep": {
+              "$ref": "#/$defs/GenerationStep"
+            },
+            "model": {
+              "$ref": "#/$defs/ModelDescriptor"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ApprovalNode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/WorkflowNodeBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "nodeType",
+            "role",
+            "approvalStatus"
+          ],
+          "description": "G1 fix: human-in-the-loop gate.",
+          "properties": {
+            "nodeType": {
+              "const": "approval"
+            },
+            "role": {
+              "type": "string"
+            },
+            "assigneeRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "deadline": {
+              "$ref": "#/$defs/ISOTimestamp"
+            },
+            "approvalStatus": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "waived"
+              ]
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "TransformNode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/WorkflowNodeBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "nodeType",
+            "operation"
+          ],
+          "description": "G1 fix: holds typed Operation.",
+          "properties": {
+            "nodeType": {
+              "const": "transform"
+            },
+            "operation": {
+              "$ref": "#/$defs/Operation"
+            },
+            "executor": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "compatibleRuntimes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "environment": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "RenderNode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/WorkflowNodeBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "nodeType",
+            "renderPlanRef"
+          ],
+          "description": "G1 fix: render execution node.",
+          "properties": {
+            "nodeType": {
+              "const": "render"
+            },
+            "renderPlanRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "executor": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "compatibleRuntimes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "environment": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ValidationNode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/WorkflowNodeBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "nodeType",
+            "validationRules"
+          ],
+          "description": "G1 fix: automated QA node.",
+          "properties": {
+            "nodeType": {
+              "const": "validation"
+            },
+            "validationRules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ValidationRule"
+              },
+              "minItems": 1
+            },
+            "qaGate": {
+              "$ref": "#/$defs/QaGate"
+            },
+            "qcResults": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/QCResult"
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "NotificationNode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/WorkflowNodeBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "nodeType",
+            "channel"
+          ],
+          "description": "G1 fix: notification/event node.",
+          "properties": {
+            "nodeType": {
+              "const": "notification"
+            },
+            "channel": {
+              "type": "string",
+              "enum": [
+                "webhook",
+                "email",
+                "slack",
+                "custom"
+              ]
+            },
+            "recipients": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "template": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "CustomWorkflowNode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/WorkflowNodeBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "nodeType",
+            "executor"
+          ],
+          "description": "G1 fix: escape hatch for custom node types.",
+          "properties": {
+            "nodeType": {
+              "const": "custom"
+            },
+            "executor": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "compatibleRuntimes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "environment": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": false
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "WorkflowNode": {
+      "description": "G1 fix: was single object with untyped nodeType string. Now discriminated oneOf. Rule 8.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/GenerationNode"
+        },
+        {
+          "$ref": "#/$defs/ApprovalNode"
+        },
+        {
+          "$ref": "#/$defs/TransformNode"
+        },
+        {
+          "$ref": "#/$defs/RenderNode"
+        },
+        {
+          "$ref": "#/$defs/ValidationNode"
+        },
+        {
+          "$ref": "#/$defs/NotificationNode"
+        },
+        {
+          "$ref": "#/$defs/CustomWorkflowNode"
+        }
+      ]
+    },
+    "WorkflowEdge": {
+      "type": "object",
+      "required": [
+        "fromNodeId",
+        "toNodeId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fromNodeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "toNodeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Boolean expression (CEL/JSONPath) that must evaluate true for edge to activate."
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "WorkflowGraph": {
+      "type": "object",
+      "required": [
+        "workflowId",
+        "nodes",
+        "edges"
+      ],
+      "additionalProperties": false,
+      "description": "DAG of production steps. Rule 14: cycles forbidden (topology constraint declared, validated by dependency-resolver skill).",
+      "properties": {
+        "workflowId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "paused",
+            "succeeded",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowNode"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowEdge"
+          },
+          "description": "Rule 14: must form a DAG. Cycle detection by dependency-resolver skill."
+        },
+        "runtimeHints": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "Orchestration": {
+      "type": "object",
+      "required": [
+        "workflows"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowGraph"
+          }
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "LocalizationConfig": {
+      "type": "object",
+      "required": [
+        "language"
+      ],
+      "additionalProperties": false,
+      "description": "G6 fix: absent from original schema. Rule 25: localization strategy declared.",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "BCP-47. e.g. 'pt-BR', 'en-US'."
+        },
+        "subtitleTrackRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "dubbedAudioRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "adaptedMarketingRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "AccessibilityConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "G6 fix: absent from original schema. WCAG compliance and accessibility asset refs.",
+      "properties": {
+        "wcagLevel": {
+          "type": "string",
+          "enum": [
+            "A",
+            "AA",
+            "AAA"
+          ]
+        },
+        "closedCaptions": {
+          "type": "boolean"
+        },
+        "openCaptions": {
+          "type": "boolean"
+        },
+        "audioDescriptionRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "signLanguageRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "PlatformDelivery": {
+      "type": "object",
+      "required": [
+        "platform"
+      ],
+      "additionalProperties": false,
+      "description": "Per-platform delivery specification. From session-02.",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "youtube",
+            "instagram",
+            "tiktok",
+            "vimeo",
+            "broadcast",
+            "theatrical",
+            "streaming",
+            "custom"
+          ]
+        },
+        "format": {
+          "type": "string"
+        },
+        "aspectRatio": {
+          "$ref": "#/$defs/AspectRatio"
+        },
+        "resolution": {
+          "$ref": "#/$defs/Resolution"
+        },
+        "frameRate": {
+          "$ref": "#/$defs/FrameRate"
+        },
+        "maxDurationSec": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1800
+        },
+        "publishSchedule": {
+          "$ref": "#/$defs/FuzzyDate"
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMap"
+        }
+      }
+    },
+    "FinalOutputEntity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseEntity"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entityType",
+            "outputType",
+            "runtimeSec",
+            "sourceTimelineRef",
+            "renderPlanRef"
+          ],
+          "description": "G6 fix: localizationTargets, accessibilityConfig, platformDeliveries added. Layer 4 of 4-layer assembly model.",
+          "properties": {
+            "entityType": {
+              "const": "finalOutput"
+            },
+            "outputType": {
+              "type": "string"
+            },
+            "platform": {
+              "type": "string"
+            },
+            "releaseChannel": {
+              "type": "string"
+            },
+            "runtimeSec": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1800
+            },
+            "sourceTimelineRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "sourceEditRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "renderPlanRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "sourceOutputRef": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "qcResults": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/QCResult"
+              }
+            },
+            "localizationTargets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LocalizationConfig"
+              },
+              "description": "G6 fix."
+            },
+            "accessibilityConfig": {
+              "$ref": "#/$defs/AccessibilityConfig",
+              "description": "G6 fix."
+            },
+            "platformDeliveries": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PlatformDelivery"
+              },
+              "description": "G6 fix."
+            },
+            "publicationMetadata": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "DependencyEdge": {
+      "type": "object",
+      "required": [
+        "edgeId",
+        "fromRef",
+        "toRef",
+        "dependencyType"
+      ],
+      "additionalProperties": false,
+      "description": "Typed dependency edge for the project DAG. From session-02. Rule 14: acyclic constraint declared.",
+      "properties": {
+        "edgeId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "fromRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "toRef": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "dependencyType": {
+          "type": "string",
+          "enum": [
+            "requires",
+            "blocks",
+            "derives_from",
+            "supersedes",
+            "references",
+            "syncs_with",
+            "custom"
+          ]
+        },
+        "required": {
+          "type": "boolean",
+          "default": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "Relationship": {
+      "type": "object",
+      "required": [
+        "relationshipId",
+        "relationshipType",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "relationshipId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "relationshipType": {
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "to": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1208 @@
+{
+  "schema_version": "2.0.0",
+  "project_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "title": "The Last Signal",
+  "version": "1.0.0",
+  "status": "draft",
+  "created_at": "2026-03-27T10:00:00Z",
+  "updated_at": "2026-03-27T10:00:00Z",
+
+  "project_meta": {
+    "client_name": "SAFE AI Production",
+    "project_code": "PRJ-2026-001",
+    "visibility": "internal",
+    "archived": false,
+    "tags": ["sci-fi", "short-film", "generative-ai"],
+    "description": "A 90-second sci-fi short about the last radio operator on a dying space station receiving an unexpected message.",
+    "budget": {
+      "total_usd": 500.00,
+      "spent_usd": 0.00,
+      "generation_budget_usd": 400.00,
+      "render_budget_usd": 100.00,
+      "contingency_pct": 0.1,
+      "alert_threshold_pct": 0.8
+    },
+    "compliance": {
+      "content_warnings": [],
+      "rating": "PG",
+      "gdpr_personal_data": false,
+      "ccpa_personal_data": false
+    },
+    "localization": {
+      "primary_language": "en-US",
+      "target_languages": ["pt-BR"]
+    }
+  },
+
+  "team": {
+    "members": [
+      {
+        "user_id": "user-director-001",
+        "name": "Ana Souza",
+        "email": "ana@safeai.io",
+        "role": "director",
+        "permissions": ["view", "comment", "edit", "generate", "approve"]
+      },
+      {
+        "user_id": "user-producer-001",
+        "name": "Carlos Lima",
+        "email": "carlos@safeai.io",
+        "role": "producer",
+        "permissions": ["view", "comment", "approve", "publish"]
+      }
+    ],
+    "default_approval_chain": [
+      {
+        "approver": "Ana Souza",
+        "role": "director",
+        "status": "pending"
+      },
+      {
+        "approver": "Carlos Lima",
+        "role": "producer",
+        "status": "pending"
+      }
+    ]
+  },
+
+  "global_specs": {
+    "quality_spec": {
+      "resolution": {
+        "preset": "1080p",
+        "width_px": 1920,
+        "height_px": 1080
+      },
+      "aspect_ratio": {
+        "preset": "16:9",
+        "width": 16,
+        "height": 9
+      },
+      "frame_rate": {
+        "fps": 24
+      },
+      "color_space": "Rec.709",
+      "bit_depth": 10,
+      "hdr_format": "SDR",
+      "codec_video": "h265",
+      "codec_audio": "aac",
+      "bitrate_video_mbps": 8.0,
+      "bitrate_audio_kbps": 192.0,
+      "motion_blur": true,
+      "motion_blur_shutter_angle": 180.0,
+      "grain_level": "subtle"
+    },
+    "temporal_consistency": {
+      "character_coherence_min_score": 7.99,
+      "world_consistency_min_score": 0.85,
+      "temporal_bridge_enabled": true,
+      "optical_flow_validation": true,
+      "face_consistency_required": true,
+      "clothing_consistency_required": true,
+      "style_consistency_required": true
+    },
+    "max_duration_sec": 90,
+    "style_guidelines": [
+      "Cinematic 2.35:1 feel on 16:9 canvas via black letterbox bars",
+      "Cool desaturated palette with single warm practical light source",
+      "No lens flare unless dramatically motivated"
+    ],
+    "render_constraints": {
+      "gpu_type": "nvidia",
+      "min_vram_gb": 8.0,
+      "codec_preset": "web_optimised",
+      "parallel_workers": 4,
+      "max_cost_usd": 50.00
+    }
+  },
+
+  "story": {
+    "logline": "The sole survivor on a dying space station intercepts a signal that changes what it means to be the last of anything.",
+    "synopsis": "EVA-7 station, 2147. Radio operator MIRA has been alone for 60 days after the crew evacuation. With power reserves at 4%, she prepares a final log. Then a voice — familiar, impossible — comes through the static. In 90 seconds, she must decide: answer, or let silence win.",
+    "theme": "The cost of solitude and the courage of connection.",
+    "narrative_arc": [
+      {
+        "act": "Act 1 — Isolation",
+        "title": "The Empty Station",
+        "description": "Establish Mira alone in the dimly lit comms room. Ambient hum of dying systems. She records her final log entry.",
+        "key_events": ["Mira activates recorder", "Power warning flashes"],
+        "emotional_tone": "resigned, melancholy",
+        "target_length_sec": 30
+      },
+      {
+        "act": "Act 2 — Signal",
+        "title": "The Voice",
+        "description": "Static breaks. A voice calls her name — her sister, who died on the evacuation shuttle. Mira freezes.",
+        "key_events": ["Static spike on scope", "Voice says her name"],
+        "emotional_tone": "shocked, yearning",
+        "target_length_sec": 30
+      },
+      {
+        "act": "Act 3 — Choice",
+        "title": "Answer",
+        "description": "Mira reaches for the transmit button. Cut to black. A single LED blinks on — she answered.",
+        "key_events": ["Hand on transmit button", "Fade to black", "LED blink"],
+        "emotional_tone": "cathartic, open",
+        "target_length_sec": 30
+      }
+    ],
+    "characters_summary": ["MIRA — radio operator, 30s, survivor", "VOICE — Mira's sister, heard only (deceased)"]
+  },
+
+  "script": {
+    "format": "screenplay",
+    "full_text": "INT. EVA-7 COMMS ROOM — CONTINUOUS\n\nEmergency lighting. Banks of dead screens. MIRA (30s, flight suit, hollow eyes) sits before the only live console.\n\nMIRA\n(to recorder)\nDay sixty. Power at four percent. This is Mira Osei, final log.\n\nA burst of STATIC. The waveform spikes.\n\nVOICE (V.O.)\n(through static)\nMira...\n\nMira's hand freezes above the controls.\n\nVOICE (V.O.)\nIt's me. Don't be afraid.\n\nMira stares at the transmit button. A long beat.\n\nHer hand moves.\n\nCUT TO BLACK.\n\nA single LED blinks green.\n\nFADE OUT.",
+    "lines": [
+      {
+        "id": "line-0001-0000-0000-0000-000000000001",
+        "line_type": "scene_heading",
+        "content": "INT. EVA-7 COMMS ROOM — CONTINUOUS",
+        "start_sec": 0,
+        "end_sec": 1
+      },
+      {
+        "id": "line-0002-0000-0000-0000-000000000002",
+        "line_type": "action",
+        "content": "Emergency lighting. Banks of dead screens. MIRA (30s, flight suit, hollow eyes) sits before the only live console.",
+        "start_sec": 1,
+        "end_sec": 8
+      },
+      {
+        "id": "line-0003-0000-0000-0000-000000000003",
+        "line_type": "character",
+        "content": "MIRA",
+        "start_sec": 8,
+        "end_sec": 9,
+        "speaker": "MIRA"
+      },
+      {
+        "id": "line-0004-0000-0000-0000-000000000004",
+        "line_type": "dialogue",
+        "content": "Day sixty. Power at four percent. This is Mira Osei, final log.",
+        "start_sec": 9,
+        "end_sec": 15,
+        "speaker": "MIRA",
+        "estimated_duration_sec": 6
+      },
+      {
+        "id": "line-0005-0000-0000-0000-000000000005",
+        "line_type": "action",
+        "content": "A burst of STATIC. The waveform spikes.",
+        "start_sec": 32,
+        "end_sec": 35
+      },
+      {
+        "id": "line-0006-0000-0000-0000-000000000006",
+        "line_type": "character",
+        "content": "VOICE (V.O.)",
+        "start_sec": 35,
+        "end_sec": 36,
+        "speaker": "VOICE"
+      },
+      {
+        "id": "line-0007-0000-0000-0000-000000000007",
+        "line_type": "dialogue",
+        "content": "Mira...",
+        "start_sec": 36,
+        "end_sec": 38,
+        "speaker": "VOICE",
+        "estimated_duration_sec": 2
+      },
+      {
+        "id": "line-0008-0000-0000-0000-000000000008",
+        "line_type": "dialogue",
+        "content": "It's me. Don't be afraid.",
+        "start_sec": 50,
+        "end_sec": 54,
+        "speaker": "VOICE",
+        "estimated_duration_sec": 4
+      },
+      {
+        "id": "line-0009-0000-0000-0000-000000000009",
+        "line_type": "transition",
+        "content": "CUT TO BLACK.",
+        "start_sec": 85,
+        "end_sec": 86
+      }
+    ]
+  },
+
+  "director_notes": {
+    "overall_vision": "Intimate and claustrophobic. Every frame should feel like the station is breathing its last. The signal must feel miraculous, not supernatural — earned through Mira's 60 days of silence.",
+    "tone_and_mood": "Quiet dread giving way to fragile hope. Think Arrival meets Gravity, but stripped to the bone.",
+    "target_audience": "Sci-fi short-film audiences, festival circuit, YouTube cinematic shorts.",
+    "style_references": [
+      "Arrival (2016) — colour palette and stillness",
+      "Gravity (2013) — space station production design",
+      "Moon (2009) — single character isolation"
+    ],
+    "quality_rules": [
+      "No lens flare in Act 1 — reserve for the signal moment only",
+      "Mira's face must remain consistent across all close-ups",
+      "Station interior colour temperature must never exceed 3200K (cold blue-green)"
+    ],
+    "per_scene_overrides": {
+      "scene-act1-isolation": {
+        "vision": "Static wide shots. No camera movement until Act 2.",
+        "camera_style": "locked-off, slight dutch tilt on final shot",
+        "mood": "resigned"
+      },
+      "scene-act2-signal": {
+        "vision": "Tight close-ups. Handheld for the static burst.",
+        "camera_style": "handheld push in on face",
+        "mood": "shock, disbelief"
+      },
+      "scene-act3-choice": {
+        "vision": "Extreme close-up on hand. Then black. Then the LED.",
+        "camera_style": "extreme close-up, static, then macro on LED",
+        "mood": "catharsis"
+      }
+    }
+  },
+
+  "asset_registry": {
+    "characters": [
+      {
+        "id": "char-mira-0000-0000-0000-000000000001",
+        "name": "MIRA",
+        "role": "protagonist",
+        "physical_description": "Woman, early 30s, East African heritage, short natural hair, worn EVA-7 flight suit (dark navy, patches on left arm), hollow eyes from exhaustion, no makeup.",
+        "visual_notes": "Consistent face ID required across all shots. Slight bloom in practical light. No beauty retouching.",
+        "personality": "Resilient, technical, quietly emotional. Does not show fear easily.",
+        "arc": "Moves from resigned isolation to an act of courageous connection.",
+        "gen_params": {
+          "tool": "midjourney",
+          "model_id": "midjourney-v7",
+          "prompt": "woman, early 30s, East African heritage, short natural hair, dark navy flight suit with patches, exhausted hollow eyes, cinematic close-up, Rec.709 colour space, 3200K cool blue-green lighting, photorealistic --ar 16:9 --style raw",
+          "negative_prompt": "beauty retouching, dramatic makeup, lens flare, bright warm lighting",
+          "seed": 42,
+          "cfg_scale": 7.0
+        },
+        "rights": {
+          "source": "generated",
+          "license_type": "proprietary",
+          "attribution_required": false,
+          "talent_release_signed": false,
+          "territory": []
+        },
+        "tags": ["protagonist", "human", "female"]
+      }
+    ],
+    "environments": [
+      {
+        "id": "env-comms-room-0000-0000-000000000001",
+        "name": "EVA-7 Comms Room",
+        "description": "Cramped radio/comms bay aboard a dying space station. Banks of dead screens along three walls. One active console glows amber-green. Emergency red strip lighting at floor level. Exposed conduits and loose panels. No windows.",
+        "time_of_day": "N/A — artificial light only",
+        "weather": "N/A — interior",
+        "gen_params": {
+          "tool": "runway",
+          "model_id": "gen4",
+          "prompt": "interior space station comms room, cramped, most screens dark, one amber-green console active, red emergency strip lighting, exposed conduits, sci-fi, cold blue-green colour temperature, cinematic wide shot, Rec.709",
+          "negative_prompt": "bright white lighting, clean pristine surfaces, windows, sunlight"
+        },
+        "rights": {
+          "source": "generated",
+          "license_type": "proprietary",
+          "attribution_required": false,
+          "talent_release_signed": false,
+          "territory": []
+        }
+      }
+    ],
+    "props": [
+      {
+        "id": "prop-console-0000-0000-0000-000000000001",
+        "name": "Active Comms Console",
+        "description": "1980s-inspired analogue-meets-digital radio console. Waveform display (green phosphor), physical toggle switches, large red TRANSMIT button, coiled cable handset. Worn and repaired many times.",
+        "gen_params": {
+          "tool": "midjourney",
+          "model_id": "midjourney-v7",
+          "prompt": "retro-futurist space radio console, green phosphor waveform display, physical toggle switches, large red transmit button, worn surface, cinematic product shot --ar 16:9 --style raw",
+          "seed": 77
+        },
+        "rights": {
+          "source": "generated",
+          "license_type": "proprietary",
+          "attribution_required": false,
+          "talent_release_signed": false,
+          "territory": []
+        }
+      }
+    ],
+    "style_guides": [
+      {
+        "id": "style-guide-0000-0000-0000-000000000001",
+        "name": "EVA-7 Visual Style",
+        "art_style": "Photorealistic cinematic sci-fi. Desaturated with a cool teal-green base. Single warm practical source in mid-ground. Film grain subtle. Anamorphic lens quality without letterboxing.",
+        "color_palette": ["#0d1b2a", "#1b4332", "#e9c46a", "#264653", "#6b7280"],
+        "negative_style_prompt": "cartoon, anime, bright saturated colours, CGI sheen, lens flare (except Act 2), clean pristine environments",
+        "lighting_default": "low_key",
+        "cinematic_spec": {
+          "shot_type": "medium",
+          "lens_focal_mm": 35,
+          "aperture_f": 1.8,
+          "depth_of_field": "shallow",
+          "lighting_style": "low_key",
+          "lighting_direction": "45_front",
+          "color_palette": ["#0d1b2a", "#1b4332", "#e9c46a"],
+          "mood": "melancholy, tense",
+          "film_grain": "subtle",
+          "lens_flare": false,
+          "anamorphic": false
+        }
+      }
+    ]
+  },
+
+  "audio_assets": {
+    "audio-ambient-station": {
+      "id": "audio-ambient-station-0000-000000000001",
+      "type": "ambient",
+      "label": "Station ambient hum",
+      "transcript": "",
+      "language": "en-US",
+      "sync": {
+        "timeline_in_sec": 0,
+        "timeline_out_sec": 90,
+        "loop": true,
+        "fade_in_sec": 1.0,
+        "fade_out_sec": 3.0
+      },
+      "gen_params": {
+        "tool": "elevenlabs",
+        "prompt": "deep low-frequency hum of failing ventilation systems on a space station, distant mechanical clicks, electrical interference noise, no music, very subtle, melancholy"
+      },
+      "rights": {
+        "source": "generated",
+        "license_type": "proprietary",
+        "attribution_required": false,
+        "talent_release_signed": false,
+        "territory": []
+      },
+      "tags": ["ambient", "station", "loop"]
+    },
+    "audio-mira-dialogue": {
+      "id": "audio-mira-dialogue-0000-000000000001",
+      "type": "dialogue",
+      "label": "Mira final log dialogue",
+      "transcript": "Day sixty. Power at four percent. This is Mira Osei, final log.",
+      "language": "en-US",
+      "sync": {
+        "timeline_in_sec": 9,
+        "timeline_out_sec": 15,
+        "loop": false,
+        "fade_in_sec": 0,
+        "fade_out_sec": 0.5
+      },
+      "gen_params": {
+        "tool": "elevenlabs",
+        "model_id": "eleven_multilingual_v2",
+        "prompt": "Day sixty. Power at four percent. This is Mira Osei, final log.",
+        "sound_generation": {
+          "enabled": true,
+          "lip_sync": true,
+          "voice_id": "rachel",
+          "voice_stability": 0.75,
+          "voice_similarity": 0.85,
+          "voice_style": 0.4,
+          "voice_use_speaker_boost": true
+        }
+      },
+      "rights": {
+        "source": "generated",
+        "license_type": "proprietary",
+        "attribution_required": false,
+        "talent_release_signed": false,
+        "territory": []
+      },
+      "tags": ["dialogue", "mira", "act1"]
+    },
+    "audio-voice-signal": {
+      "id": "audio-voice-signal-0000-000000000001",
+      "type": "dialogue",
+      "label": "The Voice — signal transmission",
+      "transcript": "Mira... It's me. Don't be afraid.",
+      "language": "en-US",
+      "sync": {
+        "timeline_in_sec": 36,
+        "timeline_out_sec": 54,
+        "loop": false,
+        "fade_in_sec": 1.0,
+        "fade_out_sec": 1.0
+      },
+      "gen_params": {
+        "tool": "elevenlabs",
+        "model_id": "eleven_multilingual_v2",
+        "prompt": "Mira... It's me. Don't be afraid.",
+        "sound_generation": {
+          "enabled": true,
+          "lip_sync": false,
+          "voice_id": "bella",
+          "voice_stability": 0.6,
+          "voice_similarity": 0.9,
+          "voice_style": 0.2,
+          "voice_use_speaker_boost": false
+        },
+        "extra": {
+          "radio_filter": true,
+          "static_overlay": 0.3
+        }
+      },
+      "rights": {
+        "source": "generated",
+        "license_type": "proprietary",
+        "attribution_required": false,
+        "talent_release_signed": false,
+        "territory": []
+      },
+      "tags": ["dialogue", "voice", "act2", "radio-filtered"]
+    },
+    "audio-score": {
+      "id": "audio-score-0000-0000-0000-000000000001",
+      "type": "music",
+      "label": "Score — The Last Signal",
+      "transcript": "",
+      "language": "en-US",
+      "sync": {
+        "timeline_in_sec": 25,
+        "timeline_out_sec": 90,
+        "loop": false,
+        "fade_in_sec": 5.0,
+        "fade_out_sec": 5.0
+      },
+      "gen_params": {
+        "tool": "suno",
+        "prompt": "sparse minimalist score, single piano, cello drone, no percussion, building emotional tension, sci-fi melancholy, instrumental only, 65 seconds"
+      },
+      "rights": {
+        "source": "generated",
+        "license_type": "proprietary",
+        "attribution_required": false,
+        "talent_release_signed": false,
+        "territory": []
+      },
+      "tags": ["music", "score", "instrumental"]
+    }
+  },
+
+  "scenes": [
+    {
+      "scene_id": "scene-act1-isolation-0000-000000000001",
+      "title": "Act 1 — Isolation",
+      "description": "Mira alone in the comms room recording her final log. Establishing her environment and emotional state.",
+      "order": 0,
+      "start_sec": 0,
+      "end_sec": 30,
+      "director_notes": "Static wide shots only. No camera movement. Cold and lonely.",
+      "shots": [
+        {
+          "shot_id": "shot-0001-0000-0000-0000-000000000001",
+          "label": "Wide — station establishing",
+          "duration_sec": 8,
+          "order": 0,
+          "cinematic_spec": {
+            "shot_type": "extreme_wide",
+            "lens_focal_mm": 24,
+            "aperture_f": 2.8,
+            "depth_of_field": "deep",
+            "lighting_style": "low_key",
+            "lighting_direction": "side",
+            "color_palette": ["#0d1b2a", "#1b4332"],
+            "mood": "desolate, cold",
+            "film_grain": "subtle",
+            "lens_flare": false,
+            "anamorphic": false
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "extreme wide shot, space station comms room interior, single woman in flight suit at console, most screens dark, emergency red strip lighting, cold blue-green atmosphere, cinematic, 24mm lens, Rec.709, no camera movement, 8 seconds",
+            "negative_prompt": "camera movement, bright lighting, warm tones, crowded",
+            "seed": 1001,
+            "cfg_scale": 7.5,
+            "duration_sec": 8,
+            "camera_motion": {
+              "move_type": "static",
+              "speed": "slow",
+              "duration_sec": 8
+            }
+          },
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 8,
+            "timeline_in_sec": 0,
+            "timeline_out_sec": 8,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "fade_from_black",
+              "duration_sec": 1.5,
+              "easing": "ease_in_out"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["no_artifacts", "frame_rate_stable", "resolution_match"],
+            "pass_threshold": 0.85,
+            "qa_passed": false
+          }
+        },
+        {
+          "shot_id": "shot-0002-0000-0000-0000-000000000002",
+          "label": "Medium — Mira at console",
+          "duration_sec": 10,
+          "order": 1,
+          "cinematic_spec": {
+            "shot_type": "medium",
+            "lens_focal_mm": 50,
+            "aperture_f": 1.8,
+            "depth_of_field": "shallow",
+            "lighting_style": "low_key",
+            "lighting_direction": "45_front",
+            "color_palette": ["#0d1b2a", "#e9c46a"],
+            "mood": "resigned, tired",
+            "film_grain": "subtle",
+            "lens_flare": false,
+            "anamorphic": false
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "medium shot, woman in dark navy flight suit at retro-futurist radio console, green phosphor waveform display, single warm amber glow from screen, cold background, shallow depth of field, cinematic, 50mm, Rec.709, 10 seconds",
+            "negative_prompt": "camera movement, bright studio lighting, multiple light sources",
+            "seed": 1002,
+            "cfg_scale": 7.5,
+            "duration_sec": 10,
+            "camera_motion": {
+              "move_type": "static",
+              "speed": "slow",
+              "duration_sec": 10
+            },
+            "consistency_anchors": [
+              {
+                "asset_ref": {
+                  "id": "char-mira-0000-0000-0000-000000000001",
+                  "type": "character",
+                  "label": "MIRA"
+                },
+                "role": "character",
+                "weight": 0.9
+              }
+            ]
+          },
+          "audio_sync_points": [
+            {
+              "audio_asset_id": "audio-mira-dialogue-0000-000000000001",
+              "offset_sec": 9,
+              "duration_sec": 6
+            }
+          ],
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 10,
+            "timeline_in_sec": 8,
+            "timeline_out_sec": 18,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "cut",
+              "duration_sec": 0,
+              "easing": "linear"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["character_consistency", "audio_sync", "no_artifacts"],
+            "pass_threshold": 0.85,
+            "qa_passed": false
+          }
+        },
+        {
+          "shot_id": "shot-0003-0000-0000-0000-000000000003",
+          "label": "Close-up — Mira's face, recording",
+          "duration_sec": 12,
+          "order": 2,
+          "cinematic_spec": {
+            "shot_type": "close_up",
+            "lens_focal_mm": 85,
+            "aperture_f": 1.4,
+            "depth_of_field": "shallow",
+            "lighting_style": "low_key",
+            "lighting_direction": "45_front",
+            "color_palette": ["#0d1b2a", "#e9c46a"],
+            "mood": "hollow, introspective",
+            "film_grain": "subtle",
+            "lens_flare": false,
+            "anamorphic": false
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "close-up portrait, woman early 30s East African heritage, short natural hair, hollow exhausted eyes, dark navy flight suit, single warm amber light from console below, cool blue-green background shadow, photorealistic, 85mm, Rec.709, 12 seconds",
+            "negative_prompt": "beauty lighting, retouching, lens flare, smile, camera movement",
+            "seed": 1003,
+            "cfg_scale": 8.0,
+            "duration_sec": 12,
+            "camera_motion": {
+              "move_type": "static",
+              "speed": "slow",
+              "duration_sec": 12
+            },
+            "consistency_anchors": [
+              {
+                "asset_ref": {
+                  "id": "char-mira-0000-0000-0000-000000000001",
+                  "type": "character",
+                  "label": "MIRA"
+                },
+                "role": "face_id",
+                "weight": 0.95
+              }
+            ]
+          },
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 12,
+            "timeline_in_sec": 18,
+            "timeline_out_sec": 30,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "cut",
+              "duration_sec": 0,
+              "easing": "linear"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["character_consistency", "no_artifacts", "frame_rate_stable"],
+            "pass_threshold": 0.90,
+            "qa_passed": false
+          }
+        }
+      ],
+      "qa_gate": {
+        "required_checks": ["character_consistency", "audio_sync", "frame_rate_stable", "no_artifacts"],
+        "pass_threshold": 0.85,
+        "qa_passed": false
+      }
+    },
+    {
+      "scene_id": "scene-act2-signal-0000-000000000002",
+      "title": "Act 2 — The Signal",
+      "description": "The static bursts. A voice calls Mira's name. Reaction and disbelief.",
+      "order": 1,
+      "start_sec": 30,
+      "end_sec": 60,
+      "director_notes": "Camera goes handheld the moment the static hits. Tight and claustrophobic. Hold on her face.",
+      "shots": [
+        {
+          "shot_id": "shot-0004-0000-0000-0000-000000000004",
+          "label": "Insert — waveform scope static burst",
+          "duration_sec": 4,
+          "order": 0,
+          "anchor_frame_ref": {
+            "id": "shot-0003-0000-0000-0000-000000000003",
+            "type": "shot",
+            "label": "last frame of Mira close-up"
+          },
+          "cinematic_spec": {
+            "shot_type": "extreme_close_up",
+            "lens_focal_mm": 100,
+            "aperture_f": 2.8,
+            "depth_of_field": "shallow",
+            "lighting_style": "practical_lights",
+            "lighting_direction": "front",
+            "color_palette": ["#00ff00", "#0d1b2a"],
+            "mood": "tense, mechanical",
+            "film_grain": "none",
+            "lens_flare": false,
+            "anamorphic": false,
+            "vfx_notes": "Green phosphor waveform must spike to full amplitude on frame 24"
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "extreme macro close-up of green phosphor oscilloscope waveform, flat line suddenly spikes to full amplitude, black background, CRT scanlines visible, cinematic, 4 seconds",
+            "seed": 2001,
+            "duration_sec": 4,
+            "camera_motion": {
+              "move_type": "static",
+              "speed": "slow",
+              "duration_sec": 4
+            }
+          },
+          "audio_sync_points": [
+            {
+              "audio_asset_id": "audio-voice-signal-0000-000000000001",
+              "offset_sec": 36,
+              "duration_sec": 3
+            }
+          ],
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 4,
+            "timeline_in_sec": 30,
+            "timeline_out_sec": 34,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "cut",
+              "duration_sec": 0,
+              "easing": "linear"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["no_artifacts", "frame_rate_stable"],
+            "pass_threshold": 0.85,
+            "qa_passed": false
+          }
+        },
+        {
+          "shot_id": "shot-0005-0000-0000-0000-000000000005",
+          "label": "Close-up — Mira reacts to voice",
+          "duration_sec": 20,
+          "order": 1,
+          "anchor_frame_ref": {
+            "id": "shot-0004-0000-0000-0000-000000000004",
+            "type": "shot",
+            "label": "last frame of waveform spike"
+          },
+          "cinematic_spec": {
+            "shot_type": "close_up",
+            "lens_focal_mm": 85,
+            "aperture_f": 1.4,
+            "depth_of_field": "shallow",
+            "lighting_style": "low_key",
+            "lighting_direction": "45_front",
+            "color_palette": ["#0d1b2a", "#e9c46a"],
+            "mood": "shock, recognition, longing",
+            "film_grain": "medium",
+            "lens_flare": false,
+            "anamorphic": false
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "handheld close-up, woman early 30s East African heritage, short natural hair, expression changing from blank to shock to tearful recognition, flight suit, warm amber console light, cool blue shadow, handheld subtle movement, 85mm, Rec.709, 20 seconds",
+            "negative_prompt": "static camera, beauty lighting, overacting, smile",
+            "seed": 2002,
+            "cfg_scale": 8.0,
+            "duration_sec": 20,
+            "camera_motion": {
+              "move_type": "handheld",
+              "speed": "slow",
+              "duration_sec": 20
+            },
+            "consistency_anchors": [
+              {
+                "asset_ref": {
+                  "id": "char-mira-0000-0000-0000-000000000001",
+                  "type": "character",
+                  "label": "MIRA"
+                },
+                "role": "face_id",
+                "weight": 0.95
+              }
+            ]
+          },
+          "audio_sync_points": [
+            {
+              "audio_asset_id": "audio-voice-signal-0000-000000000001",
+              "offset_sec": 36,
+              "duration_sec": 18
+            }
+          ],
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 20,
+            "timeline_in_sec": 34,
+            "timeline_out_sec": 54,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "cut",
+              "duration_sec": 0,
+              "easing": "linear"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["character_consistency", "audio_sync", "lip_sync", "no_artifacts"],
+            "pass_threshold": 0.90,
+            "qa_passed": false
+          }
+        },
+        {
+          "shot_id": "shot-0006-0000-0000-0000-000000000006",
+          "label": "Medium — Mira frozen, hand near console",
+          "duration_sec": 6,
+          "order": 2,
+          "cinematic_spec": {
+            "shot_type": "medium_close",
+            "lens_focal_mm": 50,
+            "aperture_f": 1.8,
+            "depth_of_field": "shallow",
+            "lighting_style": "low_key",
+            "lighting_direction": "45_front",
+            "color_palette": ["#0d1b2a", "#e9c46a"],
+            "mood": "paralysed, deciding",
+            "film_grain": "subtle",
+            "lens_flare": false,
+            "anamorphic": false
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "medium close-up, woman in flight suit frozen, hand hovering above large red transmit button on console, amber console glow, cold blue background, tense stillness, 50mm, Rec.709, 6 seconds",
+            "seed": 2003,
+            "duration_sec": 6,
+            "camera_motion": {
+              "move_type": "static",
+              "speed": "slow",
+              "duration_sec": 6
+            },
+            "consistency_anchors": [
+              {
+                "asset_ref": {
+                  "id": "char-mira-0000-0000-0000-000000000001",
+                  "type": "character",
+                  "label": "MIRA"
+                },
+                "role": "character",
+                "weight": 0.85
+              }
+            ]
+          },
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 6,
+            "timeline_in_sec": 54,
+            "timeline_out_sec": 60,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "cut",
+              "duration_sec": 0,
+              "easing": "linear"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["character_consistency", "no_artifacts"],
+            "pass_threshold": 0.85,
+            "qa_passed": false
+          }
+        }
+      ],
+      "qa_gate": {
+        "required_checks": ["character_consistency", "audio_sync", "no_artifacts", "frame_rate_stable"],
+        "pass_threshold": 0.85,
+        "qa_passed": false
+      }
+    },
+    {
+      "scene_id": "scene-act3-choice-0000-000000000003",
+      "title": "Act 3 — The Choice",
+      "description": "Mira reaches for the transmit button. Fade to black. The LED blinks green.",
+      "order": 2,
+      "start_sec": 60,
+      "end_sec": 90,
+      "director_notes": "Extreme close-up on hand pressing button. Hold. Cut to black. Then the LED. No dialogue. Let the silence and single blinking green light do everything.",
+      "shots": [
+        {
+          "shot_id": "shot-0007-0000-0000-0000-000000000007",
+          "label": "ECU — hand pressing transmit",
+          "duration_sec": 8,
+          "order": 0,
+          "anchor_frame_ref": {
+            "id": "shot-0006-0000-0000-0000-000000000006",
+            "type": "shot",
+            "label": "last frame of frozen hand shot"
+          },
+          "cinematic_spec": {
+            "shot_type": "extreme_close_up",
+            "lens_focal_mm": 100,
+            "aperture_f": 2.0,
+            "depth_of_field": "shallow",
+            "lighting_style": "low_key",
+            "lighting_direction": "45_front",
+            "color_palette": ["#e9c46a", "#cc0000", "#0d1b2a"],
+            "mood": "decisive, courageous",
+            "film_grain": "subtle",
+            "lens_flare": false,
+            "anamorphic": false
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "extreme close-up macro, human hand slowly descending onto large red TRANSMIT button, warm amber glow from below, dark cool background, tension and intention, slow motion, 100mm macro, Rec.709, 8 seconds",
+            "seed": 3001,
+            "duration_sec": 8,
+            "camera_motion": {
+              "move_type": "dolly_in",
+              "speed": "slow",
+              "duration_sec": 8
+            }
+          },
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 8,
+            "timeline_in_sec": 60,
+            "timeline_out_sec": 68,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "cut",
+              "duration_sec": 0,
+              "easing": "linear"
+            },
+            "speed_factor": 0.7
+          },
+          "qa_gate": {
+            "required_checks": ["no_artifacts", "frame_rate_stable"],
+            "pass_threshold": 0.85,
+            "qa_passed": false
+          }
+        },
+        {
+          "shot_id": "shot-0008-0000-0000-0000-000000000008",
+          "label": "Fade to black — button pressed",
+          "duration_sec": 5,
+          "order": 1,
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "black screen, complete darkness, hold for 5 seconds, no content",
+            "seed": 3002,
+            "duration_sec": 5
+          },
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 5,
+            "timeline_in_sec": 68,
+            "timeline_out_sec": 73,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "fade_to_black",
+              "duration_sec": 2.0,
+              "easing": "ease_in_out"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["no_artifacts"],
+            "pass_threshold": 0.85,
+            "qa_passed": false
+          }
+        },
+        {
+          "shot_id": "shot-0009-0000-0000-0000-000000000009",
+          "label": "ECU — single green LED blinks",
+          "duration_sec": 17,
+          "order": 2,
+          "cinematic_spec": {
+            "shot_type": "extreme_close_up",
+            "lens_focal_mm": 100,
+            "aperture_f": 2.8,
+            "depth_of_field": "shallow",
+            "lighting_style": "practical_lights",
+            "lighting_direction": "front",
+            "color_palette": ["#00ff00", "#0d1b2a"],
+            "mood": "hopeful, quiet resolution",
+            "film_grain": "none",
+            "lens_flare": true,
+            "anamorphic": false,
+            "vfx_notes": "Single green LED 5mm, blinking at 0.5Hz. Soft glow halo. Black background. Cinematic bokeh from foreground dust particles."
+          },
+          "gen_params": {
+            "tool": "runway",
+            "model_id": "gen4",
+            "prompt": "extreme macro close-up, single small green LED blinking slowly, black background, soft green glow halo, cinematic bokeh, dust particles, hope, 100mm, Rec.709, 17 seconds",
+            "negative_prompt": "multiple lights, bright environment, camera movement",
+            "seed": 3003,
+            "duration_sec": 17,
+            "camera_motion": {
+              "move_type": "static",
+              "speed": "slow",
+              "duration_sec": 17
+            }
+          },
+          "assembly": {
+            "clip_in_sec": 0,
+            "clip_out_sec": 17,
+            "timeline_in_sec": 73,
+            "timeline_out_sec": 90,
+            "layer": 0,
+            "blend_mode": "normal",
+            "transition_in": {
+              "type": "fade_in",
+              "duration_sec": 1.5,
+              "easing": "ease_in"
+            },
+            "transition_out": {
+              "type": "fade_to_black",
+              "duration_sec": 3.0,
+              "easing": "ease_in_out"
+            }
+          },
+          "qa_gate": {
+            "required_checks": ["no_artifacts", "frame_rate_stable", "color_match"],
+            "pass_threshold": 0.85,
+            "qa_passed": false
+          }
+        }
+      ],
+      "qa_gate": {
+        "required_checks": ["no_artifacts", "frame_rate_stable", "color_match"],
+        "pass_threshold": 0.85,
+        "qa_passed": false
+      }
+    }
+  ],
+
+  "render_pipeline": {
+    "format": "structured",
+    "steps": [
+      {
+        "step_id": "step-load-0000-0000-0000-000000000001",
+        "operation": "load",
+        "library": "moviepy",
+        "parameters": { "scene_ids": ["scene-act1-isolation-0000-000000000001", "scene-act2-signal-0000-000000000002", "scene-act3-choice-0000-000000000003"] },
+        "input_asset_ids": [],
+        "output_asset_id": "step-load-0000-0000-0000-000000000001"
+      },
+      {
+        "step_id": "step-audio-0000-0000-0000-000000000002",
+        "operation": "overlay_audio",
+        "library": "moviepy",
+        "parameters": {
+          "audio_layers": ["audio-ambient-station", "audio-mira-dialogue", "audio-voice-signal", "audio-score"],
+          "mix_strategy": "ducking"
+        },
+        "input_asset_ids": ["step-load-0000-0000-0000-000000000001"],
+        "output_asset_id": "step-audio-0000-0000-0000-000000000002",
+        "depends_on": ["step-load-0000-0000-0000-000000000001"]
+      },
+      {
+        "step_id": "step-grade-0000-0000-0000-000000000003",
+        "operation": "color_grade",
+        "library": "ffmpeg",
+        "parameters": {
+          "lut": "rec709_desaturated_cool.cube",
+          "brightness": -0.05,
+          "saturation": 0.75,
+          "contrast": 1.1
+        },
+        "input_asset_ids": ["step-audio-0000-0000-0000-000000000002"],
+        "output_asset_id": "step-grade-0000-0000-0000-000000000003",
+        "depends_on": ["step-audio-0000-0000-0000-000000000002"]
+      },
+      {
+        "step_id": "step-encode-0000-0000-0000-000000000004",
+        "operation": "encode",
+        "library": "ffmpeg",
+        "parameters": {
+          "codec": "libx265",
+          "crf": 18,
+          "preset": "slow",
+          "audio_codec": "aac",
+          "audio_bitrate": "192k",
+          "output_filename": "the-last-signal-v1.0.0.mp4"
+        },
+        "input_asset_ids": ["step-grade-0000-0000-0000-000000000003"],
+        "output_asset_id": "step-encode-0000-0000-0000-000000000004",
+        "depends_on": ["step-grade-0000-0000-0000-000000000003"]
+      }
+    ]
+  },
+
+  "outputs": [
+    {
+      "id": "output-v1-0000-0000-0000-000000000001",
+      "version": "1.0.0",
+      "label": "v1.0 — Initial draft render",
+      "status": "draft",
+      "quality_spec": {
+        "resolution": { "preset": "1080p", "width_px": 1920, "height_px": 1080 },
+        "aspect_ratio": { "preset": "16:9" },
+        "frame_rate": { "fps": 24 },
+        "codec_video": "h265",
+        "codec_audio": "aac"
+      },
+      "assembly_tool": "moviepy",
+      "total_duration_sec": 90,
+      "scene_order": [
+        "scene-act1-isolation-0000-000000000001",
+        "scene-act2-signal-0000-000000000002",
+        "scene-act3-choice-0000-000000000003"
+      ],
+      "platform_deliveries": [
+        {
+          "platform": "youtube",
+          "title": "The Last Signal — Short Film (2026)",
+          "description": "A 90-second sci-fi short about the last radio operator on a dying space station. Generated with Runway Gen4, ElevenLabs, Suno, and assembled with MoviePy.",
+          "tags": ["sci-fi", "short film", "generative ai", "runway", "ai cinema"],
+          "hashtags": ["#SciFi", "#ShortFilm", "#GenerativeAI", "#AIcinema"],
+          "category": "Film & Animation",
+          "drm_required": false,
+          "age_restriction": 0
+        }
+      ],
+      "localization": {
+        "primary_language": "en-US",
+        "target_languages": ["pt-BR"]
+      },
+      "accessibility": {
+        "wcag_level": "AA"
+      },
+      "approval_chain": [
+        {
+          "approver": "Ana Souza",
+          "role": "director",
+          "status": "pending"
+        },
+        {
+          "approver": "Carlos Lima",
+          "role": "producer",
+          "status": "pending"
+        }
+      ],
+      "change_log": "Initial draft. All shots generated. Pending QA review."
+    }
+  ],
+
+  "dependencies": [
+    {
+      "source_id": "shot-0002-0000-0000-0000-000000000002",
+      "target_id": "char-mira-0000-0000-0000-000000000001",
+      "type": "references",
+      "notes": "Shot uses Mira character asset for face consistency"
+    },
+    {
+      "source_id": "shot-0003-0000-0000-0000-000000000003",
+      "target_id": "char-mira-0000-0000-0000-000000000001",
+      "type": "references",
+      "notes": "Close-up requires face_id anchor on Mira"
+    },
+    {
+      "source_id": "shot-0004-0000-0000-0000-000000000004",
+      "target_id": "shot-0003-0000-0000-0000-000000000003",
+      "type": "conditions_on",
+      "notes": "Temporal bridge: waveform shot conditioned on last frame of Mira close-up"
+    },
+    {
+      "source_id": "shot-0005-0000-0000-0000-000000000005",
+      "target_id": "shot-0004-0000-0000-0000-000000000004",
+      "type": "conditions_on",
+      "notes": "Temporal bridge: Mira reaction conditioned on last frame of waveform spike"
+    },
+    {
+      "source_id": "shot-0007-0000-0000-0000-000000000007",
+      "target_id": "shot-0006-0000-0000-0000-000000000006",
+      "type": "conditions_on",
+      "notes": "Temporal bridge: hand pressing button conditioned on last frame of frozen hand shot"
+    },
+    {
+      "source_id": "shot-0005-0000-0000-0000-000000000005",
+      "target_id": "audio-voice-signal-0000-000000000001",
+      "type": "requires",
+      "notes": "Shot requires the Voice audio asset for lip-sync reference"
+    }
+  ]
+}
