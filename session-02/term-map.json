@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.vidproject.io/term-map/1.0.0",
+  "title": "VideoProductionTermMap",
+  "description": "Machine-readable version of claude-corrected_term_map.html. Defines production vocabulary along four orthogonal axes: Domain, VocabularyType, DiegeticStatus, PipelineStage. Intended for schema validation, prompt construction, and tooling that needs to resolve or disambiguate film/video production terms.",
+  "schema_version": "1.0.0",
+
+  "axes": {
+    "domain": {
+      "description": "Whether the term belongs to the audio or visual track — mutually exclusive.",
+      "values": ["audio", "visual"]
+    },
+    "vocabulary_type": {
+      "description": "Whether the term describes an aesthetic preference or an operational technique.",
+      "values": ["aesthetic", "operational"]
+    },
+    "diegetic_status": {
+      "description": "Whether the element exists within the story-world (diegetic) or is imposed by the author outside of it (non_diegetic). Can be ambiguous for some terms.",
+      "values": ["diegetic", "non_diegetic", "either"]
+    },
+    "pipeline_stage": {
+      "description": "Which production phase the term primarily belongs to.",
+      "values": ["pre_production", "production", "post_production", "distribution"]
+    }
+  },
+
+  "overlap_types": {
+    "physical_co_determination": "One physical decision that generates vocabulary in two separate domains (e.g., a lighting decision creates both a light-style entry and a color-style entry).",
+    "same_operation_different_stage": "The same creative operation can be executed at different pipeline stages (e.g., light FX can be practical on-set or synthetic in post).",
+    "discipline_handoff": "Two disciplines collaborate without one containing the other (e.g., Motion Graphics FX hands off to VFX for integration, but neither is a subset of the other)."
+  },
+
+  "terms": [
+
+    {
+      "id": "soundtrack",
+      "label": "Soundtrack",
+      "definition": "Composed or licensed music that accompanies the visual track. May be diegetic (a band playing in the scene) or non-diegetic (orchestral score heard only by the audience).",
+      "domain": "audio",
+      "vocabulary_type": "aesthetic",
+      "diegetic_status": "either",
+      "pipeline_stage": "post_production",
+      "overlaps_with": ["sound_fx"],
+      "overlap_type": "physical_co_determination",
+      "overlap_notes": "In industrial/compositional work, sound designers and composers share the same session; the boundary between scored music and designed sound events blurs.",
+      "corrected_misuses": [
+        "Do not use 'soundtrack' to refer to all audio in a film — it refers specifically to the music component.",
+        "Do not conflate with 'sound design', which covers non-musical audio events."
+      ]
+    },
+
+    {
+      "id": "sound_fx",
+      "label": "Sound FX (Sound Effects)",
+      "definition": "Designed audio events tied to on-screen or off-screen actions (footsteps, explosions, ambient noise). Diegetic when representing a real event in the story world; can bleed into non-diegetic when used expressively.",
+      "domain": "audio",
+      "vocabulary_type": "operational",
+      "diegetic_status": "either",
+      "pipeline_stage": "post_production",
+      "overlaps_with": ["soundtrack"],
+      "overlap_type": "physical_co_determination",
+      "overlap_notes": "Industrial/compositional sessions treat sound events and music as a continuum."
+    },
+
+    {
+      "id": "vfx",
+      "label": "Visual FX (VFX)",
+      "definition": "Post-production visual techniques that alter or augment the photographed image: compositing, CGI integration, matte painting, wire removal, digital set extension, de-aging.",
+      "domain": "visual",
+      "vocabulary_type": "operational",
+      "diegetic_status": "non_diegetic",
+      "pipeline_stage": "post_production",
+      "overlaps_with": ["graphic_fx"],
+      "overlap_type": "discipline_handoff",
+      "overlap_notes": "Motion graphics may be handed off to VFX for compositing integration, but motion graphics is not a subset of VFX.",
+      "corrected_misuses": [
+        "VFX ≠ color grading. Color grading is a separate post-production discipline handled by a colorist in a DI session.",
+        "VFX ≠ motion graphics. Motion graphics are graphic design in motion; VFX manipulate photographic material.",
+        "VFX ≠ practical effects. Practical effects are physical, on-set; VFX are digital, in post."
+      ]
+    },
+
+    {
+      "id": "graphic_fx",
+      "label": "Graphic FX / Motion Graphics",
+      "definition": "Animated graphical elements that are typically non-diegetic: title cards, lower thirds, kinetic typography, animated overlays, infographic animations, UI representations.",
+      "domain": "visual",
+      "vocabulary_type": "aesthetic",
+      "diegetic_status": "non_diegetic",
+      "pipeline_stage": "post_production",
+      "overlaps_with": ["vfx"],
+      "overlap_type": "discipline_handoff",
+      "overlap_notes": "Graphic FX collaborate with VFX for compositing but are a distinct discipline with different toolchains (After Effects, Motion vs. Nuke, Flame).",
+      "corrected_misuses": [
+        "Graphic FX ≠ a subset of VFX — collaboration is not containment.",
+        "Not all on-screen graphics are Graphic FX; diegetic screens (a phone in the scene) may be handled by VFX."
+      ]
+    },
+
+    {
+      "id": "light_style",
+      "label": "Light Style",
+      "definition": "The Director of Photography's recurring aesthetic decisions about light: hardness (hard vs. soft), directionality (front/side/back/rim), color temperature (warm/cool/neutral), and contrast ratio. Decided in pre-production, executed on set.",
+      "domain": "visual",
+      "vocabulary_type": "aesthetic",
+      "diegetic_status": "non_diegetic",
+      "pipeline_stage": "pre_production",
+      "overlaps_with": ["color_style"],
+      "overlap_type": "physical_co_determination",
+      "overlap_notes": "A single on-set lighting decision simultaneously determines the light style and constrains the color style. They are one physical event described by two vocabularies.",
+      "corrected_misuses": [
+        "Light style ≠ light FX. Light style is a pre-production aesthetic decision; light FX are specific visual phenomena (lens flares, god rays) added in production or post."
+      ]
+    },
+
+    {
+      "id": "light_fx",
+      "label": "Light FX",
+      "definition": "Specific light-based visual phenomena: lens flares, god rays, volumetric shafts, bokeh light points, practical light spills. Can be created practically on-set (a rigged practical) or synthetically in post (composited in).",
+      "domain": "visual",
+      "vocabulary_type": "operational",
+      "diegetic_status": "either",
+      "pipeline_stage": "either_production_or_post",
+      "corrected_misuses": [
+        "Light FX ≠ light style. Light style is the overall aesthetic language; light FX are specific phenomena within it."
+      ],
+      "pipeline_note": "The same light FX (e.g., lens flare) can be a production practical effect or a post-production composite — the operation is stage-ambiguous."
+    },
+
+    {
+      "id": "color_style",
+      "label": "Color Style",
+      "definition": "The overall color palette language of a film: warm/cool balance, hue biases, tonal range (high-key/low-key), palette restrictions. A non-diegetic authorial choice executed in the Digital Intermediate (DI) by the colorist.",
+      "domain": "visual",
+      "vocabulary_type": "aesthetic",
+      "diegetic_status": "non_diegetic",
+      "pipeline_stage": "post_production",
+      "overlaps_with": ["light_style"],
+      "overlap_type": "physical_co_determination",
+      "overlap_notes": "On-set lighting constrains the colorist's palette. Both vocabularies describe consequences of the same physical decisions.",
+      "corrected_misuses": [
+        "Color style ≠ color FX. Color style is the overall palette language; color FX are specific transformations applied within that session."
+      ]
+    },
+
+    {
+      "id": "color_fx",
+      "label": "Color FX",
+      "definition": "Specific color transformations applied during the DI: LUT application, bleach bypass emulation, cross-processing looks, selective hue shifts, vignetting, grain addition. Applied in the same DI session as color style but are distinct, discrete operations.",
+      "domain": "visual",
+      "vocabulary_type": "operational",
+      "diegetic_status": "non_diegetic",
+      "pipeline_stage": "post_production",
+      "overlaps_with": ["color_style", "vfx"],
+      "overlap_notes": "Color FX are executed in the DI session, not by VFX artists. They are a separate discipline.",
+      "corrected_misuses": [
+        "Color FX ≠ VFX. Both are post-production but handled by different departments with different toolchains.",
+        "Color FX ≠ color style. Style is the overall palette language; FX are specific transformations within a single DI pass."
+      ]
+    },
+
+    {
+      "id": "graphics_style",
+      "label": "Graphics Style",
+      "definition": "The overall visual design language applied to graphic elements: line quality, rendering approach (flat/3D/painterly), typographic system, palette logic, icon grammar. Defines consistency rules for all on-screen graphic material.",
+      "domain": "visual",
+      "vocabulary_type": "aesthetic",
+      "diegetic_status": "non_diegetic",
+      "pipeline_stage": "pre_production",
+      "corrected_misuses": [
+        "Graphics style is a design system specification, not a synonym for 'animation style' or 'art direction'.",
+        "Graphics style applies to graphic elements specifically — not to the overall visual tone of a live-action film (that is color_style + light_style)."
+      ]
+    },
+
+    {
+      "id": "graphic_novel",
+      "label": "Graphic Novel",
+      "definition": "A FORMAT (long-form sequential art in book form), not a visual style. Graphic novels may contain dozens of incompatible visual styles (realistic, cartoonish, abstract, painterly). Citing 'graphic novel' as a style descriptor is a category error.",
+      "domain": "visual",
+      "vocabulary_type": "aesthetic",
+      "diegetic_status": "non_diegetic",
+      "pipeline_stage": "pre_production",
+      "corrected_misuses": [
+        "'Graphic novel style' is not a valid style descriptor — it names a container format, not a visual language.",
+        "Specify the actual visual style instead: 'Frank Miller noir ink style', 'Moebius ligne claire', 'watercolour painted panels', etc."
+      ],
+      "is_format_not_style": true
+    }
+
+  ],
+
+  "corrected_overlaps": [
+    {
+      "id": "overlap_light_color",
+      "type": "physical_co_determination",
+      "terms": ["light_style", "color_style"],
+      "description": "One on-set lighting decision simultaneously instantiates a light-style value and constrains color-style space. Both vocabularies describe different consequences of the same physical act. Neither contains the other — they are co-determined."
+    },
+    {
+      "id": "overlap_light_fx_stage",
+      "type": "same_operation_different_stage",
+      "terms": ["light_fx"],
+      "description": "A lens flare can be a practical effect (rigged on-set during production) or a synthetic composite (added in post). The phenomenon is the same; the pipeline stage is ambiguous until the production plan specifies which approach is used."
+    },
+    {
+      "id": "overlap_graphic_vfx",
+      "type": "discipline_handoff",
+      "terms": ["graphic_fx", "vfx"],
+      "description": "Motion graphics are delivered to VFX for compositing integration into the final image. This is a handoff between collaborating disciplines, not containment. Graphic FX is not a subset of VFX."
+    }
+  ],
+
+  "schema_usage_notes": {
+    "for_gen_params_prompt_construction": "When building prompts for generative-AI tools, use term IDs from this map to annotate which vocabulary a prompt element belongs to. This enables downstream validation that prompts are internally consistent (e.g., not mixing non_diegetic and diegetic descriptors in conflicting ways).",
+    "for_cinematic_spec": "The CinematicSpec fields lighting_style and lighting_direction in video-project-schema-v2.json correspond to the 'light_style' term here. The vfx_notes field corresponds to 'vfx'. Color grading (color_grade) corresponds to 'color_fx'.",
+    "for_animation_taxonomy": "See claude-animation-taxonomy-v1.0.md for the formal animation artifact definition. The 'graphics_style' term here maps to the visual_style.iota parameter in that taxonomy."
+  }
+}

@@ -1,5 +1,8 @@
 # VideoProject JSON Schema
 ## Comprehensive Schema for Generative-AI Video Production, Assembly & Orchestration
+
+> **v1.0 — Reference document.** The production-ready, fully enhanced schema is **[video-project-schema-v2.json](./video-project-schema-v2.json)** (v2.0.0), which extends this document with: cost tracking, retry/async logic, rights management, collaborative workflow (roles, comments, approval chains), QA gates, prompt versioning, platform delivery, localization, and accessibility. The terminology used here is formally defined in **[term-map.json](./term-map.json)**.
+
 ---
 ## 1. Design Principles & Architecture
 This schema is structured around five foundational principles derived from research into generative-AI video pipelines, post-production workflows, and JSON Schema best practices:[^1][^2][^3]
@@ -9,6 +12,16 @@ This schema is structured around five foundational principles derived from resea
 3. **Temporal Bridge pattern** — each scene explicitly references the `anchor_frame` (last generated frame) of its predecessor, enabling visual conditioning between clips.[^3]
 4. **Semantic versioning on every entity** — using URI-based `$id` keys and a `schema_version` field as recommended by JSON Schema maintainers.[^2][^4]
 5. **Programmatic assembly metadata** — every clip carries native fields consumed directly by MoviePy, Movis, OpenCV, PyAV, and Manim without intermediate translation.[^5][^6]
+
+### v2.0 Additions (see video-project-schema-v2.json)
+Six additional design principles were added in v2.0:
+
+6. **Cost-aware generation** — every `gen_params` node carries `cost` (estimated + actual USD, tokens, GPU seconds, provider job ID) and `attempts[]` for full retry audit trails.
+7. **Resilient async orchestration** — `retry_config` (max attempts, backoff, fallback tool) and `async_config` (webhook URL, events, timeout) enable robust long-running generation pipelines.
+8. **Rights-first asset management** — every asset carries a `rights` object (source, license type/URL, expiry, talent release, territory) to prevent downstream IP violations.
+9. **Collaborative review workflow** — `team` (roles + permissions), `comments[]` (timecoded annotations with threading), and `approval_chain[]` (per-role decisions with deadlines) on every entity.
+10. **Quality-gated assembly** — `qa_gate` on every scene and shot with required checks, pass thresholds, and per-check scores; `validation_result` on the render pipeline.
+11. **Multi-platform delivery** — `platform_deliveries[]` on outputs (YouTube, TikTok, Instagram, broadcast, etc.), `localization` (subtitle + dubbed audio tracks), and `accessibility` (WCAG level, captions, audio descriptions).
 
 ***
 ## 2. Entity-Relationship Overview

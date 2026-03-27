@@ -17,6 +17,11 @@ disclaimer: >
 
 # Research Source Map
 
+## Disclaimer
+
+This work is subject to the methodological caveats and commitments described in [@DISCLAIMER.md](../../DISCLAIMER.md).
+> No statement or premise not backed by a real logical definition or verifiable reference should be taken for granted.
+
 A pair of schemas for building, auditing, and remediating research
 source collections across written, oral, visual, and time-based media.
 

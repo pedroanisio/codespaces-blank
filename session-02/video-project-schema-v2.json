@@ -1,0 +1,1179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.vidproject.io/video-project/2.0.0",
+  "title": "VideoProject",
+  "description": "v2.0 — Unified, tool-agnostic JSON Schema for generative-AI video production up to 30 minutes. Merges the best of Grok, Manus, and Perplexity schemas and adds: cost tracking, retry/async logic, rights management, collaborative workflow (roles, comments, approval chains), QA gates, prompt versioning, platform delivery, localization, and accessibility.",
+  "type": "object",
+  "required": ["schema_version", "project_id", "title", "version", "project_meta", "global_specs", "story", "script", "director_notes", "asset_registry", "scenes"],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": { "type": "string", "const": "2.0.0" },
+    "project_id":     { "$ref": "#/$defs/UUID" },
+    "title":          { "type": "string" },
+    "version":        { "$ref": "#/$defs/SemVer", "description": "Semantic version of the entire project; bump on any structural change." },
+    "status":         { "$ref": "#/$defs/StatusEnum" },
+    "created_at":     { "$ref": "#/$defs/ISOTimestamp" },
+    "updated_at":     { "$ref": "#/$defs/ISOTimestamp" },
+
+    "project_meta":     { "$ref": "#/$defs/ProjectMeta" },
+    "team":             { "$ref": "#/$defs/Team" },
+    "global_specs":     { "$ref": "#/$defs/GlobalSpecs" },
+    "story":            { "$ref": "#/$defs/Story" },
+    "script":           { "$ref": "#/$defs/Script" },
+    "director_notes":   { "$ref": "#/$defs/DirectorNotes" },
+    "asset_registry":   { "$ref": "#/$defs/AssetRegistry" },
+    "scenes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Scene" },
+      "minItems": 1,
+      "description": "Ordered list of scenes. Each scene contains shots; shots reference assets."
+    },
+    "audio_assets": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/AudioAsset" },
+      "description": "Map of audioAssetId → AudioAsset. Assets may be shared across shots."
+    },
+    "visual_assets": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/VisualAsset" },
+      "description": "Map of visualAssetId → VisualAsset."
+    },
+    "marketing_materials": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/MarketingMaterial" }
+    },
+    "render_pipeline":  { "$ref": "#/$defs/RenderPipeline" },
+    "outputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/RenderOutput" },
+      "description": "Versioned final renders with provenance and delivery metadata."
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DependencyEdge" },
+      "description": "Explicit cross-asset dependency graph for orchestration and validation."
+    }
+  },
+
+  "$defs": {
+
+    "UUID": {
+      "type": "string",
+      "format": "uuid"
+    },
+
+    "SemVer": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?(\\+[a-zA-Z0-9.]+)?$",
+      "description": "Semantic version string e.g. '1.0.0', '2.3.1-rc.1'"
+    },
+
+    "ISOTimestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+
+    "StatusEnum": {
+      "type": "string",
+      "enum": ["draft", "generating", "review", "changes_requested", "approved", "archived"],
+      "description": "Canonical status lifecycle shared by all versioned entities."
+    },
+
+    "AssetRef": {
+      "type": "object",
+      "description": "Pointer to any registered asset by UUID and type.",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id":    { "$ref": "#/$defs/UUID" },
+        "type":  {
+          "type": "string",
+          "enum": ["character", "environment", "prop", "style_guide", "visual_asset", "audio_asset", "shot", "scene", "output"]
+        },
+        "label": { "type": "string" }
+      }
+    },
+
+    "FileLocator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "uri":         { "type": "string", "format": "uri" },
+        "local_path":  { "type": "string" },
+        "format":      { "type": "string", "description": "MIME type or extension, e.g. 'video/mp4', 'image/png'." },
+        "size_bytes":  { "type": "integer", "minimum": 0 },
+        "checksum_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "storage_tier":{ "type": "string", "enum": ["hot", "warm", "cold", "archive"] },
+        "cdn_url":     { "type": "string", "format": "uri" }
+      }
+    },
+
+    "VersionRecord": {
+      "type": "object",
+      "required": ["version_id", "version_number", "status", "created_at"],
+      "additionalProperties": false,
+      "properties": {
+        "version_id":      { "$ref": "#/$defs/UUID" },
+        "version_number":  { "$ref": "#/$defs/SemVer" },
+        "parent_version_id": { "$ref": "#/$defs/UUID" },
+        "status":          { "$ref": "#/$defs/StatusEnum" },
+        "created_at":      { "$ref": "#/$defs/ISOTimestamp" },
+        "created_by":      { "type": "string" },
+        "notes":           { "type": "string" },
+        "gen_params":      { "$ref": "#/$defs/GenParams" },
+        "file":            { "$ref": "#/$defs/FileLocator" },
+        "quality_metrics": { "$ref": "#/$defs/QualityMetrics" },
+        "cost":            { "$ref": "#/$defs/GenerationCost" }
+      }
+    },
+
+    "Rights": {
+      "type": "object",
+      "description": "Rights, licensing, and IP provenance for any asset.",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["generated", "uploaded", "reference", "licensed", "public_domain"],
+          "description": "How this asset was obtained."
+        },
+        "copyright_owner":  { "type": "string" },
+        "license_type": {
+          "type": "string",
+          "enum": ["proprietary", "cc0", "cc-by", "cc-by-sa", "commercial", "royalty_free", "rights_managed", "editorial_only"]
+        },
+        "license_url":      { "type": "string", "format": "uri" },
+        "expires_at":       { "$ref": "#/$defs/ISOTimestamp" },
+        "attribution_required": { "type": "boolean" },
+        "attribution_text": { "type": "string" },
+        "talent_release_signed": { "type": "boolean" },
+        "territory":        { "type": "array", "items": { "type": "string" }, "description": "ISO 3166-1 alpha-2 territory codes where this license applies. Empty = worldwide." }
+      }
+    },
+
+    "GenerationCost": {
+      "type": "object",
+      "description": "Cost incurred for a generation attempt.",
+      "additionalProperties": false,
+      "properties": {
+        "estimated_usd":        { "type": "number", "minimum": 0 },
+        "actual_usd":           { "type": "number", "minimum": 0 },
+        "tokens_used":          { "type": "integer", "minimum": 0 },
+        "gpu_seconds":          { "type": "number", "minimum": 0 },
+        "provider_job_id":      { "type": "string" },
+        "generation_time_sec":  { "type": "number", "minimum": 0 },
+        "retry_cost_usd":       { "type": "number", "minimum": 0, "description": "Additional cost from retried attempts." }
+      }
+    },
+
+    "RetryConfig": {
+      "type": "object",
+      "description": "Retry behaviour for failed generation attempts.",
+      "additionalProperties": false,
+      "properties": {
+        "max_attempts":         { "type": "integer", "minimum": 1, "default": 3 },
+        "backoff_strategy":     { "type": "string", "enum": ["fixed", "linear", "exponential"], "default": "exponential" },
+        "initial_delay_sec":    { "type": "number", "minimum": 0, "default": 5 },
+        "on_failure":           { "type": "string", "enum": ["fail", "skip", "use_placeholder", "fallback_tool"] },
+        "fallback_tool":        { "type": "string", "description": "Tool to use if all retries fail." },
+        "fallback_asset_id":    { "$ref": "#/$defs/UUID", "description": "Asset to substitute if generation fails." }
+      }
+    },
+
+    "GenerationAttempt": {
+      "type": "object",
+      "description": "Record of a single generation attempt (success or failure).",
+      "required": ["attempt_id", "attempt_number", "status", "started_at"],
+      "additionalProperties": false,
+      "properties": {
+        "attempt_id":    { "$ref": "#/$defs/UUID" },
+        "attempt_number":{ "type": "integer", "minimum": 1 },
+        "status":        { "type": "string", "enum": ["pending", "generating", "success", "failed", "cancelled"] },
+        "started_at":    { "$ref": "#/$defs/ISOTimestamp" },
+        "completed_at":  { "$ref": "#/$defs/ISOTimestamp" },
+        "error_code":    { "type": "string" },
+        "error_message": { "type": "string" },
+        "cost":          { "$ref": "#/$defs/GenerationCost" },
+        "output_file":   { "$ref": "#/$defs/FileLocator" }
+      }
+    },
+
+    "AsyncConfig": {
+      "type": "object",
+      "description": "Webhook and polling configuration for async generation jobs.",
+      "additionalProperties": false,
+      "properties": {
+        "webhook_url":       { "type": "string", "format": "uri" },
+        "webhook_secret":    { "type": "string", "description": "HMAC secret for verifying webhook payloads." },
+        "webhook_events": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["generation_queued", "generation_started", "generation_progress", "generation_complete", "generation_failed", "review_ready", "approved", "published"]
+          }
+        },
+        "timeout_sec":           { "type": "integer", "minimum": 10, "default": 600 },
+        "polling_interval_sec":  { "type": "integer", "minimum": 5, "default": 30, "description": "Fallback poll interval if webhook is unavailable." }
+      }
+    },
+
+    "PromptRecord": {
+      "type": "object",
+      "description": "A versioned snapshot of a prompt for A/B tracking and reproducibility.",
+      "required": ["prompt_version", "prompt"],
+      "additionalProperties": false,
+      "properties": {
+        "prompt_version":    { "type": "string", "description": "e.g. 'v1.0', 'v2.1-variant-b'" },
+        "prompt":            { "type": "string" },
+        "negative_prompt":   { "type": "string" },
+        "notes":             { "type": "string", "description": "What changed and why." },
+        "quality_score":     { "type": "number", "minimum": 0, "maximum": 10 },
+        "created_at":        { "$ref": "#/$defs/ISOTimestamp" }
+      }
+    },
+
+    "Comment": {
+      "type": "object",
+      "description": "Timecoded annotation or review comment on any entity.",
+      "required": ["comment_id", "author", "body", "created_at"],
+      "additionalProperties": false,
+      "properties": {
+        "comment_id":       { "$ref": "#/$defs/UUID" },
+        "thread_id":        { "$ref": "#/$defs/UUID", "description": "Groups replies under a parent comment." },
+        "author":           { "type": "string" },
+        "body":             { "type": "string" },
+        "timestamp_sec":    { "type": "number", "minimum": 0, "description": "If set, links comment to a specific timecode within the asset." },
+        "frame_number":     { "type": "integer", "minimum": 0 },
+        "status":           { "type": "string", "enum": ["open", "resolved", "wont_fix"] },
+        "created_at":       { "$ref": "#/$defs/ISOTimestamp" },
+        "updated_at":       { "$ref": "#/$defs/ISOTimestamp" },
+        "mentioned_users":  { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "ApprovalRecord": {
+      "type": "object",
+      "description": "A single approver's decision in an approval chain.",
+      "required": ["approver", "role", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "approver":   { "type": "string" },
+        "role":       { "type": "string", "enum": ["director", "producer", "vfx_supervisor", "sound_designer", "qa", "client", "legal", "finance"] },
+        "status":     { "type": "string", "enum": ["pending", "approved", "rejected", "changes_requested"] },
+        "notes":      { "type": "string" },
+        "deadline":   { "$ref": "#/$defs/ISOTimestamp" },
+        "decided_at": { "$ref": "#/$defs/ISOTimestamp" }
+      }
+    },
+
+    "QaGate": {
+      "type": "object",
+      "description": "Quality assurance checkpoint that must pass before assembly or delivery.",
+      "additionalProperties": false,
+      "properties": {
+        "required_checks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["character_consistency", "audio_sync", "color_match", "flicker_check", "lip_sync", "frame_rate_stable", "no_artifacts", "resolution_match", "script_adherence"]
+          }
+        },
+        "pass_threshold":    { "type": "number", "minimum": 0, "maximum": 1, "default": 0.85 },
+        "qa_passed":         { "type": "boolean" },
+        "checked_at":        { "$ref": "#/$defs/ISOTimestamp" },
+        "checked_by":        { "type": "string" },
+        "scores": {
+          "type": "object",
+          "description": "Per-check numeric scores (0–1).",
+          "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "ValidationResult": {
+      "type": "object",
+      "description": "Output of schema/dependency validation.",
+      "additionalProperties": false,
+      "properties": {
+        "schema_valid":       { "type": "boolean" },
+        "dependencies_met":   { "type": "boolean" },
+        "missing_assets":     { "type": "array", "items": { "$ref": "#/$defs/UUID" } },
+        "circular_deps":      { "type": "array", "items": { "type": "string" }, "description": "Descriptions of detected circular dependency cycles." },
+        "errors":             { "type": "array", "items": { "type": "string" } },
+        "warnings":           { "type": "array", "items": { "type": "string" } },
+        "validated_at":       { "$ref": "#/$defs/ISOTimestamp" }
+      }
+    },
+
+    "AssemblyErrorHandling": {
+      "type": "object",
+      "description": "Fallback strategy when an assembly step encounters missing or invalid inputs.",
+      "additionalProperties": false,
+      "properties": {
+        "on_missing_asset":      { "type": "string", "enum": ["fail", "skip", "use_placeholder"] },
+        "on_invalid_transition": { "type": "string", "enum": ["fail", "use_default_cut"] },
+        "on_audio_mismatch":     { "type": "string", "enum": ["fail", "trim_audio", "pad_audio", "skip_audio"] },
+        "fallback_asset_id":     { "$ref": "#/$defs/UUID" },
+        "notify_on_fallback":    { "type": "boolean" }
+      }
+    },
+
+    "PlatformDelivery": {
+      "type": "object",
+      "description": "Platform-specific delivery metadata for a final output.",
+      "required": ["platform"],
+      "additionalProperties": false,
+      "properties": {
+        "platform":   { "type": "string", "enum": ["youtube", "tiktok", "instagram_reels", "instagram_feed", "twitter_x", "facebook", "linkedin", "vimeo", "broadcast", "theatrical", "internal", "custom"] },
+        "title":      { "type": "string" },
+        "description":{ "type": "string" },
+        "tags":       { "type": "array", "items": { "type": "string" } },
+        "hashtags":   { "type": "array", "items": { "type": "string" } },
+        "category":   { "type": "string" },
+        "thumbnail_asset_id": { "$ref": "#/$defs/UUID" },
+        "scheduled_publish_at": { "$ref": "#/$defs/ISOTimestamp" },
+        "playlist_id":   { "type": "string" },
+        "utm_source":    { "type": "string" },
+        "utm_medium":    { "type": "string" },
+        "utm_campaign":  { "type": "string" },
+        "drm_required":  { "type": "boolean" },
+        "age_restriction": { "type": "integer", "minimum": 0, "maximum": 21 },
+        "custom_params": { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "LocalizationConfig": {
+      "type": "object",
+      "description": "Multilingual output configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "primary_language": { "type": "string", "description": "BCP-47 language tag, e.g. 'en-US'." },
+        "target_languages": { "type": "array", "items": { "type": "string" }, "description": "BCP-47 codes of additional output languages." },
+        "subtitle_tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["language", "file"],
+            "properties": {
+              "language":   { "type": "string" },
+              "label":      { "type": "string" },
+              "file":       { "$ref": "#/$defs/FileLocator" },
+              "is_default": { "type": "boolean" },
+              "is_forced":  { "type": "boolean" }
+            }
+          }
+        },
+        "dubbed_audio_tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["language", "audio_asset_id"],
+            "properties": {
+              "language":       { "type": "string" },
+              "label":          { "type": "string" },
+              "audio_asset_id": { "$ref": "#/$defs/UUID" },
+              "is_default":     { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+
+    "AccessibilityConfig": {
+      "type": "object",
+      "description": "Accessibility metadata and assets for WCAG compliance.",
+      "additionalProperties": false,
+      "properties": {
+        "wcag_level":           { "type": "string", "enum": ["A", "AA", "AAA"] },
+        "closed_captions_file": { "$ref": "#/$defs/FileLocator", "description": "VTT or SRT file with closed captions." },
+        "audio_description_track": { "$ref": "#/$defs/UUID", "description": "AudioAsset ID of the audio description track." },
+        "sign_language_track":  { "$ref": "#/$defs/UUID", "description": "VisualAsset ID of a sign-language overlay video." },
+        "transcript_file":      { "$ref": "#/$defs/FileLocator" },
+        "high_contrast_version_id": { "$ref": "#/$defs/UUID" }
+      }
+    },
+
+    "RenderConstraints": {
+      "type": "object",
+      "description": "Hardware and time constraints for the render pipeline.",
+      "additionalProperties": false,
+      "properties": {
+        "max_memory_gb":            { "type": "number", "exclusiveMinimum": 0 },
+        "gpu_type":                 { "type": "string", "enum": ["nvidia", "amd", "intel", "apple_silicon", "any"] },
+        "min_vram_gb":              { "type": "number", "exclusiveMinimum": 0 },
+        "estimated_render_time_hr": { "type": "number", "minimum": 0 },
+        "codec_preset":             { "type": "string", "enum": ["web_optimised", "broadcast", "archive", "preview"] },
+        "parallel_workers":         { "type": "integer", "minimum": 1 },
+        "max_cost_usd":             { "type": "number", "minimum": 0, "description": "Abort render if estimated cost exceeds this budget." }
+      }
+    },
+
+    "GenParams": {
+      "type": "object",
+      "description": "Universal generative-AI parameter envelope — tool-agnostic. Typed fields cover the common surface area; 'extra' accepts any additional provider-specific keys.",
+      "additionalProperties": false,
+      "properties": {
+        "tool":          { "type": "string", "description": "Provider name, e.g. 'runway', 'kling', 'luma', 'pika', 'midjourney', 'stable_diffusion', 'elevenlabs', 'manim', 'comfyui'." },
+        "model_id":      { "type": "string" },
+        "model_version": { "type": "string" },
+        "api_endpoint":  { "type": "string", "format": "uri" },
+
+        "prompt":         { "type": "string" },
+        "negative_prompt":{ "type": "string" },
+        "prompt_version": { "type": "string", "description": "Version tag for the current prompt, e.g. 'v1.2-variant-b'." },
+        "prompt_history": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PromptRecord" },
+          "description": "Ordered history of all prompt versions tried for this asset — enables A/B comparison."
+        },
+
+        "seed":      { "type": "integer" },
+        "cfg_scale": { "type": "number", "minimum": 0 },
+        "steps":     { "type": "integer", "minimum": 1 },
+        "sampler":   { "type": "string" },
+        "scheduler": { "type": "string" },
+        "strength":  { "type": "number", "minimum": 0, "maximum": 1, "description": "img2img / I2V conditioning strength." },
+        "duration_sec": { "type": "number", "minimum": 0 },
+
+        "consistency_anchors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["asset_ref", "role"],
+            "properties": {
+              "asset_ref":    { "$ref": "#/$defs/AssetRef" },
+              "role": {
+                "type": "string",
+                "enum": ["character", "style", "scene", "subject", "ip_adapter", "controlnet", "depth_map", "pose", "face_id", "temporal_bridge_frame"]
+              },
+              "adapter_type": { "type": "string" },
+              "weight":       { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+
+        "lora": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "path":   { "type": "string" },
+              "weight": { "type": "number", "minimum": 0, "maximum": 2 }
+            }
+          }
+        },
+
+        "camera_motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "move_type": {
+              "type": "string",
+              "enum": ["static", "pan_left", "pan_right", "tilt_up", "tilt_down", "zoom_in", "zoom_out", "dolly_in", "dolly_out", "truck_left", "truck_right", "crane_up", "crane_down", "arc_left", "arc_right", "handheld", "orbit", "custom"]
+            },
+            "speed":          { "type": "string", "enum": ["slow", "medium", "fast", "custom"] },
+            "duration_sec":   { "type": "number", "minimum": 0 },
+            "custom_path_uri":{ "type": "string", "format": "uri" }
+          }
+        },
+
+        "sound_generation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled":              { "type": "boolean" },
+            "lip_sync":             { "type": "boolean" },
+            "voice_id":             { "type": "string" },
+            "voice_stability":      { "type": "number", "minimum": 0, "maximum": 1 },
+            "voice_similarity":     { "type": "number", "minimum": 0, "maximum": 1 },
+            "voice_style":          { "type": "number", "minimum": 0, "maximum": 1 },
+            "voice_use_speaker_boost": { "type": "boolean" }
+          }
+        },
+
+        "cost":          { "$ref": "#/$defs/GenerationCost" },
+        "retry_config":  { "$ref": "#/$defs/RetryConfig" },
+        "async_config":  { "$ref": "#/$defs/AsyncConfig" },
+        "attempts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GenerationAttempt" },
+          "description": "Full history of generation attempts (including failures) for audit and cost tracking."
+        },
+
+        "extra": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Freeform bag for tool-specific parameters not covered above."
+        }
+      }
+    },
+
+    "QualitySpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset":    { "type": "string", "enum": ["480p", "720p", "1080p", "1440p", "2K", "4K", "8K", "custom"] },
+            "width_px":  { "type": "integer", "minimum": 1 },
+            "height_px": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "aspect_ratio": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset":  { "type": "string", "enum": ["16:9", "9:16", "4:3", "1:1", "2.35:1", "2.39:1", "4:5", "21:9", "custom"] },
+            "width":   { "type": "integer" },
+            "height":  { "type": "integer" }
+          }
+        },
+        "frame_rate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fps":        { "type": "number", "enum": [23.976, 24, 25, 29.97, 30, 48, 59.94, 60, 120] },
+            "custom_fps": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        "color_space":        { "type": "string", "enum": ["sRGB", "Rec.709", "Rec.2020", "DCI-P3", "custom"] },
+        "bit_depth":          { "type": "integer", "enum": [8, 10, 12, 16] },
+        "hdr_format":         { "type": "string", "enum": ["SDR", "HDR10", "HLG", "Dolby Vision", "none"] },
+        "codec_video":        { "type": "string", "examples": ["h264", "h265", "prores_422", "prores_4444", "av1", "dnxhd"] },
+        "codec_audio":        { "type": "string", "examples": ["aac", "mp3", "flac", "pcm_s24le"] },
+        "bitrate_video_mbps": { "type": "number", "exclusiveMinimum": 0 },
+        "bitrate_audio_kbps": { "type": "number", "exclusiveMinimum": 0 },
+        "motion_blur":        { "type": "boolean" },
+        "motion_blur_shutter_angle": { "type": "number", "minimum": 0, "maximum": 360 },
+        "grain_level":        { "type": "string", "enum": ["none", "subtle", "medium", "heavy"] }
+      }
+    },
+
+    "TemporalConsistency": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cross-shot and cross-scene consistency requirements. Research baseline for character_coherence_min_score is 7.99/10.",
+      "properties": {
+        "character_coherence_min_score":  { "type": "number", "minimum": 0, "maximum": 10, "default": 7.99 },
+        "world_consistency_min_score":    { "type": "number", "minimum": 0, "maximum": 1 },
+        "temporal_bridge_enabled":        { "type": "boolean", "description": "Conditions each scene's first frame on the last frame of the prior scene." },
+        "optical_flow_validation":        { "type": "boolean" },
+        "max_dynamic_degree":             { "type": "number", "minimum": 0 },
+        "face_consistency_required":      { "type": "boolean" },
+        "clothing_consistency_required":  { "type": "boolean" },
+        "style_consistency_required":     { "type": "boolean" }
+      }
+    },
+
+    "CinematicSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shot_type": {
+          "type": "string",
+          "enum": ["extreme_wide", "wide", "medium_wide", "medium", "medium_close", "close_up", "extreme_close_up", "aerial", "pov", "over_the_shoulder", "two_shot", "insert", "cutaway"]
+        },
+        "lens_focal_mm":   { "type": "number", "exclusiveMinimum": 0 },
+        "aperture_f":      { "type": "number", "exclusiveMinimum": 0 },
+        "depth_of_field":  { "type": "string", "enum": ["shallow", "medium", "deep"] },
+        "lighting_style": {
+          "type": "string",
+          "enum": ["golden_hour", "blue_hour", "high_key", "low_key", "rembrandt", "practical_lights", "neon", "overcast", "hard_noon", "candlelight", "custom"]
+        },
+        "lighting_direction": {
+          "type": "string",
+          "enum": ["front", "45_front", "side", "backlit", "top", "bottom", "rim"]
+        },
+        "color_palette":  { "type": "array", "items": { "type": "string" }, "description": "CSS hex colors, e.g. '#1a1a2e'." },
+        "mood":           { "type": "string" },
+        "film_grain":     { "type": "string", "enum": ["none", "subtle", "medium", "heavy"] },
+        "lens_flare":     { "type": "boolean" },
+        "anamorphic":     { "type": "boolean" },
+        "vfx_notes":      { "type": "string" },
+        "manim_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "background_color": { "type": "string" },
+            "pixel_height":     { "type": "integer", "minimum": 1 },
+            "pixel_width":      { "type": "integer", "minimum": 1 },
+            "frame_rate":       { "type": "number", "exclusiveMinimum": 0 },
+            "scene_class":      { "type": "string", "description": "Python class name of the Manim scene to render." },
+            "quality":          { "type": "string", "enum": ["low", "medium", "high", "production"] }
+          }
+        }
+      }
+    },
+
+    "QualityMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Measured quality scores for a generated asset version.",
+      "properties": {
+        "character_coherence_score": { "type": "number", "minimum": 0, "maximum": 10 },
+        "world_consistency_score":   { "type": "number", "minimum": 0, "maximum": 1 },
+        "prompt_adherence_score":    { "type": "number", "minimum": 0, "maximum": 1 },
+        "script_adherence_score":    { "type": "number", "minimum": 0, "maximum": 1 },
+        "audio_sync_score":          { "type": "number", "minimum": 0, "maximum": 1 },
+        "overall_score":             { "type": "number", "minimum": 0, "maximum": 10 },
+        "quality_check_passed":      { "type": "boolean" },
+        "validator_notes":           { "type": "string" },
+        "evaluated_at":              { "$ref": "#/$defs/ISOTimestamp" }
+      }
+    },
+
+    "TeamMember": {
+      "type": "object",
+      "required": ["user_id", "role"],
+      "additionalProperties": false,
+      "properties": {
+        "user_id":   { "type": "string" },
+        "name":      { "type": "string" },
+        "email":     { "type": "string", "format": "email" },
+        "role": {
+          "type": "string",
+          "enum": ["creator", "director", "producer", "editor", "vfx_supervisor", "sound_designer", "qa", "finance", "client", "legal", "viewer"]
+        },
+        "permissions": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["view", "comment", "edit", "generate", "approve", "publish", "delete", "manage_team"] }
+        },
+        "asset_type_scope": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Restricts permissions to specific asset types. Empty = all."
+        }
+      }
+    },
+
+    "Team": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "members": { "type": "array", "items": { "$ref": "#/$defs/TeamMember" } },
+        "default_approval_chain": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ApprovalRecord" },
+          "description": "Default approver sequence applied to all new assets unless overridden."
+        }
+      }
+    },
+
+    "Budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total_usd":              { "type": "number", "minimum": 0 },
+        "spent_usd":              { "type": "number", "minimum": 0 },
+        "generation_budget_usd":  { "type": "number", "minimum": 0 },
+        "render_budget_usd":      { "type": "number", "minimum": 0 },
+        "contingency_pct":        { "type": "number", "minimum": 0, "maximum": 1, "default": 0.1 },
+        "alert_threshold_pct":    { "type": "number", "minimum": 0, "maximum": 1, "default": 0.8, "description": "Send alert when spent_usd / total_usd exceeds this ratio." }
+      }
+    },
+
+    "Compliance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "regions_requiring_approval": { "type": "array", "items": { "type": "string" }, "description": "ISO 3166-1 alpha-2 codes." },
+        "content_warnings":           { "type": "array", "items": { "type": "string" }, "examples": ["violence", "strong_language", "adult_themes"] },
+        "rating":                     { "type": "string", "examples": ["G", "PG", "PG-13", "R", "NC-17", "TV-MA", "PEGI-12"] },
+        "gdpr_personal_data":         { "type": "boolean" },
+        "ccpa_personal_data":         { "type": "boolean" }
+      }
+    },
+
+    "ProjectMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "client_name":    { "type": "string" },
+        "project_code":   { "type": "string", "description": "Internal tracking code, e.g. 'PRJ-2026-042'." },
+        "external_id":    { "type": "string", "description": "ID in an external system (Jira, Linear, Notion, etc.)." },
+        "visibility":     { "type": "string", "enum": ["private", "internal", "shared", "public"] },
+        "archived":       { "type": "boolean", "default": false },
+        "sunset_date":    { "$ref": "#/$defs/ISOTimestamp", "description": "Date after which the project and its assets may be auto-archived or deleted." },
+        "tags":           { "type": "array", "items": { "type": "string" } },
+        "description":    { "type": "string" },
+        "budget":         { "$ref": "#/$defs/Budget" },
+        "compliance":     { "$ref": "#/$defs/Compliance" },
+        "localization":   { "$ref": "#/$defs/LocalizationConfig" }
+      }
+    },
+
+    "GlobalSpecs": {
+      "type": "object",
+      "required": ["quality_spec"],
+      "additionalProperties": false,
+      "properties": {
+        "quality_spec":          { "$ref": "#/$defs/QualitySpec" },
+        "temporal_consistency":  { "$ref": "#/$defs/TemporalConsistency" },
+        "max_duration_sec":      { "type": "number", "maximum": 1800, "default": 1800 },
+        "style_guidelines":      { "type": "array", "items": { "type": "string" } },
+        "render_constraints":    { "$ref": "#/$defs/RenderConstraints" }
+      }
+    },
+
+    "Story": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "logline":   { "type": "string" },
+        "synopsis":  { "type": "string" },
+        "theme":     { "type": "string" },
+        "narrative_arc": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["act", "description"],
+            "properties": {
+              "act":            { "type": "string" },
+              "title":          { "type": "string" },
+              "description":    { "type": "string" },
+              "key_events":     { "type": "array", "items": { "type": "string" } },
+              "emotional_tone": { "type": "string" },
+              "target_length_sec": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "characters_summary": { "type": "array", "items": { "type": "string" }, "description": "Brief character roster; full definitions live in asset_registry.characters." }
+      }
+    },
+
+    "Script": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "full_text": { "type": "string" },
+        "format":    { "type": "string", "enum": ["screenplay", "storyboard", "shot_list", "treatment"] },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "line_type", "content"],
+            "properties": {
+              "id":         { "$ref": "#/$defs/UUID" },
+              "line_type":  { "type": "string", "enum": ["scene_heading", "action", "character", "dialogue", "parenthetical", "transition", "note"] },
+              "content":    { "type": "string" },
+              "speaker":    { "type": "string" },
+              "scene_ref":  { "$ref": "#/$defs/UUID" },
+              "shot_ref":   { "$ref": "#/$defs/UUID" },
+              "start_sec":  { "type": "number", "minimum": 0 },
+              "end_sec":    { "type": "number", "minimum": 0 },
+              "estimated_duration_sec": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "DirectorNotes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overall_vision":     { "type": "string" },
+        "tone_and_mood":      { "type": "string" },
+        "target_audience":    { "type": "string" },
+        "style_references":   { "type": "array", "items": { "type": "string" }, "description": "Free-text, URLs, or asset IDs." },
+        "quality_rules":      { "type": "array", "items": { "type": "string" }, "description": "Hard constraints, e.g. 'no lens flare in Act 1'." },
+        "per_scene_overrides":{
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "vision":       { "type": "string" },
+              "camera_style": { "type": "string" },
+              "mood":         { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "Character": {
+      "type": "object",
+      "required": ["id", "name", "physical_description"],
+      "additionalProperties": false,
+      "properties": {
+        "id":                   { "$ref": "#/$defs/UUID" },
+        "name":                 { "type": "string" },
+        "role":                 { "type": "string", "enum": ["protagonist", "antagonist", "supporting", "narrator", "background", "custom"] },
+        "physical_description": { "type": "string" },
+        "visual_notes":         { "type": "string" },
+        "personality":          { "type": "string" },
+        "arc":                  { "type": "string" },
+        "reference_images":     { "type": "array", "items": { "$ref": "#/$defs/FileLocator" } },
+        "voice_ref":            { "$ref": "#/$defs/AssetRef" },
+        "gen_params":           { "$ref": "#/$defs/GenParams" },
+        "rights":               { "$ref": "#/$defs/Rights" },
+        "versions":             { "type": "array", "items": { "$ref": "#/$defs/VersionRecord" } },
+        "approval_chain":       { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } },
+        "comments":             { "type": "array", "items": { "$ref": "#/$defs/Comment" } },
+        "tags":                 { "type": "array", "items": { "type": "string" } },
+        "metadata":             { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "Environment": {
+      "type": "object",
+      "required": ["id", "name", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id":               { "$ref": "#/$defs/UUID" },
+        "name":             { "type": "string" },
+        "description":      { "type": "string" },
+        "time_of_day":      { "type": "string" },
+        "weather":          { "type": "string" },
+        "reference_images": { "type": "array", "items": { "$ref": "#/$defs/FileLocator" } },
+        "gen_params":       { "$ref": "#/$defs/GenParams" },
+        "rights":           { "$ref": "#/$defs/Rights" },
+        "versions":         { "type": "array", "items": { "$ref": "#/$defs/VersionRecord" } },
+        "approval_chain":   { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } },
+        "comments":         { "type": "array", "items": { "$ref": "#/$defs/Comment" } },
+        "metadata":         { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "Prop": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id":               { "$ref": "#/$defs/UUID" },
+        "name":             { "type": "string" },
+        "description":      { "type": "string" },
+        "reference_images": { "type": "array", "items": { "$ref": "#/$defs/FileLocator" } },
+        "gen_params":       { "$ref": "#/$defs/GenParams" },
+        "rights":           { "$ref": "#/$defs/Rights" },
+        "metadata":         { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "StyleGuide": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id":                    { "$ref": "#/$defs/UUID" },
+        "name":                  { "type": "string" },
+        "art_style":             { "type": "string" },
+        "visual_references":     { "type": "array", "items": { "$ref": "#/$defs/FileLocator" } },
+        "color_palette":         { "type": "array", "items": { "type": "string" } },
+        "negative_style_prompt": { "type": "string" },
+        "lighting_default":      { "type": "string" },
+        "cinematic_spec":        { "$ref": "#/$defs/CinematicSpec" }
+      }
+    },
+
+    "AssetRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "characters":    { "type": "array", "items": { "$ref": "#/$defs/Character" } },
+        "environments":  { "type": "array", "items": { "$ref": "#/$defs/Environment" } },
+        "props":         { "type": "array", "items": { "$ref": "#/$defs/Prop" } },
+        "style_guides":  { "type": "array", "items": { "$ref": "#/$defs/StyleGuide" } }
+      }
+    },
+
+    "VisualAsset": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id":          { "$ref": "#/$defs/UUID" },
+        "type": {
+          "type": "string",
+          "enum": ["image", "storyboard_frame", "character_sheet", "environment_ref", "prop_ref", "concept_art", "video_clip", "animated_sequence", "thumbnail", "promotional_still"]
+        },
+        "label":       { "type": "string" },
+        "description": { "type": "string" },
+        "file":        { "$ref": "#/$defs/FileLocator" },
+        "quality_spec":{ "$ref": "#/$defs/QualitySpec" },
+        "cinematic_spec": { "$ref": "#/$defs/CinematicSpec" },
+        "gen_params":  { "$ref": "#/$defs/GenParams" },
+        "rights":      { "$ref": "#/$defs/Rights" },
+        "references":  { "type": "array", "items": { "$ref": "#/$defs/AssetRef" } },
+        "versions":    { "type": "array", "items": { "$ref": "#/$defs/VersionRecord" } },
+        "current_version_id": { "$ref": "#/$defs/UUID" },
+        "approval_chain": { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } },
+        "comments":    { "type": "array", "items": { "$ref": "#/$defs/Comment" } },
+        "tags":        { "type": "array", "items": { "type": "string" } },
+        "metadata":    { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "AudioAsset": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id":       { "$ref": "#/$defs/UUID" },
+        "type":     { "type": "string", "enum": ["voice_over", "dialogue", "music", "sfx", "ambient", "foley"] },
+        "label":    { "type": "string" },
+        "file":     { "$ref": "#/$defs/FileLocator" },
+        "transcript": { "type": "string" },
+        "language": { "type": "string", "description": "BCP-47 language tag." },
+        "sync": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "timeline_in_sec":  { "type": "number", "minimum": 0 },
+            "timeline_out_sec": { "type": "number", "minimum": 0 },
+            "shot_ref":         { "$ref": "#/$defs/AssetRef" },
+            "beat_offset_sec":  { "type": "number" },
+            "loop":             { "type": "boolean" },
+            "fade_in_sec":      { "type": "number", "minimum": 0 },
+            "fade_out_sec":     { "type": "number", "minimum": 0 }
+          }
+        },
+        "gen_params":  { "$ref": "#/$defs/GenParams" },
+        "rights":      { "$ref": "#/$defs/Rights" },
+        "versions":    { "type": "array", "items": { "$ref": "#/$defs/VersionRecord" } },
+        "current_version_id": { "$ref": "#/$defs/UUID" },
+        "approval_chain": { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } },
+        "comments":    { "type": "array", "items": { "$ref": "#/$defs/Comment" } },
+        "tags":        { "type": "array", "items": { "type": "string" } },
+        "metadata":    { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "Transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["cut", "dissolve", "fade_in", "fade_out", "fade_to_black", "fade_from_black", "wipe", "cross_zoom", "dip_to_black", "morph", "custom"]
+        },
+        "duration_sec": { "type": "number", "minimum": 0 },
+        "easing":       { "type": "string", "enum": ["linear", "ease_in", "ease_out", "ease_in_out", "custom_bezier"] },
+        "bezier_control_points": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "Four values [x1, y1, x2, y2] for CSS cubic-bezier easing."
+        }
+      }
+    },
+
+    "AssemblyInstruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clip_in_sec":       { "type": "number", "minimum": 0 },
+        "clip_out_sec":      { "type": "number", "minimum": 0 },
+        "timeline_in_sec":   { "type": "number", "minimum": 0 },
+        "timeline_out_sec":  { "type": "number", "minimum": 0 },
+        "layer":             { "type": "integer", "minimum": 0, "description": "Z-order: higher values render on top." },
+        "blend_mode": {
+          "type": "string",
+          "enum": ["normal", "multiply", "screen", "overlay", "darken", "lighten", "color_dodge", "color_burn", "hard_light", "soft_light", "difference", "exclusion", "add"],
+          "default": "normal"
+        },
+        "transition_in":     { "$ref": "#/$defs/Transition" },
+        "transition_out":    { "$ref": "#/$defs/Transition" },
+        "speed_factor":      { "type": "number", "exclusiveMinimum": 0, "default": 1.0 },
+        "reverse":           { "type": "boolean" },
+        "crop": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x1": { "type": "number" }, "y1": { "type": "number" },
+            "x2": { "type": "number" }, "y2": { "type": "number" }
+          }
+        },
+        "resize": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width":  { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 },
+            "method": { "type": "string", "enum": ["lanczos", "bilinear", "bicubic", "nearest"] }
+          }
+        },
+        "opacity":       { "type": "number", "minimum": 0, "maximum": 1 },
+        "color_grade": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lut_file":   { "$ref": "#/$defs/FileLocator" },
+            "brightness": { "type": "number" },
+            "contrast":   { "type": "number" },
+            "saturation": { "type": "number" },
+            "hue_shift":  { "type": "number" },
+            "gamma":      { "type": "number" }
+          }
+        },
+        "opencv_filters":    { "type": "array", "items": { "type": "string" }, "description": "OpenCV filter descriptors applied frame-by-frame." },
+        "pyav_stream_params":{ "type": "object", "additionalProperties": true },
+        "error_handling":    { "$ref": "#/$defs/AssemblyErrorHandling" }
+      }
+    },
+
+    "Shot": {
+      "type": "object",
+      "required": ["shot_id", "duration_sec"],
+      "additionalProperties": false,
+      "properties": {
+        "shot_id":      { "$ref": "#/$defs/UUID" },
+        "label":        { "type": "string" },
+        "duration_sec": { "type": "number", "exclusiveMinimum": 0 },
+        "order":        { "type": "integer", "minimum": 0 },
+        "cinematic_spec":      { "$ref": "#/$defs/CinematicSpec" },
+        "gen_params":          { "$ref": "#/$defs/GenParams" },
+        "visual_asset_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "asset_id":   { "$ref": "#/$defs/UUID" },
+            "version_id": { "$ref": "#/$defs/UUID" }
+          }
+        },
+        "anchor_frame_ref": {
+          "description": "Temporal bridge: last frame of the preceding shot used to condition this shot's generation.",
+          "$ref": "#/$defs/AssetRef"
+        },
+        "audio_sync_points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["audio_asset_id", "offset_sec"],
+            "properties": {
+              "audio_asset_id": { "$ref": "#/$defs/UUID" },
+              "offset_sec":     { "type": "number", "minimum": 0 },
+              "duration_sec":   { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "assembly":    { "$ref": "#/$defs/AssemblyInstruction" },
+        "qa_gate":     { "$ref": "#/$defs/QaGate" },
+        "comments":    { "type": "array", "items": { "$ref": "#/$defs/Comment" } },
+        "approval_chain": { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } }
+      }
+    },
+
+    "Scene": {
+      "type": "object",
+      "required": ["scene_id", "title", "shots"],
+      "additionalProperties": false,
+      "properties": {
+        "scene_id":       { "$ref": "#/$defs/UUID" },
+        "title":          { "type": "string" },
+        "description":    { "type": "string" },
+        "order":          { "type": "integer", "minimum": 0 },
+        "start_sec":      { "type": "number", "minimum": 0 },
+        "end_sec":        { "type": "number", "minimum": 0 },
+        "shots":          { "type": "array", "items": { "$ref": "#/$defs/Shot" }, "minItems": 1 },
+        "director_notes": { "type": "string" },
+        "qa_gate":        { "$ref": "#/$defs/QaGate" },
+        "approval_chain": { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } },
+        "comments":       { "type": "array", "items": { "$ref": "#/$defs/Comment" } }
+      }
+    },
+
+    "MarketingMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id":     { "$ref": "#/$defs/UUID" },
+        "type":   { "type": "string", "enum": ["trailer", "thumbnail", "promotional_still", "social_clip", "poster", "banner", "gif"] },
+        "label":  { "type": "string" },
+        "platform_deliveries": { "type": "array", "items": { "$ref": "#/$defs/PlatformDelivery" } },
+        "gen_params": { "$ref": "#/$defs/GenParams" },
+        "rights":     { "$ref": "#/$defs/Rights" },
+        "versions":   { "type": "array", "items": { "$ref": "#/$defs/VersionRecord" } },
+        "approval_chain": { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } }
+      }
+    },
+
+    "RenderPipelineStep": {
+      "type": "object",
+      "required": ["step_id", "operation"],
+      "additionalProperties": false,
+      "properties": {
+        "step_id":        { "$ref": "#/$defs/UUID" },
+        "operation": {
+          "type": "string",
+          "enum": ["load", "concat", "overlay_audio", "add_transition", "apply_effect", "color_grade", "render", "manim_animate", "opencv_process", "encode", "package"]
+        },
+        "library":        { "type": "string", "enum": ["moviepy", "movis", "opencv", "pyav", "manim", "ffmpeg", "custom"] },
+        "parameters":     { "type": "object", "additionalProperties": true },
+        "input_asset_ids":{ "type": "array", "items": { "$ref": "#/$defs/UUID" } },
+        "output_asset_id":{ "$ref": "#/$defs/UUID" },
+        "timeline_sec":   { "type": "number", "minimum": 0 },
+        "depends_on":     { "type": "array", "items": { "$ref": "#/$defs/UUID" }, "description": "step_ids that must complete before this step." },
+        "error_handling": { "$ref": "#/$defs/AssemblyErrorHandling" }
+      }
+    },
+
+    "RenderPipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format":           { "type": "string", "enum": ["structured", "python_snippet"] },
+        "steps":            { "type": "array", "items": { "$ref": "#/$defs/RenderPipelineStep" } },
+        "python_snippet":   { "type": "string", "description": "Raw Python code for custom orchestration." },
+        "constraints":      { "$ref": "#/$defs/RenderConstraints" },
+        "validation_result":{ "$ref": "#/$defs/ValidationResult" }
+      }
+    },
+
+    "RenderOutput": {
+      "type": "object",
+      "required": ["id", "version", "quality_spec"],
+      "additionalProperties": false,
+      "properties": {
+        "id":               { "$ref": "#/$defs/UUID" },
+        "version":          { "$ref": "#/$defs/SemVer" },
+        "parent_version":   { "$ref": "#/$defs/SemVer" },
+        "label":            { "type": "string" },
+        "status":           { "$ref": "#/$defs/StatusEnum" },
+        "file":             { "$ref": "#/$defs/FileLocator" },
+        "quality_spec":     { "$ref": "#/$defs/QualitySpec" },
+        "quality_metrics":  { "$ref": "#/$defs/QualityMetrics" },
+        "assembly_tool":    { "type": "string", "enum": ["moviepy", "movis", "opencv", "pyav", "manim", "ffmpeg", "custom"] },
+        "assembly_script":  { "$ref": "#/$defs/FileLocator" },
+        "scene_order":      { "type": "array", "items": { "$ref": "#/$defs/UUID" } },
+        "total_duration_sec":{ "type": "number", "minimum": 0, "maximum": 1800 },
+        "rendered_at":      { "$ref": "#/$defs/ISOTimestamp" },
+        "change_log":       { "type": "string" },
+        "platform_deliveries": { "type": "array", "items": { "$ref": "#/$defs/PlatformDelivery" } },
+        "localization":     { "$ref": "#/$defs/LocalizationConfig" },
+        "accessibility":    { "$ref": "#/$defs/AccessibilityConfig" },
+        "approval_chain":   { "type": "array", "items": { "$ref": "#/$defs/ApprovalRecord" } },
+        "comments":         { "type": "array", "items": { "$ref": "#/$defs/Comment" } },
+        "metadata":         { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "DependencyEdge": {
+      "type": "object",
+      "required": ["source_id", "target_id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "source_id": { "$ref": "#/$defs/UUID" },
+        "target_id": { "$ref": "#/$defs/UUID" },
+        "type":      { "type": "string", "enum": ["requires", "references", "derived_from", "conditions_on", "blocks"] },
+        "notes":     { "type": "string" }
+      }
+    }
+
+  }
+}

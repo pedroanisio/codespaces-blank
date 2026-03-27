@@ -2,6 +2,11 @@
 
 A multi-session workspace exploring themes critical to safe, production-ready AI systems: epistemic integrity, bias auditing, type-safe data schemas, and responsible knowledge representation.
 
+## Disclaimer
+
+This work is subject to the methodological caveats and commitments described in [@DISCLAIMER.md](./DISCLAIMER.md).
+> No statement or premise not backed by a real logical definition or verifiable reference should be taken for granted.
+
 ---
 
 ## Project Philosophy

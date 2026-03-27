@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schema.videogen.ai/video-project-v1.0.json",
   "title": "VideoProject",
-  "description": "Comprehensive, tool-agnostic JSON Schema for a complete video production project (up to 30 minutes). Supports hierarchical assets, versioning, generative-AI parameters, quality specifications, and programmatic assembly with MoviePy, Movis, OpenCV, PyAV, or Manim. All generative fields are extensible via provider/model-specific parameters and additionalProperties.",
+  "description": "Comprehensive, tool-agnostic JSON Schema for a complete video production project (up to 30 minutes). Supports hierarchical assets, versioning, generative-AI parameters, quality specifications, and programmatic assembly with MoviePy, Movis, OpenCV, PyAV, or Manim. All generative fields are extensible via provider/model-specific parameters and additionalProperties. See video-project-schema-v2.json for the full enhanced schema with cost tracking, retry logic, collaboration, QA gates, rights, and platform delivery.",
   "type": "object",
   "required": [
     "projectId",
@@ -313,6 +313,7 @@
         "modelVersion": { "type": "string" },
         "prompt": { "type": "string" },
         "negativePrompt": { "type": "string" },
+        "promptVersion": { "type": "string", "description": "Version tag for this prompt, e.g. 'v1.2-variant-b'. Enables A/B comparison." },
         "seed": { "type": "integer" },
         "parameters": {
           "type": "object",
@@ -341,6 +342,38 @@
             }
           },
           "additionalProperties": true
+        },
+        "cost": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Cost incurred for this generation call.",
+          "properties": {
+            "estimatedUsd":       { "type": "number", "minimum": 0 },
+            "actualUsd":          { "type": "number", "minimum": 0 },
+            "tokensUsed":         { "type": "integer", "minimum": 0 },
+            "generationTimeSec":  { "type": "number", "minimum": 0 },
+            "providerJobId":      { "type": "string" }
+          }
+        },
+        "retryConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxAttempts":      { "type": "integer", "minimum": 1, "default": 3 },
+            "backoffStrategy":  { "type": "string", "enum": ["fixed", "linear", "exponential"] },
+            "onFailure":        { "type": "string", "enum": ["fail", "skip", "use_placeholder", "fallback_tool"] },
+            "fallbackTool":     { "type": "string" }
+          }
+        },
+        "asyncConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "webhookUrl":         { "type": "string", "format": "uri" },
+            "webhookEvents":      { "type": "array", "items": { "type": "string" } },
+            "timeoutSec":         { "type": "integer", "minimum": 10, "default": 600 },
+            "pollingIntervalSec": { "type": "integer", "minimum": 5, "default": 30 }
+          }
         }
       }
     },
@@ -365,7 +398,7 @@
             "properties": {
               "versionId": { "type": "string" },
               "createdAt": { "type": "string", "format": "date-time" },
-              "status": { "enum": ["draft", "approved", "rejected", "final"] },
+              "status": { "enum": ["draft", "generating", "review", "changes_requested", "approved", "archived"], "description": "Canonical status lifecycle aligned with video-project-schema-v2.json." },
               "generationConfig": { "$ref": "#/$defs/GenerationConfig" },
               "outputReference": {
                 "type": "object",
@@ -405,7 +438,7 @@
             "properties": {
               "versionId": { "type": "string" },
               "createdAt": { "type": "string", "format": "date-time" },
-              "status": { "enum": ["draft", "approved", "rejected", "final"] },
+              "status": { "enum": ["draft", "generating", "review", "changes_requested", "approved", "archived"], "description": "Canonical status lifecycle aligned with video-project-schema-v2.json." },
               "generationConfig": { "$ref": "#/$defs/GenerationConfig" },
               "outputReference": {
                 "type": "object",
