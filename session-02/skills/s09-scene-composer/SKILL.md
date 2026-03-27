@@ -25,6 +25,7 @@ continuity, transitions, and quality gates.
   - `plannedPosition` → `TimeRange`
   - `shotRefs[]` (ordered), `transitionIn`, `transitionOut`
   - `qaGate` → `QaGate` (required checks, pass threshold)
+- `production.shots[].qaGate` → `QaGate` (shot-level quality gates, one per shot)
 
 ### Reads
 - `production.shots[]` (from S08)
@@ -60,6 +61,7 @@ Apply director's editing language:
 
 ### Step 4: Configure QA gates
 
+For each **scene**, set `qaGate`:
 ```
 qaGate: {
   requiredChecks: ["temporal_consistency", "character_coherence", "audio_sync"],
@@ -67,7 +69,15 @@ qaGate: {
 }
 ```
 
-Include any additional checks from `directorInstructions.qualityRules[]`.
+For each **shot** within the scene, also set `qaGate` using the director's quality rules:
+```
+qaGate: {
+  requiredChecks: ["temporal_consistency", "character_coherence", "duration_compliance", "resolution_compliance"],
+  passThreshold: 0.8
+}
+```
+
+Include any additional checks from `directorInstructions.qualityRules[]` in both scene and shot gates.
 
 ### Step 5: Calculate planned positions
 
@@ -77,7 +87,8 @@ Sequence scenes and compute cumulative `plannedPosition` TimeRanges.
 
 - One `SceneEntity` per distinct scene in the script
 - `shotRefs[]` are ordered and reference existing shots
-- `qaGate` is configured with ≥2 required checks
+- Every scene has `qaGate` configured with ≥2 required checks
+- Every shot within each scene has `qaGate` configured with ≥2 required checks
 - Scene durations sum to ≈ `project.targetRuntimeSec`
 - Every scene has `environmentRef` and ≥1 `characterRef`
 

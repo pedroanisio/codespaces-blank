@@ -25,7 +25,9 @@ for all downstream video generation.
   - `visualType`: "character_reference" | "environment_reference" | "prop_reference"
   - `modality`: "image"
   - `purpose`: "canonical_reference"
-  - `characterRefs[]` or `environmentRefs[]`: Back-references
+  - `characterRefs[]`: Back-references for character reference images
+  - `environmentRefs[]`: Back-references for environment reference images
+  - `propRefs[]`: Back-references for prop reference images
   - `spec` → `VisualAssetSpec` (resolution, style, lighting)
   - `generation` → `GenerationManifest`:
     - `mode`: "ai_generated"

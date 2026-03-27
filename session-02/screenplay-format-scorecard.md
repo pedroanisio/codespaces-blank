@@ -1,7 +1,8 @@
 ---
 title: "Screenplay Format Specification — Scorecard & Design Assumptions"
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 date: "2026-03-27"
+updated: "2026-03-27"
 disclaimer: >
   No information within this document should be taken for granted.
   Any statement or premise not backed by a real logical definition
@@ -22,7 +23,7 @@ deliberately.
 | 1 | **JSON Schema draft 2020-12** as the schema language. | User asked for "schema json". JSON Schema is the most portable JSON-native contract language. |
 | 2 | **UUIDs** for `format_id`. | Opaque, collision-resistant. Switch to ULIDs if lexicographic ordering is needed. |
 | 3 | **Measurement** as a dedicated type with explicit `unit`. | Screenplay formatting spans US (inches) and European (cm/mm) traditions; a bare number would be ambiguous. |
-| 4 | **`additionalProperties: false`** on all objects. | Closed schema for strict validation. Add `x-extension-point: true` if open extensibility is needed. |
+| 4 | **`additionalProperties: false`** on all objects. | Closed schema for strict validation. Extension points are provided via explicit `extensions` fields (type `Extensions`, `additionalProperties: true`) on the root, `FormatVariant`, and `ElementFormat`. |
 | 5 | **Element list is ordered but order is advisory.** | The schema defines formatting rules per element type; it does not constrain content sequencing (that's the screenplay itself). |
 | 6 | **TV-specific elements** (act_break, cold_open_header, etc.) are in the `ElementType` enum but only appear in TV variant instances. | A single enum keeps the schema unified; variant-specific applicability is documented, not structurally enforced. This is an intentional deviation from strict discriminated-union purity (Rule 8 waiver). |
 | 7 | **Revision color sequence** is modeled as an ordered array, not a fixed enum. | Studios occasionally modify the sequence; an array is more evolvable. |
@@ -42,11 +43,11 @@ deliberately.
 │  1  │ Unambiguous field types                  │ MUST     │ Pass   │
 │  2  │ Constraints in schema                    │ MUST     │ Pass   │
 │  3  │ Closed, versioned enums                  │ MUST     │ Pass   │
-│  4  │ Nullable ≠ optional ≠ absent             │ MUST     │ Pass   │
-│  5  │ Arrays: item type + cardinality + order  │ MUST     │ Pass   │
+│  4  │ Nullable ≠ optional ≠ absent             │ MUST     │ Pass✓  │
+│  5  │ Arrays: item type + cardinality + order  │ MUST     │ Pass✓  │
 │  6  │ Temporal precision and format            │ MUST     │ Pass   │
 │  7  │ Numeric units declared                   │ MUST     │ Pass   │
-│  8  │ Discriminated polymorphism               │ MUST     │ Warn   │
+│  8  │ Discriminated polymorphism               │ MUST     │ Warn+  │
 │  9  │ Defaults declared in schema              │ SHOULD   │ Pass   │
 ├─────┼──────────────────────────────────────────┼──────────┼────────┤
 │     │ PART II — IDENTITY AND RELATIONSHIPS     │          │        │
@@ -63,8 +64,8 @@ deliberately.
 │ 18  │ Computed vs. stored distinguished        │ SHOULD   │ Pass   │
 ├─────┼──────────────────────────────────────────┼──────────┼────────┤
 │     │ PART IV — EVOLUTION AND COMPATIBILITY    │          │        │
-│ 19  │ Explicit, monotonic versioning           │ MUST     │ Pass   │
-│ 20  │ No duplicate-version entities            │ MUST     │ Pass   │
+│ 19  │ Explicit, monotonic versioning           │ MUST     │ Pass✓  │
+│ 20  │ No duplicate-version entities            │ MUST     │ Pass✓  │
 │ 21  │ Breaking changes classified              │ MUST     │ Pass   │
 │ 22  │ Field deprecation annotated              │ MUST     │ Pass   │
 ├─────┼──────────────────────────────────────────┼──────────┼────────┤
@@ -74,10 +75,18 @@ deliberately.
 │ 25  │ Localization strategy declared           │ SHOULD   │ Pass   │
 │ 26  │ Multi-actor provenance metadata          │ SHOULD   │ Warn   │
 ├─────┼──────────────────────────────────────────┼──────────┼────────┤
+│     │ FIXES APPLIED (2026-03-27 review)        │          │        │
+│ R4  │ Nullable removed from header/footer_text │ MUST     │ Fixed  │
+│ R5  │ brad_positions cardinality enforced      │ MUST     │ Fixed  │
+│ R8  │ custom variant requires notes (if/then)  │ MUST     │ Fixed  │
+│ R15 │ Duplicate x-schema-version removed       │ MUST     │ Fixed  │
+│ R19 │ schema_version const removed; pattern    │ MUST     │ Fixed  │
+│ R29 │ Extensions $def + fields on 3 types      │ MUST     │ Fixed  │
+├─────┼──────────────────────────────────────────┼──────────┼────────┤
 │     │ PART VI — DOCUMENTATION AND GENERABILITY │          │        │
 │ 27  │ Consistent naming                        │ MUST     │ Pass   │
 │ 28  │ Mechanically generatable validators      │ MUST     │ Pass   │
-│ 29  │ Intentional extension points             │ MUST     │ Pass   │
+│ 29  │ Intentional extension points             │ MUST     │ Pass✓  │
 │ 30  │ Access patterns don't dictate structure  │ SHOULD   │ Pass   │
 │ 31  │ Readable as standalone artifact          │ MUST     │ Pass   │
 ├─────┼──────────────────────────────────────────┼──────────┼────────┤
@@ -91,7 +100,7 @@ deliberately.
 
 ### Warn Explanations
 
-**Rule 8 (Discriminated polymorphism) — Warn:**
+**Rule 8 (Discriminated polymorphism) — Warn+:**
 The `ElementType` enum contains TV-specific values (e.g., `act_break`,
 `cold_open_header`) that are semantically invalid for film variants.
 A strict discriminated union would split `ElementFormat` into
@@ -100,7 +109,9 @@ was intentionally deferred to keep the schema simpler and more
 evolvable — adding a new medium shouldn't require a new union branch.
 The `variant.variant_type` field serves as a soft discriminator:
 consumers can validate element applicability against the variant at
-the application layer.
+the application layer. The `+` notation indicates the `custom` variant
+enforcement gap was closed (D4 fix: root-level `if/then` now requires
+`notes` when `variant_type` is `"custom"`).
 
 **Rule 26 (Multi-actor provenance) — Warn:**
 This schema models a *format specification*, not a collaboratively
@@ -109,6 +120,19 @@ rule) is not meaningful at this level. If the schema were extended to
 track per-studio overrides or per-production customizations, Rule 26
 would become relevant and a `provenance` field should be added to
 `ElementFormat`.
+
+---
+
+## Fixes Applied (2026-03-27 Post-Review)
+
+| ID | Rule | Fix |
+|---|---|---|
+| D1 | Rule 15 | Removed `x-schema-version` root annotation — single source of truth is the `schema_version` instance field. |
+| D2 | Rule 19 | Removed `const: "1.0.0"` from `schema_version`; kept SemVer `pattern` only. Future version bumps no longer require breaking changes. |
+| S1 | Rule 4 | Changed `header_text` and `footer_text` from `type: ["string", "null"]` + `default: null` to `type: "string"` optional (absent = no header/footer). Null sentinel eliminated. |
+| S2 | Rule 29 | Added `Extensions` $def (`additionalProperties: true`, `x-extension-point: true`). Wired `extensions` field on root, `FormatVariant`, and `ElementFormat`. |
+| D3 | Rule 5 | Added `if/then` on `binding.method` to enforce `brad_positions` cardinality: 3 items for `three_hole_brads`, 2 for `two_hole_brads`, 0 for all others. |
+| D4 | Rule 8 | Added root-level `if/then` that requires `notes` (non-empty) when `variant.variant_type` is `"custom"`. |
 
 ---
 

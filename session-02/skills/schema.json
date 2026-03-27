@@ -2386,6 +2386,12 @@
                 "$ref": "#/$defs/EntityRef"
               }
             },
+            "globalPropRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
             "globalStyleRefs": {
               "type": "array",
               "items": {
@@ -3452,6 +3458,12 @@
               }
             },
             "environmentRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EntityRef"
+              }
+            },
+            "propRefs": {
               "type": "array",
               "items": {
                 "$ref": "#/$defs/EntityRef"

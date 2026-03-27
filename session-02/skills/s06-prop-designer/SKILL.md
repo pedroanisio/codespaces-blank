@@ -23,6 +23,7 @@ across multiple shots or have narrative importance.
   - `continuityNotes`: How the prop changes or must remain consistent
   - `canonicalPromptFragments[]` → `PromptFragment[]`
   - `referenceAssetRefs[]`: Refs to reference images (S13)
+- Updates `project.globalPropRefs[]` with refs to created props
 
 ### Reads
 - `canonicalDocuments.script` (action segments mentioning objects)
@@ -62,6 +63,7 @@ version: { number: "1.0.0", state: "draft" }
 - One `PropEntity` per significant object
 - Each has `category`, `continuityNotes`, and ≥1 prompt fragment
 - Props with state changes document all states in continuity notes
+- `project.globalPropRefs[]` references all created props
 
 ## Downstream Dependencies
 

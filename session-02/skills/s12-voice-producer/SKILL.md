@@ -71,7 +71,7 @@ Set `segment.audioAssetRef` pointing to the generated audio asset.
 
 - Verify pronunciation of character/place names
 - Check timing against shot durations
-- Verify dialog intelligibility meets quality profile threshold
+- Verify dialog intelligibility meets `qualityProfiles[].audio.dialogIntelligibilityMinScore`
 
 ## Output Contract
 
@@ -79,7 +79,7 @@ Set `segment.audioAssetRef` pointing to the generated audio asset.
 - Every asset has `transcript`, `characterRef`, `technicalSpec`
 - `script.segments[].audioAssetRef` populated for all dialogue/VO segments
 - Audio durations are within ±10% of calculated timing
-- Dialog intelligibility score ≥ quality profile minimum
+- Dialog intelligibility score ≥ `qualityProfiles[].audio.dialogIntelligibilityMinScore`
 
 ## Downstream Dependencies
 

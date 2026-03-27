@@ -33,7 +33,11 @@
       "Bash(python3 -c \"from PIL import Image; print\\(''Pillow ok''\\)\")",
       "Bash(python -m pipeline.run example-project.json --output-dir ./output/the-last-signal --stub-only)",
       "Bash(grep -n \"    }$\" /workspaces/codespaces-blank/session-02/claude-unified-video-project-v3.schema.json)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(find /workspaces/codespaces-blank/session-02/skills/s* -name \"schema.json\" -type f)",
+      "Bash(python3 validate.py example-project.json --schema video-project-schema-v2.json)",
+      "Bash(python3 validate.py example-project.json --schema video-project-schema-v2.json --verbose)",
+      "Bash(python3 validate.py example-project.json --schema claude-unified-video-project-v3.schema.json --verbose)"
     ]
   }
 }

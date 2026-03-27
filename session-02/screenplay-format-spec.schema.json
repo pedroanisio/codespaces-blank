@@ -3,7 +3,6 @@
   "$id": "https://schemas.screenplay.org/format-spec/1.0.0",
   "title": "Screenplay Format Specification",
   "description": "A machine-readable specification of screenplay formatting rules across industry variants. Covers page setup, element formatting, pagination, title page, and regional/medium conventions. This schema defines the *format contract* — not screenplay content.",
-  "x-schema-version": "1.0.0",
   "x-disclaimer": "No information within should be taken for granted. Any statement or premise not backed by a real logical definition or verifiable reference may be invalid, erroneous, or a hallucination. Verify against primary sources (e.g., Writers Guild formatting guides, Final Draft documentation, BBC Writers Room guidelines).",
   "x-references": [
     {
@@ -48,8 +47,8 @@
     "schema_version": {
       "type": "string",
       "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
-      "description": "Semantic version of this schema (not the screenplay content).",
-      "const": "1.0.0"
+      "description": "Semantic version of the schema this instance was authored against. Allows tooling to select the correct validator without requiring a const that breaks every future version bump.",
+      "examples": ["1.0.0"]
     },
     "variant": {
       "$ref": "#/$defs/FormatVariant"
@@ -84,6 +83,10 @@
       "type": "string",
       "maxLength": 2000,
       "description": "Free-text notes about this format variant, e.g. deviations from the base standard or studio-specific overrides."
+    },
+    "extensions": {
+      "$ref": "#/$defs/Extensions",
+      "description": "Studio- or tool-specific extension properties. Use namespaced keys (e.g. 'finaldraft.template_id') to avoid collisions."
     }
   },
 
@@ -146,6 +149,10 @@
         "page_time_ratio": {
           "$ref": "#/$defs/Duration",
           "description": "Approximate screen time per page. The Hollywood standard targets ~60 seconds/page in Courier 12pt. Multi-camera TV is roughly 30 seconds/page due to double-spacing."
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions",
+          "description": "Variant-specific extension properties."
         }
       }
     },
@@ -187,6 +194,16 @@
               },
               "description": "Vertical positions of brads from page top.",
               "x-ordering": "positional"
+            }
+          },
+          "if":   { "properties": { "method": { "const": "three_hole_brads" } } },
+          "then": { "properties": { "brad_positions": { "minItems": 3, "maxItems": 3 } } },
+          "else": {
+            "if":   { "properties": { "method": { "const": "two_hole_brads" } } },
+            "then": { "properties": { "brad_positions": { "minItems": 2, "maxItems": 2 } } },
+            "else": {
+              "if":   { "properties": { "method": { "enum": ["spiral", "perfect_bound", "stapled", "none"] } } },
+              "then": { "properties": { "brad_positions": { "maxItems": 0 } } }
             }
           }
         }
@@ -392,6 +409,10 @@
           ],
           "default": "allow_break",
           "description": "How the element interacts with page boundaries. Character names should keep_with_next to avoid separation from dialogue."
+        },
+        "extensions": {
+          "$ref": "#/$defs/Extensions",
+          "description": "Per-element extension properties for software-specific formatting overrides."
         }
       }
     },
@@ -595,16 +616,14 @@
           "examples": ["{n}.", "{n}", "Page {n}"]
         },
         "header_text": {
-          "type": ["string", "null"],
-          "default": null,
+          "type": "string",
           "maxLength": 200,
-          "description": "Optional running header text (e.g. draft title). Null means no header beyond page number."
+          "description": "Optional running header text (e.g. draft title). When absent, no header is rendered beyond the page number."
         },
         "footer_text": {
-          "type": ["string", "null"],
-          "default": null,
+          "type": "string",
           "maxLength": 200,
-          "description": "Optional running footer text. Null means no footer."
+          "description": "Optional running footer text. When absent, no footer is rendered."
         }
       }
     },
@@ -803,6 +822,32 @@
           "enum": ["seconds", "minutes"],
           "description": "Time unit."
         }
+      }
+    },
+
+    "Extensions": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Open extension object. Use namespaced keys (e.g. 'finaldraft.template_id', 'highland.fountain_compat') to avoid collisions with future schema properties.",
+      "x-extension-point": true
+    }
+  },
+
+  "if": {
+    "properties": {
+      "variant": {
+        "properties": { "variant_type": { "const": "custom" } },
+        "required": ["variant_type"]
+      }
+    },
+    "required": ["variant"]
+  },
+  "then": {
+    "required": ["notes"],
+    "properties": {
+      "notes": {
+        "minLength": 1,
+        "description": "Required for custom variants: must explain the deviation from a named standard."
       }
     }
   }

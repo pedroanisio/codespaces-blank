@@ -82,7 +82,7 @@ Apply swells: increase music gain during non-dialogue dramatic moments.
 Check that the final mix meets:
 - Integrated loudness target (±1 LUFS)
 - True peak ≤ ceiling
-- Dialog intelligibility ≥ minimum score
+- Dialog intelligibility ≥ `qualityProfiles[].audio.dialogIntelligibilityMinScore`
 
 ## Output Contract
 

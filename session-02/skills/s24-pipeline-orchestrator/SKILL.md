@@ -96,6 +96,13 @@ Enforce rules:
 - Content hashes required for published entities
 - Supersession chain maintained for versioned updates
 
+After S17 completes and S18/S19 post-production passes review, set:
+```
+assembly.editVersions[latest].approvedForRender = true
+```
+This gates S20 (Render Plan Builder). Do not set `approvedForRender: true` until
+S18 and S19 have both completed and the edit version is in `review` state or better.
+
 ### Step 5: Handle failures
 
 - Skill failure → check `RetryConfig`, attempt retry with backoff

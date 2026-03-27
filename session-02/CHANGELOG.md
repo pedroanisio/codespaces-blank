@@ -10,6 +10,39 @@ This work is subject to the methodological caveats and commitments described in 
 
 ---
 
+## [2026-03-27] — Spatial Extension v3.1.0 merged into unified schema
+
+### Added
+
+#### `claude-unified-video-project-v3.schema.json` (v3.0.0 → v3.1.0)
+
+Merged `spatial-extension-patch.json` with all review defects resolved. Backward-compatible — all 139 `$defs`, no required fields changed.
+
+**New `$defs` (17 types):**
+- **Primitive math types:** `CoordinateSystem`, `Position3D`, `Quaternion` (scalar-last Hamilton [x,y,z,w], glTF §5.17.4), `EulerAnglesDeg` (separate $def — D1 fix), `Orientation3D`, `Scale3D`, `Transform3D`
+- **Spatial geometry:** `BoundingVolume` (with `if/then` for `aabb`/`sphere` discriminator sub-fields — D2 fix), `CameraKeyframe`, `CameraExtrinsics`, `PlacementKeyframe`, `SpatialPlacement`, `SpatialAnchor`, `SpatialRule`, `SpatialConsistency`, `SceneSpace`, `SharedSpatialUniverse`
+
+**Integration points applied (all optional — backward-compatible):**
+- `CinematicSpec` — `cameraExtrinsics` (completes intrinsics+extrinsics projection pipeline), `spatialBridgeAnchorRef`
+- `SceneEntity` — `sceneSpace`, `spatialConsistency`
+- `ShotEntity` — `spatialOverrides`
+- `EnvironmentEntity` — `defaultSceneSpace`, `spatialExtent`
+- `CharacterEntity` — `defaultBounds`, `heightM`
+- `PropEntity` — `defaultBounds`
+- `QualityProfile.video` — `spatialConsistency`
+- `ConsistencyAnchor.anchorType` enum — widened to include `"spatial"` (caution — not breaking)
+
+**Root-level addition (D4 fix):**
+- `spatialUniverses[]` — optional array of `SharedSpatialUniverse`. Provides a first-class home for cross-project spatial contracts at the schema root, discoverable without reading prose.
+
+**Defects resolved from review:**
+- **D1** — `Quaternion` and `EulerAnglesDeg` promoted to separate named `$defs` (patch had them inline in `Orientation3D`; spec doc did not show them as named types).
+- **D2** — `BoundingVolume` now enforces `if volumeType=aabb then required:[aabbMin,aabbMax]` and `if volumeType=sphere then required:[sphereCenter,sphereRadiusM]` via JSON Schema `if/then`.
+- **D3** — `SceneSpace.floorPlaneY` renamed to `floorPlaneCoord` with description tying the axis to `CoordinateSystem.upAxis`.
+- **D4** — `SharedSpatialUniverse` now has a declared root attachment point (`spatialUniverses[]`).
+
+---
+
 ## [2026-03-27] — StyleGuidelines regression fix + skills report v2
 
 ### Fixed
