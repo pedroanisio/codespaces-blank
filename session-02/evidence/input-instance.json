@@ -1,0 +1,1213 @@
+{
+  "schemaVersion": "3.1.0",
+  "package": {
+    "packageId": "pkg.demo-30s",
+    "createdAt": "2026-03-27T00:00:00Z",
+    "versioningPolicy": {}
+  },
+  "project": {
+    "id": "proj.demo-30s.v1",
+    "logicalId": "proj.demo-30s",
+    "entityType": "project",
+    "name": "The Last Signal — 30s Demo",
+    "version": {
+      "number": "1.0.0",
+      "state": "approved"
+    },
+    "description": "A 30-second demo cut: MIRA alone on a dying station receives an unexpected signal.",
+    "tags": [
+      "sci-fi",
+      "demo",
+      "generative-ai"
+    ],
+    "genres": [
+      "science_fiction",
+      "drama"
+    ],
+    "languages": [
+      "en-US"
+    ],
+    "targetRuntimeSec": 30,
+    "defaultQualityProfileRef": {
+      "id": "qp.hd.v1"
+    }
+  },
+  "qualityProfiles": [
+    {
+      "id": "qp.hd.v1",
+      "logicalId": "qp.hd",
+      "entityType": "qualityProfile",
+      "name": "HD 1080p",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "profile": {
+        "name": "HD 1080p",
+        "video": {
+          "resolution": {
+            "widthPx": 1920,
+            "heightPx": 1080
+          },
+          "frameRate": {
+            "fps": 24,
+            "mode": "constant"
+          },
+          "aspectRatio": {
+            "expression": "16:9",
+            "preset": "16:9"
+          },
+          "spatialConsistency": {
+            "required": true,
+            "enforce180DegreeRule": true,
+            "enforceScreenDirection": true
+          }
+        },
+        "audio": {
+          "sampleRateHz": 44100,
+          "channelLayout": "stereo"
+        },
+        "validationRules": [
+          {
+            "name": "Temporal consistency",
+            "id": "qr.temporal",
+            "severity": "error"
+          }
+        ]
+      }
+    }
+  ],
+  "canonicalDocuments": {
+    "story": {
+      "id": "story.demo-30s.v1",
+      "logicalId": "story.demo-30s",
+      "entityType": "story",
+      "name": "Demo Story",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "logline": "A lone radio operator on a dying station receives a signal — not distress, but an invitation.",
+      "synopsis": "Two-act 30-second micro-short. Act 1: isolation. Act 2: contact and hope.",
+      "themes": [
+        "isolation",
+        "hope"
+      ],
+      "tone": [
+        "melancholic",
+        "hopeful"
+      ],
+      "beats": [
+        {
+          "beatId": "beat.isolation",
+          "name": "Isolation",
+          "order": 1,
+          "description": "MIRA keeps vigil alone in the dying communications bay.",
+          "emotionalObjective": "melancholy"
+        },
+        {
+          "beatId": "beat.contact",
+          "name": "Contact",
+          "order": 2,
+          "description": "The QRA device lights up. MIRA hears the invitation.",
+          "emotionalObjective": "hope"
+        }
+      ]
+    },
+    "script": {
+      "id": "script.demo-30s.v1",
+      "logicalId": "script.demo-30s",
+      "entityType": "script",
+      "name": "Demo Script",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "format": "fountain",
+      "segments": [
+        {
+          "segmentId": "seg.heading1",
+          "order": 1,
+          "segmentType": "scene_heading",
+          "text": "INT. HELIX-7 COMMUNICATIONS BAY — NIGHT",
+          "sceneRef": {
+            "id": "scene.isolation.v1"
+          }
+        },
+        {
+          "segmentId": "seg.action1",
+          "order": 2,
+          "segmentType": "action",
+          "text": "Emergency lights pulse amber. MIRA sits alone at a console covered in static.",
+          "sceneRef": {
+            "id": "scene.isolation.v1"
+          }
+        },
+        {
+          "segmentId": "seg.heading2",
+          "order": 3,
+          "segmentType": "scene_heading",
+          "text": "INT. HELIX-7 COMMUNICATIONS BAY — CONTINUOUS",
+          "sceneRef": {
+            "id": "scene.contact.v1"
+          }
+        },
+        {
+          "segmentId": "seg.action2",
+          "order": 4,
+          "segmentType": "action",
+          "text": "The QRA device CHIRPS. Blue light floods the room. MIRA snaps forward.",
+          "sceneRef": {
+            "id": "scene.contact.v1"
+          }
+        },
+        {
+          "segmentId": "seg.dialogue1",
+          "order": 5,
+          "segmentType": "dialogue",
+          "text": "They know we're here.",
+          "speakerRef": {
+            "id": "char.mira.v1"
+          },
+          "sceneRef": {
+            "id": "scene.contact.v1"
+          }
+        }
+      ]
+    },
+    "directorInstructions": {
+      "id": "di.demo-30s.v1",
+      "logicalId": "di.demo-30s",
+      "entityType": "directorInstructions",
+      "name": "Demo Director Instructions",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "visionStatement": "Claustrophobic amber isolation shatters into blue-green hope in 30 seconds.",
+      "mustHaves": [
+        "amber emergency lighting in Act 1",
+        "blue QRA glow contrast in Act 2",
+        "character face consistency across shots"
+      ],
+      "mustAvoid": [
+        "bright natural daylight",
+        "cheerful expressions in Act 1"
+      ],
+      "editingLanguage": "Quick cuts. Every frame counts in 30 seconds.",
+      "colorDirection": "Amber/dark palette in Act 1. Blue-green glow in Act 2.",
+      "qualityRules": [
+        {
+          "name": "Temporal consistency",
+          "id": "qr.temporal",
+          "severity": "error"
+        }
+      ],
+      "targetedNotes": []
+    }
+  },
+  "production": {
+    "characters": [
+      {
+        "id": "char.mira.v1",
+        "logicalId": "char.mira",
+        "entityType": "character",
+        "name": "MIRA",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "description": "Last surviving radio operator on Helix-7. Mid-30s, worn flight suit, haunted eyes that shift to wonder.",
+        "heightM": 1.68,
+        "defaultBounds": {
+          "volumeType": "sphere",
+          "sphereCenter": {
+            "x": 0.0,
+            "y": 0.84,
+            "z": 0.0
+          },
+          "sphereRadiusM": 0.95
+        }
+      }
+    ],
+    "environments": [
+      {
+        "id": "env.helix7-comms.v1",
+        "logicalId": "env.helix7-comms",
+        "entityType": "environment",
+        "name": "Helix-7 Communications Bay",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "description": "Cramped space-station communications room. Amber emergency lighting. Rows of dead consoles except the QRA device.",
+        "defaultSceneSpace": {
+          "coordinateSystem": {
+            "handedness": "right",
+            "upAxis": "+Y",
+            "unitM": 1.0
+          },
+          "floorPlaneCoord": 0.0
+        },
+        "spatialExtent": {
+          "volumeType": "aabb",
+          "aabbMin": {
+            "x": -5.0,
+            "y": 0.0,
+            "z": -4.0
+          },
+          "aabbMax": {
+            "x": 5.0,
+            "y": 3.5,
+            "z": 4.0
+          }
+        }
+      }
+    ],
+    "props": [
+      {
+        "id": "prop.qra-device.v1",
+        "logicalId": "prop.qra-device",
+        "entityType": "prop",
+        "name": "QRA Communication Device",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "description": "Vintage quantum radio array with blinking indicators. Dormant amber in Act 1, pulsing blue in Act 2.",
+        "defaultBounds": {
+          "volumeType": "aabb",
+          "aabbMin": {
+            "x": -0.25,
+            "y": 0.0,
+            "z": -0.15
+          },
+          "aabbMax": {
+            "x": 0.25,
+            "y": 0.3,
+            "z": 0.15
+          }
+        }
+      }
+    ],
+    "styleGuides": [
+      {
+        "id": "sg.demo-style.v1",
+        "logicalId": "sg.demo-style",
+        "entityType": "styleGuide",
+        "name": "Demo Style Guide",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "scope": "project",
+        "guidelines": {
+          "genres": [
+            "sci-fi",
+            "short-film"
+          ],
+          "adjectives": [
+            "dark",
+            "cinematic",
+            "claustrophobic",
+            "hopeful"
+          ],
+          "palette": [
+            "#1a1a2e",
+            "#16213e",
+            "#e94560",
+            "#f5a623",
+            "#00e5ff"
+          ],
+          "textureDescriptors": [
+            "film grain",
+            "aged metal",
+            "worn surfaces"
+          ],
+          "cameraLanguage": "deliberate, controlled movements"
+        },
+        "negativeStylePrompt": "No bright daylight, no over-saturated color, no cheerful atmosphere in Act 1.",
+        "appliesTo": []
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene.isolation.v1",
+        "logicalId": "scene.isolation",
+        "entityType": "scene",
+        "name": "Act 1 — Isolation",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "sceneNumber": 1,
+        "synopsis": "MIRA alone at her console. The station is dying. She keeps watch.",
+        "storyBeatRefs": [
+          {
+            "id": "beat.isolation"
+          }
+        ],
+        "scriptSegmentRefs": [
+          {
+            "id": "seg.heading1"
+          },
+          {
+            "id": "seg.action1"
+          }
+        ],
+        "characterRefs": [
+          {
+            "id": "char.mira.v1"
+          }
+        ],
+        "environmentRef": {
+          "id": "env.helix7-comms.v1"
+        },
+        "propRefs": [],
+        "timeOfDay": "night",
+        "weather": "interior",
+        "mood": "melancholy",
+        "targetDurationSec": 15,
+        "plannedPosition": {
+          "startSec": 0,
+          "endSec": 15
+        },
+        "shotRefs": [
+          {
+            "id": "shot.d1.v1"
+          },
+          {
+            "id": "shot.d2.v1"
+          },
+          {
+            "id": "shot.d3.v1"
+          }
+        ],
+        "transitionIn": {
+          "type": "fade"
+        },
+        "transitionOut": {
+          "type": "cut"
+        },
+        "sceneSpace": {
+          "coordinateSystem": {
+            "handedness": "right",
+            "upAxis": "+Y",
+            "unitM": 1.0
+          },
+          "floorPlaneCoord": 0.0,
+          "spatialAnchors": []
+        },
+        "spatialConsistency": {
+          "required": true,
+          "enforce180DegreeRule": true
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "character_coherence"
+          ],
+          "passThreshold": 0.8
+        }
+      },
+      {
+        "id": "scene.contact.v1",
+        "logicalId": "scene.contact",
+        "entityType": "scene",
+        "name": "Act 2 — Contact",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "sceneNumber": 2,
+        "synopsis": "The QRA device activates. MIRA deciphers the message: an invitation.",
+        "storyBeatRefs": [
+          {
+            "id": "beat.contact"
+          }
+        ],
+        "scriptSegmentRefs": [
+          {
+            "id": "seg.heading2"
+          },
+          {
+            "id": "seg.action2"
+          },
+          {
+            "id": "seg.dialogue1"
+          }
+        ],
+        "characterRefs": [
+          {
+            "id": "char.mira.v1"
+          }
+        ],
+        "environmentRef": {
+          "id": "env.helix7-comms.v1"
+        },
+        "propRefs": [
+          {
+            "id": "prop.qra-device.v1"
+          }
+        ],
+        "timeOfDay": "night",
+        "weather": "interior",
+        "mood": "wonder",
+        "targetDurationSec": 15,
+        "plannedPosition": {
+          "startSec": 15,
+          "endSec": 30
+        },
+        "shotRefs": [
+          {
+            "id": "shot.d4.v1"
+          },
+          {
+            "id": "shot.d5.v1"
+          },
+          {
+            "id": "shot.d6.v1"
+          }
+        ],
+        "transitionIn": {
+          "type": "cut"
+        },
+        "transitionOut": {
+          "type": "fade"
+        },
+        "sceneSpace": {
+          "coordinateSystem": {
+            "handedness": "right",
+            "upAxis": "+Y",
+            "unitM": 1.0
+          },
+          "floorPlaneCoord": 0.0,
+          "spatialAnchors": []
+        },
+        "spatialConsistency": {
+          "required": true,
+          "enforce180DegreeRule": true
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "character_coherence",
+            "audio_sync"
+          ],
+          "passThreshold": 0.8
+        }
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot.d1.v1",
+        "logicalId": "shot.d1",
+        "entityType": "shot",
+        "name": "D1 — Wide establishing",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "shotNumber": 1,
+        "sceneRef": {
+          "id": "scene.isolation.v1"
+        },
+        "targetDurationSec": 5,
+        "plannedPosition": {
+          "startSec": 0,
+          "endSec": 5
+        },
+        "cinematicSpec": {
+          "shotType": "wide",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "static",
+          "focalLengthMm": 24,
+          "styleGuideRef": {
+            "id": "sg.demo-style.v1"
+          },
+          "style": {
+            "adjectives": [
+              "dark",
+              "vast",
+              "desolate"
+            ],
+            "palette": [
+              "#1a1a2e",
+              "#f5a623"
+            ]
+          }
+        },
+        "genParams": {
+          "stepId": "step.d1.gen",
+          "operationType": "video_generation",
+          "prompt": "Wide establishing shot of a cramped space-station communications bay, amber emergency lighting, a lone woman silhouette at a console surrounded by dead screens, cinematic dark, film grain."
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "duration_compliance"
+          ],
+          "passThreshold": 0.8
+        }
+      },
+      {
+        "id": "shot.d2.v1",
+        "logicalId": "shot.d2",
+        "entityType": "shot",
+        "name": "D2 — Medium MIRA at console",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "shotNumber": 2,
+        "sceneRef": {
+          "id": "scene.isolation.v1"
+        },
+        "targetDurationSec": 5,
+        "plannedPosition": {
+          "startSec": 5,
+          "endSec": 10
+        },
+        "cinematicSpec": {
+          "shotType": "medium",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "dolly",
+          "focalLengthMm": 50,
+          "styleGuideRef": {
+            "id": "sg.demo-style.v1"
+          },
+          "style": {
+            "adjectives": [
+              "haunted",
+              "still",
+              "amber-lit"
+            ]
+          }
+        },
+        "genParams": {
+          "stepId": "step.d2.gen",
+          "operationType": "video_generation",
+          "prompt": "Medium shot of MIRA, mid-30s woman in worn flight suit, staring at static-filled console, amber emergency light, haunted expression, slow dolly push-in, film grain.",
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "MIRA appearance lock",
+              "ref": {
+                "id": "char.mira.v1"
+              },
+              "lockLevel": "medium"
+            }
+          ]
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "character_coherence",
+            "duration_compliance"
+          ],
+          "passThreshold": 0.8
+        }
+      },
+      {
+        "id": "shot.d3.v1",
+        "logicalId": "shot.d3",
+        "entityType": "shot",
+        "name": "D3 — Close-up MIRA face",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "shotNumber": 3,
+        "sceneRef": {
+          "id": "scene.isolation.v1"
+        },
+        "targetDurationSec": 5,
+        "plannedPosition": {
+          "startSec": 10,
+          "endSec": 15
+        },
+        "cinematicSpec": {
+          "shotType": "close_up",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "static",
+          "focalLengthMm": 85,
+          "styleGuideRef": {
+            "id": "sg.demo-style.v1"
+          },
+          "style": {
+            "adjectives": [
+              "intimate",
+              "melancholy",
+              "amber-lit"
+            ]
+          }
+        },
+        "genParams": {
+          "stepId": "step.d3.gen",
+          "operationType": "video_generation",
+          "prompt": "Close-up of MIRA's face, amber light casting deep shadows, melancholy expression, eyes reflecting console static, shallow depth of field, 85mm lens.",
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "MIRA face anchor",
+              "ref": {
+                "id": "char.mira.v1"
+              },
+              "lockLevel": "hard"
+            }
+          ]
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "character_coherence",
+            "duration_compliance"
+          ],
+          "passThreshold": 0.8
+        }
+      },
+      {
+        "id": "shot.d4.v1",
+        "logicalId": "shot.d4",
+        "entityType": "shot",
+        "name": "D4 — QRA device ECU",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "shotNumber": 4,
+        "sceneRef": {
+          "id": "scene.contact.v1"
+        },
+        "targetDurationSec": 5,
+        "plannedPosition": {
+          "startSec": 15,
+          "endSec": 20
+        },
+        "cinematicSpec": {
+          "shotType": "extreme_close_up",
+          "cameraAngle": "low",
+          "cameraMovement": "static",
+          "focalLengthMm": 100,
+          "styleGuideRef": {
+            "id": "sg.demo-style.v1"
+          },
+          "style": {
+            "adjectives": [
+              "tense",
+              "sudden",
+              "blue-lit"
+            ]
+          },
+          "temporalBridgeAnchorRef": {
+            "id": "shot.d3.v1"
+          }
+        },
+        "genParams": {
+          "stepId": "step.d4.gen",
+          "operationType": "video_generation",
+          "prompt": "Extreme close-up of the QRA communication device, blinking blue indicators suddenly illuminating, low angle, sudden tension, transition from amber to electric blue light."
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "duration_compliance"
+          ],
+          "passThreshold": 0.8
+        }
+      },
+      {
+        "id": "shot.d5.v1",
+        "logicalId": "shot.d5",
+        "entityType": "shot",
+        "name": "D5 — MIRA reaction MCU",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "shotNumber": 5,
+        "sceneRef": {
+          "id": "scene.contact.v1"
+        },
+        "targetDurationSec": 5,
+        "plannedPosition": {
+          "startSec": 20,
+          "endSec": 25
+        },
+        "cinematicSpec": {
+          "shotType": "medium_close_up",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "static",
+          "focalLengthMm": 85,
+          "styleGuideRef": {
+            "id": "sg.demo-style.v1"
+          },
+          "style": {
+            "adjectives": [
+              "wonder",
+              "blue-amber mix"
+            ]
+          }
+        },
+        "genParams": {
+          "stepId": "step.d5.gen",
+          "operationType": "video_generation",
+          "prompt": "Medium close-up of MIRA's face, shock turning to wonder, blue light from QRA device illuminating her features against amber emergency light, eyes wide.",
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "MIRA face consistency — Act 2",
+              "ref": {
+                "id": "char.mira.v1"
+              },
+              "lockLevel": "hard"
+            }
+          ]
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "character_coherence",
+            "duration_compliance"
+          ],
+          "passThreshold": 0.8
+        }
+      },
+      {
+        "id": "shot.d6.v1",
+        "logicalId": "shot.d6",
+        "entityType": "shot",
+        "name": "D6 — Wide pull-back finale",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "shotNumber": 6,
+        "sceneRef": {
+          "id": "scene.contact.v1"
+        },
+        "targetDurationSec": 5,
+        "plannedPosition": {
+          "startSec": 25,
+          "endSec": 30
+        },
+        "cinematicSpec": {
+          "shotType": "wide",
+          "cameraAngle": "high",
+          "cameraMovement": "dolly",
+          "focalLengthMm": 24,
+          "styleGuideRef": {
+            "id": "sg.demo-style.v1"
+          },
+          "style": {
+            "adjectives": [
+              "hopeful",
+              "expansive",
+              "warm"
+            ]
+          }
+        },
+        "genParams": {
+          "stepId": "step.d6.gen",
+          "operationType": "video_generation",
+          "prompt": "Wide high-angle shot pulling back, MIRA standing at console, all screens now lit blue-green, she begins transmitting a reply. Slow dolly pull-back reveals the full bay. A moment of hope."
+        },
+        "qaGate": {
+          "requiredChecks": [
+            "temporal_consistency",
+            "duration_compliance"
+          ],
+          "passThreshold": 0.8
+        }
+      }
+    ]
+  },
+  "assetLibrary": {
+    "visualAssets": [],
+    "audioAssets": [
+      {
+        "id": "audio.ambient.v1",
+        "logicalId": "audio.ambient",
+        "entityType": "audioAsset",
+        "name": "Station Ambient Hum",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "audioType": "ambient",
+        "technicalSpec": {
+          "sampleRateHz": 44100,
+          "channelLayout": "stereo",
+          "codec": "flac"
+        }
+      },
+      {
+        "id": "audio.dialogue.v1",
+        "logicalId": "audio.dialogue",
+        "entityType": "audioAsset",
+        "name": "MIRA — They know we're here",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "audioType": "dialogue",
+        "characterRef": {
+          "id": "char.mira.v1"
+        },
+        "transcript": "They know we're here.",
+        "technicalSpec": {
+          "sampleRateHz": 44100,
+          "channelLayout": "mono",
+          "codec": "flac"
+        }
+      },
+      {
+        "id": "audio.score.v1",
+        "logicalId": "audio.score",
+        "entityType": "audioAsset",
+        "name": "Score — Isolation to Hope",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "audioType": "music",
+        "mood": "melancholy building to hope across 30 seconds",
+        "technicalSpec": {
+          "sampleRateHz": 44100,
+          "channelLayout": "stereo",
+          "codec": "flac"
+        }
+      },
+      {
+        "id": "audio.sfx.chirp.v1",
+        "logicalId": "audio.sfx.chirp",
+        "entityType": "audioAsset",
+        "name": "QRA Device Activation Chirp",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "audioType": "sfx",
+        "technicalSpec": {
+          "sampleRateHz": 44100,
+          "channelLayout": "mono",
+          "codec": "flac"
+        }
+      }
+    ],
+    "marketingAssets": [],
+    "genericAssets": []
+  },
+  "orchestration": {
+    "workflows": [
+      {
+        "workflowId": "wf.demo-pipeline",
+        "name": "Demo Pipeline",
+        "nodes": [],
+        "edges": []
+      }
+    ]
+  },
+  "assembly": {
+    "timelines": [
+      {
+        "id": "tl.demo.v1",
+        "logicalId": "tl.demo",
+        "entityType": "timeline",
+        "name": "Demo Timeline",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "durationSec": 30,
+        "frameRate": {
+          "fps": 24,
+          "mode": "constant"
+        },
+        "resolution": {
+          "widthPx": 1920,
+          "heightPx": 1080
+        },
+        "videoClips": [
+          {
+            "clipId": "vc.d1",
+            "sourceRef": {
+              "id": "shot.d1.v1"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 5
+          },
+          {
+            "clipId": "vc.d2",
+            "sourceRef": {
+              "id": "shot.d2.v1"
+            },
+            "timelineStartSec": 5,
+            "durationSec": 5
+          },
+          {
+            "clipId": "vc.d3",
+            "sourceRef": {
+              "id": "shot.d3.v1"
+            },
+            "timelineStartSec": 10,
+            "durationSec": 5
+          },
+          {
+            "clipId": "vc.d4",
+            "sourceRef": {
+              "id": "shot.d4.v1"
+            },
+            "timelineStartSec": 15,
+            "durationSec": 5
+          },
+          {
+            "clipId": "vc.d5",
+            "sourceRef": {
+              "id": "shot.d5.v1"
+            },
+            "timelineStartSec": 20,
+            "durationSec": 5
+          },
+          {
+            "clipId": "vc.d6",
+            "sourceRef": {
+              "id": "shot.d6.v1"
+            },
+            "timelineStartSec": 25,
+            "durationSec": 5
+          }
+        ],
+        "audioClips": [
+          {
+            "clipId": "ac.ambient",
+            "sourceRef": {
+              "id": "audio.ambient.v1"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 30
+          },
+          {
+            "clipId": "ac.score",
+            "sourceRef": {
+              "id": "audio.score.v1"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 30
+          },
+          {
+            "clipId": "ac.sfx",
+            "sourceRef": {
+              "id": "audio.sfx.chirp.v1"
+            },
+            "timelineStartSec": 15,
+            "durationSec": 2
+          },
+          {
+            "clipId": "ac.dialogue",
+            "sourceRef": {
+              "id": "audio.dialogue.v1"
+            },
+            "timelineStartSec": 23,
+            "durationSec": 4
+          }
+        ]
+      }
+    ],
+    "editVersions": [
+      {
+        "id": "ev.demo-lock.v1",
+        "logicalId": "ev.demo-lock",
+        "entityType": "editVersion",
+        "name": "Demo Picture Lock",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "timelineRef": {
+          "id": "tl.demo.v1"
+        },
+        "changeList": [
+          "Initial picture lock — 6 shots, 30s runtime, 4 audio tracks."
+        ],
+        "approvedForRender": true
+      }
+    ],
+    "renderPlans": [
+      {
+        "id": "rp.demo.v1",
+        "logicalId": "rp.demo",
+        "entityType": "renderPlan",
+        "name": "Demo Render Plan",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "sourceTimelineRef": {
+          "id": "tl.demo.v1"
+        },
+        "compatibleRuntimes": [
+          "ffmpeg"
+        ],
+        "operations": [
+          {
+            "opId": "op.concat",
+            "opType": "concat",
+            "clipRefs": [
+              {
+                "id": "shot.d1.v1"
+              },
+              {
+                "id": "shot.d2.v1"
+              },
+              {
+                "id": "shot.d3.v1"
+              },
+              {
+                "id": "shot.d4.v1"
+              },
+              {
+                "id": "shot.d5.v1"
+              },
+              {
+                "id": "shot.d6.v1"
+              }
+            ],
+            "method": "chain"
+          },
+          {
+            "opId": "op.audio-mix",
+            "opType": "audioMix",
+            "tracks": [
+              {
+                "audioRef": {
+                  "id": "audio.ambient.v1"
+                },
+                "gainDb": -6,
+                "timeRange": {
+                  "startSec": 0,
+                  "endSec": 30
+                }
+              },
+              {
+                "audioRef": {
+                  "id": "audio.score.v1"
+                },
+                "gainDb": -12,
+                "timeRange": {
+                  "startSec": 0,
+                  "endSec": 30
+                }
+              },
+              {
+                "audioRef": {
+                  "id": "audio.sfx.chirp.v1"
+                },
+                "gainDb": -3,
+                "timeRange": {
+                  "startSec": 15,
+                  "endSec": 17
+                }
+              },
+              {
+                "audioRef": {
+                  "id": "audio.dialogue.v1"
+                },
+                "gainDb": 0,
+                "timeRange": {
+                  "startSec": 23,
+                  "endSec": 27
+                }
+              }
+            ]
+          },
+          {
+            "opId": "op.color-grade",
+            "opType": "colorGrade",
+            "inputRef": {
+              "id": "op.concat"
+            },
+            "intent": "rec709 filmic dark — amber highlights, crushed blacks, blue-green shift in Act 2",
+            "strength": 0.85
+          },
+          {
+            "opId": "op.encode",
+            "opType": "encode",
+            "inputRef": {
+              "id": "op.color-grade"
+            },
+            "compression": {
+              "codec": "libx264",
+              "profile": "high",
+              "bitrateMbps": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "deliverables": [
+    {
+      "id": "del.demo-1080p.v1",
+      "logicalId": "del.demo-1080p",
+      "entityType": "finalOutput",
+      "name": "Demo — 1080p MP4",
+      "version": {
+        "number": "1.0.0",
+        "state": "draft"
+      },
+      "outputType": "video/mp4",
+      "runtimeSec": 30,
+      "sourceTimelineRef": {
+        "id": "tl.demo.v1"
+      },
+      "renderPlanRef": {
+        "id": "rp.demo.v1"
+      },
+      "platform": "youtube"
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipId": "rel.mira-helix7",
+      "relationshipType": "references",
+      "from": {
+        "id": "char.mira.v1"
+      },
+      "to": {
+        "id": "env.helix7-comms.v1"
+      }
+    },
+    {
+      "relationshipId": "rel.scene1-beat1",
+      "relationshipType": "references",
+      "from": {
+        "id": "scene.isolation.v1"
+      },
+      "to": {
+        "id": "beat.isolation"
+      }
+    },
+    {
+      "relationshipId": "rel.scene2-beat2",
+      "relationshipType": "references",
+      "from": {
+        "id": "scene.contact.v1"
+      },
+      "to": {
+        "id": "beat.contact"
+      }
+    },
+    {
+      "relationshipId": "rel.d3-d4-bridge",
+      "relationshipType": "requires",
+      "from": {
+        "id": "shot.d4.v1"
+      },
+      "to": {
+        "id": "shot.d3.v1"
+      },
+      "notes": "D4 temporal bridge from D3 for visual continuity across act break."
+    }
+  ]
+}

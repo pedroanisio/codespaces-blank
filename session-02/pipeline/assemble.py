@@ -381,6 +381,29 @@ def assemble(
         (instance.get("project") or {}).get("name", "output")
         .lower().replace(" ", "-")[:40]
     )
+
+    # ── Read deliverables for platform-specific settings ──────────────────
+    deliverables = instance.get("deliverables") or []
+    platform = ""
+    if deliverables:
+        platform = deliverables[0].get("platform", "")
+
+    # Apply platform presets to quality profile if not already set
+    if platform and qp:
+        video_cfg = qp.get("video") or {}
+        res = video_cfg.get("resolution") or {}
+        ar = video_cfg.get("aspectRatio") or {}
+        if platform in ("tiktok", "instagram_reels", "youtube_shorts"):
+            # Vertical format
+            if not res.get("widthPx"):
+                res["widthPx"] = 1080
+                res["heightPx"] = 1920
+            if not ar.get("preset"):
+                ar["preset"] = "9:16"
+        elif platform == "youtube" and not res.get("widthPx"):
+            res["widthPx"] = 1920
+            res["heightPx"] = 1080
+
     output_filename = f"{project_name}.mp4"
 
     # ── Extract scene transitions ─────────────────────────────────────────────

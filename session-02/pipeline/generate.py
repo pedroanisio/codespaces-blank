@@ -332,6 +332,36 @@ def _suno_generate_music(asset: dict, cookie: str, out_path: Path) -> None:
     log.info("suno → %s", out_path.name)
 
 
+# ── temporal bridge helper ────────────────────────────────────────────────────
+
+def _extract_last_frame(video_path: Path) -> bytes | None:
+    """Extract the last frame of a video as PNG bytes for temporal bridging."""
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+        tmp = Path(f.name)
+    try:
+        # Get duration
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries",
+             "format=duration", "-of", "csv=p=0", str(video_path)],
+            capture_output=True, text=True, timeout=5,
+        )
+        dur = float(probe.stdout.strip() or "5")
+        # Seek to 0.5s before end and grab last frame
+        seek = max(0, dur - 0.5)
+        subprocess.run(
+            ["ffmpeg", "-y", "-ss", str(seek), "-i", str(video_path),
+             "-frames:v", "1", "-q:v", "2", str(tmp)],
+            capture_output=True, check=True, timeout=10,
+        )
+        data = tmp.read_bytes()
+        return data if len(data) > 100 else None
+    except Exception:
+        return None
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 # ── consistency layer ─────────────────────────────────────────────────────────
 
 def _build_style_preamble(instance: dict) -> str:
@@ -466,6 +496,32 @@ def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
     style_adj = ", ".join((spec.get("style") or {}).get("adjectives", []))
     style_palette = ", ".join((spec.get("style") or {}).get("palette", []))
 
+    # ── Resolve styleGuideRef ─────────────────────────────────────────────
+    sg_ref_id = (spec.get("styleGuideRef") or {}).get("id", "")
+    sg_extra = ""
+    if sg_ref_id:
+        for sg in (instance.get("production") or {}).get("styleGuides", []):
+            if sg.get("id") == sg_ref_id or sg.get("logicalId") == sg_ref_id:
+                gl = sg.get("guidelines") or {}
+                sg_adj = gl.get("adjectives", [])
+                sg_palette = gl.get("palette", [])
+                sg_tex = gl.get("textureDescriptors", [])
+                sg_cam = gl.get("cameraLanguage", "")
+                parts = []
+                if sg_adj:
+                    parts.append(f"Style: {', '.join(sg_adj)}")
+                if sg_palette:
+                    parts.append(f"Palette: {', '.join(sg_palette)}")
+                if sg_tex:
+                    parts.append(f"Textures: {', '.join(sg_tex)}")
+                if sg_cam:
+                    parts.append(f"Camera language: {sg_cam}")
+                neg = sg.get("negativeStylePrompt", "")
+                if neg:
+                    parts.append(f"AVOID: {neg}")
+                sg_extra = "\n".join(parts)
+                break
+
     # Map focal length to depth-of-field guidance
     dof_hint = ""
     if focal_mm:
@@ -512,6 +568,30 @@ def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
         enriched_parts.append(f"Visual feel: {style_adj}")
     if style_palette:
         enriched_parts.append(f"Color palette: {style_palette}")
+
+    # Style guide overrides (per-shot via styleGuideRef)
+    if sg_extra:
+        enriched_parts.append(f"\n[STYLE GUIDE]\n{sg_extra}")
+
+    # Temporal bridge — continuity from previous shot
+    bridge_ref = (spec.get("temporalBridgeAnchorRef") or {}).get("id", "")
+    if bridge_ref:
+        enriched_parts.append(
+            f"\n[CONTINUITY] This shot must visually continue from shot {bridge_ref}. "
+            f"Maintain the same lighting, color temperature, and spatial orientation."
+        )
+
+    # Consistency anchors with lock level context
+    anchors = (shot.get("genParams") or {}).get("consistencyAnchors", [])
+    if anchors:
+        anchor_descs = []
+        for anc in anchors:
+            level = anc.get("lockLevel", "medium")
+            name = anc.get("name", "")
+            atype = anc.get("anchorType", "")
+            strength = {"hard": "STRICTLY", "medium": "closely", "soft": "loosely"}.get(level, "closely")
+            anchor_descs.append(f"  - {strength} match {atype}: {name}")
+        enriched_parts.append(f"\n[CONSISTENCY REQUIREMENTS]\n" + "\n".join(anchor_descs))
 
     enriched_parts.append(f"\n[GENERATION PROMPT]\n{base_prompt}")
 
@@ -571,19 +651,44 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
         enriched_prompt = _enrich_prompt(shot, instance, preamble)
 
         # Collect reference images for this shot's consistency anchors
-        shot_refs: list[bytes] = []
+        # Ordered by lockLevel: hard first, then medium, then soft
+        shot_refs: list[tuple[int, bytes]] = []  # (priority, bytes)
         anchors = (shot.get("genParams") or {}).get("consistencyAnchors", [])
+        lock_priority = {"hard": 0, "medium": 1, "soft": 2}
         for anchor in anchors:
             ref_id = (anchor.get("ref") or {}).get("id", "")
-            # Map character ref IDs to their reference images
+            level = anchor.get("lockLevel", "medium")
+            prio = lock_priority.get(level, 1)
             for char in (instance.get("production") or {}).get("characters", []):
                 if char.get("id") == ref_id or char.get("logicalId") == ref_id:
                     char_lid = char.get("logicalId") or char.get("id")
                     if char_lid in ref_images:
-                        shot_refs.append(ref_images[char_lid])
+                        shot_refs.append((prio, ref_images[char_lid]))
+        # Sort by priority (hard=0 first) and take bytes only
+        shot_refs.sort(key=lambda x: x[0])
+        ref_bytes: list[bytes] = [b for _, b in shot_refs]
         # If no explicit anchors but refs exist, use all refs
-        if not shot_refs and ref_images:
-            shot_refs = list(ref_images.values())
+        if not ref_bytes and ref_images:
+            ref_bytes = list(ref_images.values())
+
+        # Temporal bridge: extract last frame from previous shot as STYLE reference
+        bridge_ref = ((shot.get("cinematicSpec") or {})
+                      .get("temporalBridgeAnchorRef") or {}).get("id", "")
+        if bridge_ref:
+            # Find the previous shot's clip in results
+            for prev_shot in all_shots:
+                if prev_shot.get("id") == bridge_ref or prev_shot.get("logicalId") == bridge_ref:
+                    prev_lid = _shot_id(prev_shot)
+                    prev_clip = shots_dir / f"{prev_lid}.mp4"
+                    if prev_clip.exists():
+                        try:
+                            frame_bytes = _extract_last_frame(prev_clip)
+                            if frame_bytes:
+                                ref_bytes.append(frame_bytes)
+                                log.info("temporal bridge: %s → %s", bridge_ref, sid)
+                        except Exception as exc:
+                            log.debug("temporal bridge extraction failed: %s", exc)
+                    break
 
         # Try Runway first
         if runway_key:
@@ -598,7 +703,7 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                 _veo_generate_shot(
                     shot, gemini_key, out_path,
                     enriched_prompt=enriched_prompt,
-                    reference_images=shot_refs,
+                    reference_images=ref_bytes,
                 )
                 return sid, out_path
             except Exception as exc:

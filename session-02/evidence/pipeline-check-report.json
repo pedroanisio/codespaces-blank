@@ -1,0 +1,799 @@
+{
+  "timestamp": "2026-03-27T21:30:21.132200+00:00",
+  "elapsed_sec": 0.01,
+  "totals": {
+    "pass": 130,
+    "fail": 3,
+    "warn": 15
+  },
+  "gates": [
+    {
+      "gate": "GATE 0 — Prerequisites",
+      "checks": [
+        {
+          "name": "Python ≥ 3.9",
+          "status": "PASS",
+          "detail": "v3.12.3"
+        },
+        {
+          "name": "ffmpeg in PATH",
+          "status": "PASS",
+          "detail": "/usr/bin/ffmpeg"
+        },
+        {
+          "name": "jsonschema installed",
+          "status": "FAIL",
+          "detail": "pip install jsonschema"
+        },
+        {
+          "name": "v3 schema file exists",
+          "status": "PASS",
+          "detail": "claude-unified-video-project-v3.schema.json"
+        },
+        {
+          "name": "demo-30s.json exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "ANTHROPIC_API_KEY set",
+          "status": "FAIL",
+          "detail": "MISSING — required for --idea mode"
+        },
+        {
+          "name": "OPENAI_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        },
+        {
+          "name": "GEMINI_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        },
+        {
+          "name": "ELEVENLABS_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        },
+        {
+          "name": "RUNWAY_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        },
+        {
+          "name": "BRAVE_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        },
+        {
+          "name": "DESCRIPT_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        },
+        {
+          "name": "DEEPSEEK_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        },
+        {
+          "name": "XAI_API_KEY set",
+          "status": "WARN",
+          "detail": "not set — optional"
+        }
+      ]
+    },
+    {
+      "gate": "GATE 1 — JSON Schema Validation (v3)",
+      "checks": [
+        {
+          "name": "Instance passes v3 JSON Schema",
+          "status": "FAIL",
+          "detail": "1 error(s)",
+          "evidence": [
+            "jsonschema not installed — pip install jsonschema"
+          ]
+        },
+        {
+          "name": "Root key: schemaVersion",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: package",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: project",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: qualityProfiles",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: canonicalDocuments",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: production",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: assetLibrary",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: orchestration",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: assembly",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: deliverables",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "Root key: relationships",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "schemaVersion is SemVer",
+          "status": "PASS",
+          "detail": "3.1.0"
+        }
+      ]
+    },
+    {
+      "gate": "GATE 2 — Canonical Documents",
+      "checks": [
+        {
+          "name": "story exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "story.beats ≥ 1",
+          "status": "PASS",
+          "detail": "2 beat(s)"
+        },
+        {
+          "name": "beats have sequential order",
+          "status": "PASS",
+          "detail": "[1, 2]"
+        },
+        {
+          "name": "beat beat.isolation: has emotionalObjective",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "beat beat.contact: has emotionalObjective",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "script exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "script.segments ≥ 1",
+          "status": "PASS",
+          "detail": "5 segment(s)"
+        },
+        {
+          "name": "script has scene_heading segments",
+          "status": "PASS",
+          "detail": "{'scene_heading', 'dialogue', 'action'}"
+        },
+        {
+          "name": "directorInstructions exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "visionStatement non-empty",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "mustHaves[] ≥ 1",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "mustAvoid[] ≥ 1",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "colorDirection non-empty",
+          "status": "PASS",
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "gate": "GATE 3 — Production Entities",
+      "checks": [
+        {
+          "name": "characters[] ≥ 1",
+          "status": "PASS",
+          "detail": "1"
+        },
+        {
+          "name": "char char.mira.v1: valid ID pattern",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "char char.mira.v1: has name",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "char char.mira.v1: has description",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "environments[] ≥ 1",
+          "status": "PASS",
+          "detail": "1"
+        },
+        {
+          "name": "env env.helix7-comms.v1: has spatialExtent",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "env env.helix7-comms.v1: has defaultSceneSpace",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scenes[] ≥ 1",
+          "status": "PASS",
+          "detail": "2"
+        },
+        {
+          "name": "scene scene.isolation.v1: has sceneNumber",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.isolation.v1: has environmentRef",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.isolation.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.isolation.v1: shotRefs ≥ 1",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.isolation.v1: has qaGate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.contact.v1: has sceneNumber",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.contact.v1: has environmentRef",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.contact.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.contact.v1: shotRefs ≥ 1",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "scene scene.contact.v1: has qaGate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shots[] ≥ 1",
+          "status": "PASS",
+          "detail": "6"
+        },
+        {
+          "name": "shot shot.d1.v1: has shotType",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d1.v1: has cameraAngle",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d1.v1: has cameraMovement",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d1.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": "5s"
+        },
+        {
+          "name": "shot shot.d1.v1: sceneRef valid",
+          "status": "PASS",
+          "detail": "scene.isolation.v1"
+        },
+        {
+          "name": "shot shot.d2.v1: has shotType",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d2.v1: has cameraAngle",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d2.v1: has cameraMovement",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d2.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": "5s"
+        },
+        {
+          "name": "shot shot.d2.v1: sceneRef valid",
+          "status": "PASS",
+          "detail": "scene.isolation.v1"
+        },
+        {
+          "name": "shot shot.d3.v1: has shotType",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d3.v1: has cameraAngle",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d3.v1: has cameraMovement",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d3.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": "5s"
+        },
+        {
+          "name": "shot shot.d3.v1: sceneRef valid",
+          "status": "PASS",
+          "detail": "scene.isolation.v1"
+        },
+        {
+          "name": "shot shot.d4.v1: has shotType",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d4.v1: has cameraAngle",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d4.v1: has cameraMovement",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d4.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": "5s"
+        },
+        {
+          "name": "shot shot.d4.v1: sceneRef valid",
+          "status": "PASS",
+          "detail": "scene.contact.v1"
+        },
+        {
+          "name": "shot shot.d5.v1: has shotType",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d5.v1: has cameraAngle",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d5.v1: has cameraMovement",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d5.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": "5s"
+        },
+        {
+          "name": "shot shot.d5.v1: sceneRef valid",
+          "status": "PASS",
+          "detail": "scene.contact.v1"
+        },
+        {
+          "name": "shot shot.d6.v1: has shotType",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d6.v1: has cameraAngle",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d6.v1: has cameraMovement",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "shot shot.d6.v1: targetDurationSec > 0",
+          "status": "PASS",
+          "detail": "5s"
+        },
+        {
+          "name": "shot shot.d6.v1: sceneRef valid",
+          "status": "PASS",
+          "detail": "scene.contact.v1"
+        },
+        {
+          "name": "shot durations sum ≈ targetRuntime (30s)",
+          "status": "PASS",
+          "detail": "sum=30s, drift=0s"
+        }
+      ]
+    },
+    {
+      "gate": "GATE 4 — Asset Library",
+      "checks": [
+        {
+          "name": "assetLibrary.visualAssets exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "assetLibrary.audioAssets exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "assetLibrary.marketingAssets exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "assetLibrary.genericAssets exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "audioAssets ≥ 1",
+          "status": "PASS",
+          "detail": "4"
+        },
+        {
+          "name": "audio audio.ambient.v1: has audioType",
+          "status": "PASS",
+          "detail": "ambient"
+        },
+        {
+          "name": "audio audio.ambient.v1: valid ID pattern",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "audio audio.dialogue.v1: has audioType",
+          "status": "PASS",
+          "detail": "dialogue"
+        },
+        {
+          "name": "audio audio.dialogue.v1: valid ID pattern",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "audio audio.score.v1: has audioType",
+          "status": "PASS",
+          "detail": "music"
+        },
+        {
+          "name": "audio audio.score.v1: valid ID pattern",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "audio audio.sfx.chirp.v1: has audioType",
+          "status": "PASS",
+          "detail": "sfx"
+        },
+        {
+          "name": "audio audio.sfx.chirp.v1: valid ID pattern",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "audio type coverage (≥2 distinct types)",
+          "status": "PASS",
+          "detail": "{'sfx', 'ambient', 'dialogue', 'music'}"
+        }
+      ]
+    },
+    {
+      "gate": "GATE 5 — Assembly",
+      "checks": [
+        {
+          "name": "timelines ≥ 1",
+          "status": "PASS",
+          "detail": "1"
+        },
+        {
+          "name": "timeline tl.demo.v1: durationSec > 0",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "timeline tl.demo.v1: has frameRate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "timeline tl.demo.v1: has resolution",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "timeline tl.demo.v1: videoClips ≥ 1",
+          "status": "PASS",
+          "detail": "6"
+        },
+        {
+          "name": "timeline tl.demo.v1: audioClips ≥ 1",
+          "status": "PASS",
+          "detail": "4"
+        },
+        {
+          "name": "editVersions ≥ 1",
+          "status": "PASS",
+          "detail": "1"
+        },
+        {
+          "name": "at least one editVersion approvedForRender",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "renderPlans ≥ 1",
+          "status": "PASS",
+          "detail": "1"
+        },
+        {
+          "name": "renderPlan rp.demo.v1: operations ≥ 1",
+          "status": "PASS",
+          "detail": "4 op(s)"
+        },
+        {
+          "name": "renderPlan rp.demo.v1: has concat op",
+          "status": "PASS",
+          "detail": "['concat', 'audioMix', 'colorGrade', 'encode']"
+        },
+        {
+          "name": "renderPlan rp.demo.v1: has encode op",
+          "status": "PASS",
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "gate": "GATE 6 — Deliverables & Relationships",
+      "checks": [
+        {
+          "name": "deliverables ≥ 1",
+          "status": "PASS",
+          "detail": "1"
+        },
+        {
+          "name": "deliverable del.demo-1080p.v1: outputType set",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "deliverable del.demo-1080p.v1: runtimeSec > 0",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "deliverable del.demo-1080p.v1: sourceTimelineRef",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "relationships ≥ 1",
+          "status": "PASS",
+          "detail": "4"
+        }
+      ]
+    },
+    {
+      "gate": "GATE 7 — Referential Integrity (cross-entity refs)",
+      "checks": [
+        {
+          "name": "Collected 77 entity IDs",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "No dangling refs (all Ref.id → known entity)",
+          "status": "PASS",
+          "detail": "all refs resolved"
+        }
+      ]
+    },
+    {
+      "gate": "GATE 11 — Provider Wiring Integrity",
+      "checks": [
+        {
+          "name": "providers.complete_json exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.generate_image exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.text_to_speech exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.vision_score exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.search_web exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.search_web_context exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.generate_sound_effect exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.generate_music exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.descript_import_media exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.descript_agent_edit exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.descript_job_status exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "providers.available_providers exists",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "available_providers() returns dict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "provider 'claude' inactive",
+          "status": "WARN",
+          "detail": "API key not set"
+        },
+        {
+          "name": "provider 'openai' inactive",
+          "status": "WARN",
+          "detail": "API key not set"
+        },
+        {
+          "name": "provider 'deepseek' inactive",
+          "status": "WARN",
+          "detail": "API key not set"
+        },
+        {
+          "name": "provider 'grok' inactive",
+          "status": "WARN",
+          "detail": "API key not set"
+        },
+        {
+          "name": "provider 'gemini' inactive",
+          "status": "WARN",
+          "detail": "API key not set"
+        },
+        {
+          "name": "provider 'brave' inactive",
+          "status": "WARN",
+          "detail": "API key not set"
+        },
+        {
+          "name": "provider 'descript' inactive",
+          "status": "WARN",
+          "detail": "API key not set"
+        },
+        {
+          "name": "generate_audio: has SFX/ambient path",
+          "status": "PASS",
+          "detail": "providers.generate_sound_effect() wired"
+        },
+        {
+          "name": "generate_audio: has music fallback path",
+          "status": "PASS",
+          "detail": "providers.generate_music() wired"
+        },
+        {
+          "name": "skills.py: Brave Search wired to S02/S04/S05",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "skills.py: Descript wired to S18",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "skills.py: _audio_tool_from_type uses 'auto' not 'stub'",
+          "status": "PASS",
+          "detail": "SFX/ambient/foley route to real providers"
+        }
+      ]
+    }
+  ]
+}
