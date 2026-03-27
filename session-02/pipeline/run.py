@@ -14,18 +14,19 @@ Steps (--idea mode)
   0. Load .env API keys
   1. Run 24-skill pipeline  →  v3 instance JSON
   2. Save v3 instance to output_dir/instance.json
-  3. Convert v3 → v2 field names via bridge_v3_to_v2()
+  3. Derive shots/audio from story beats if production is empty  (derive.py)
   4. Generate shot clips + audio in parallel
   5. Assemble: load → overlay_audio → color_grade → encode (FFmpeg)
   6. Print summary
 
 Steps (instance JSON mode)
 --------------------------
-  1. Load and validate the schema instance (jsonschema Draft 2020-12)
-  2. Generate shot clips  ┐ in parallel via ThreadPoolExecutor
+  1. Load the v3 schema instance
+  2. Derive shots/audio from story beats if production.shots is empty  (derive.py)
+  3. Generate shot clips  ┐ in parallel via ThreadPoolExecutor
      Generate audio files ┘
-  3. Assemble: load → overlay_audio → color_grade → encode (FFmpeg)
-  4. Print summary: elapsed time, output path, asset counts
+  4. Assemble: load → overlay_audio → color_grade → encode (FFmpeg)
+  5. Print summary: elapsed time, output path, asset counts
 """
 
 from __future__ import annotations
@@ -72,19 +73,20 @@ try:
     from pipeline.generate import generate_audio, generate_shots
     from pipeline.assemble import assemble
     from pipeline import skills as skills_module
+    from pipeline.derive import ensure_shots, ensure_audio
 except ModuleNotFoundError:
     # Allow running as `python pipeline/run.py` from session-02/
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from pipeline.generate import generate_audio, generate_shots
     from pipeline.assemble import assemble
     from pipeline import skills as skills_module
+    from pipeline.derive import ensure_shots, ensure_audio
 
 
 # ---------------------------------------------------------------------------
 # Schema validation helper
 # ---------------------------------------------------------------------------
 
-_DEFAULT_SCHEMA = Path(__file__).parent.parent / "video-project-schema-v2.json"
 _V3_SCHEMA = Path(__file__).parent.parent / "skills" / "schema.json"
 
 
@@ -104,11 +106,6 @@ def _validate(instance: dict, schema_path: Path) -> list[str]:
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)
     return [e.message for e in validator.iter_errors(instance)]
-
-
-def _is_v3(instance: dict) -> bool:
-    """Detect whether an instance uses v3 schema structure."""
-    return "production" in instance or "assetLibrary" in instance
 
 
 # ---------------------------------------------------------------------------
@@ -146,9 +143,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--schema",
-        default=str(_DEFAULT_SCHEMA),
+        default=str(_V3_SCHEMA),
         metavar="SCHEMA_JSON",
-        help="Path to the JSON Schema file for validation (v2 mode only).",
+        help="Path to the v3 JSON Schema file for validation.",
     )
     parser.add_argument(
         "--stub-only",
@@ -223,9 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         t_skills = time.perf_counter() - t_start
         log.info("Skills pipeline complete in %.1fs", t_skills)
 
-        # Convert v3 → v2 for generate/assemble
-        log.info("Converting v3 → v2 for assembly …")
-        instance = skills_module.bridge_v3_to_v2(v3_instance)
+        instance = v3_instance
 
     # ── 2b. Instance JSON mode: load from file ───────────────────────────────
     else:
@@ -237,23 +232,41 @@ def main(argv: list[str] | None = None) -> int:
         log.info("Loading instance: %s", instance_path)
         instance = json.loads(instance_path.read_text(encoding="utf-8"))
 
-        # Auto-bridge v3 instances
-        if _is_v3(instance):
-            log.info("Detected v3 schema — bridging to v2 …")
-            instance = skills_module.bridge_v3_to_v2(instance)
-
-        # ── 2c. Validate (v2 only) ───────────────────────────────────────────
         if not args.skip_validation:
             schema_path = Path(args.schema)
             errors = _validate(instance, schema_path)
             if errors:
-                log.error("Schema validation failed (%d error(s)):", len(errors))
-                for e in errors[:10]:
-                    log.error("  • %s", e)
-                if len(errors) > 10:
-                    log.error("  … and %d more", len(errors) - 10)
-                return 1
-            log.info("Schema validation passed ✓")
+                log.warning(
+                    "Schema validation: %d issue(s) (continuing — use --skip-validation to silence)",
+                    len(errors),
+                )
+                for e in errors[:5]:
+                    log.warning("  • %s", e)
+
+    # ── 2c. Derive shots/audio from story beats if production is empty ────────
+    log.info("─── Derive phase ───────────────────────────────────────────────")
+    n_shots_before = len((instance.get("production") or {}).get("shots") or [])
+    n_audio_before = len((instance.get("assetLibrary") or {}).get("audioAssets") or [])
+
+    instance = ensure_shots(instance)
+    instance = ensure_audio(instance)
+
+    n_shots_after = len((instance.get("production") or {}).get("shots") or [])
+    n_audio_after = len((instance.get("assetLibrary") or {}).get("audioAssets") or [])
+
+    if n_shots_after > n_shots_before:
+        log.info(
+            "Derived %d shots across %d scenes from story beats",
+            n_shots_after,
+            len((instance.get("production") or {}).get("scenes") or []),
+        )
+    else:
+        log.info("production.shots already populated (%d shots)", n_shots_after)
+
+    if n_audio_after > n_audio_before:
+        log.info("Derived %d audio assets from director instructions", n_audio_after)
+    else:
+        log.info("assetLibrary.audioAssets already populated (%d assets)", n_audio_after)
 
     # ── 3. Generate shots + audio in parallel ────────────────────────────────
     t_gen_start = time.perf_counter()

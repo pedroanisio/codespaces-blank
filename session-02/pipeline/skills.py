@@ -624,6 +624,7 @@ def bridge_v3_to_v2(instance: dict) -> dict:
             "_filePath": asset.get("_filePath", ""),
         }
 
+
     # Derive color grade params from directorInstructions.colorDirection
     color_dir = instance.get("canonicalDocuments", {}).get("directorInstructions", {}).get(
         "colorDirection", ""
