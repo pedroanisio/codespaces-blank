@@ -490,6 +490,47 @@ def _resolve_clip_refs(
     return ordered
 
 
+def _resolve_clip_refs_with_durations(
+    clip_refs: list[dict],
+    shot_clips: dict[str, Path],
+    instance: dict,
+) -> tuple[list[Path], list[float]]:
+    """Resolve clipRefs to (paths, target_durations) kept in sync.
+
+    Only includes entries where the clip file actually exists, so both
+    lists always have the same length.
+    """
+    shot_dur_map: dict[str, float] = {}
+    for s in (instance.get("production") or {}).get("shots") or []:
+        dur = float(s.get("targetDurationSec", 0))
+        for key in (s.get("id", ""), s.get("logicalId", "")):
+            if key:
+                shot_dur_map[key] = dur
+
+    ordered: list[Path] = []
+    durations: list[float] = []
+    for ref in clip_refs:
+        ref_id = ref.get("id") or ref.get("logicalId") or ""
+        if not ref_id:
+            continue
+        clip = shot_clips.get(ref_id)
+        matched_id = ref_id
+        if not (clip and clip.exists()):
+            clip = None
+            for key, path in shot_clips.items():
+                if ref_id.startswith(key) or key.startswith(ref_id):
+                    if path.exists():
+                        clip = path
+                        matched_id = key
+                        break
+        if clip:
+            ordered.append(clip)
+            durations.append(shot_dur_map.get(ref_id, shot_dur_map.get(matched_id, 0.0)))
+        else:
+            log.warning("clipRef %s could not be resolved to a clip file", ref_id)
+    return ordered, durations
+
+
 # ── Shot ordering ─────────────────────────────────────────────────────────────
 
 def _shots_in_scene_order(
@@ -561,13 +602,22 @@ def _normalize_filter(
     idx: int,
     target_dur: float,
     actual_dur: float,
+    *,
+    fade_in: float = 0.0,
+    fade_out: float = 0.0,
 ) -> str:
-    """Build per-clip normalize filter: trim → scale → fps."""
+    """Build per-clip normalize filter: trim → scale → fps → fade."""
+    effective_dur = min(target_dur, actual_dur) if target_dur > 0 else actual_dur
     trim = f"trim=duration={target_dur}," if 0 < target_dur < actual_dur else ""
+    fades = ""
+    if fade_in > 0:
+        fades += f",fade=t=in:st=0:d={fade_in:.2f}"
+    if fade_out > 0:
+        fades += f",fade=t=out:st={effective_dur - fade_out:.2f}:d={fade_out:.2f}"
     return (
         f"[{idx}:v]{trim}setpts=PTS-STARTPTS,"
         f"scale=1920:1080:force_original_aspect_ratio=decrease,"
-        f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[n{idx}]"
+        f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24{fades}[n{idx}]"
     )
 
 
@@ -589,12 +639,14 @@ def _concat_clips_ffmpeg(
     actual_durs = [_get_clip_duration(p) for p in clip_paths]
     targets = target_durations or [0.0] * len(clip_paths)
 
+    # Check if any scene boundary has a real transition (not just fade-in/out
+    # from/to black which are first-scene-in / last-scene-out effects).
     has_transitions = False
-    if scenes:
-        for s in scenes:
-            t_in = (s.get("transitionIn") or {}).get("type", "cut")
-            t_out = (s.get("transitionOut") or {}).get("type", "cut")
-            if t_in != "cut" or t_out != "cut":
+    if scenes and len(scenes) > 1:
+        for si in range(len(scenes) - 1):
+            t_out = (scenes[si].get("transitionOut") or {}).get("type", "cut")
+            t_in_next = (scenes[si + 1].get("transitionIn") or {}).get("type", "cut")
+            if t_out != "cut" or t_in_next != "cut":
                 has_transitions = True
                 break
 
@@ -602,8 +654,23 @@ def _concat_clips_ffmpeg(
     for p in clip_paths:
         inputs += ["-i", str(p)]
 
+    # Detect fade-from-black on first scene and fade-to-black on last scene
+    first_fade_in = 0.0
+    last_fade_out = 0.0
+    if scenes:
+        t_in_first = scenes[0].get("transitionIn") or {}
+        if t_in_first.get("type") in ("fade", "dissolve"):
+            first_fade_in = float(t_in_first.get("durationSec", 0.5))
+        t_out_last = scenes[-1].get("transitionOut") or {}
+        if t_out_last.get("type") in ("fade", "dissolve"):
+            last_fade_out = float(t_out_last.get("durationSec", 0.5))
+
     norm_filters = [
-        _normalize_filter(i, targets[i], actual_durs[i])
+        _normalize_filter(
+            i, targets[i], actual_durs[i],
+            fade_in=first_fade_in if i == 0 else 0.0,
+            fade_out=last_fade_out if i == len(clip_paths) - 1 else 0.0,
+        )
         for i in range(len(clip_paths))
     ]
 
@@ -640,11 +707,24 @@ def _concat_clips_ffmpeg(
         "custom": "fade",
     }
 
-    # Build transition list from scenes
-    transition_specs: list[dict] = []
+    # Build a per-clip-pair transition spec.
+    # Scene transitionOut applies between the LAST shot of that scene and
+    # the FIRST shot of the next scene.  Within a scene, transitions are cuts.
+    transition_specs: list[dict] = [{"type": "cut"}] * (len(clip_paths) - 1)
     if scenes:
-        for s in scenes:
-            transition_specs.append(s.get("transitionOut") or {"type": "cut"})
+        clip_idx = 0
+        for si, s in enumerate(scenes):
+            n_shots = len(s.get("shotRefs") or [])
+            boundary = clip_idx + n_shots - 1  # index of last shot in this scene
+            if boundary < len(clip_paths) - 1:  # not the very last clip
+                t_out = s.get("transitionOut") or {"type": "cut"}
+                t_in_next = (scenes[si + 1].get("transitionIn") or {"type": "cut"}) if si + 1 < len(scenes) else {"type": "cut"}
+                # Use whichever is not "cut"; prefer transitionOut
+                if t_out.get("type", "cut") != "cut":
+                    transition_specs[boundary] = t_out
+                elif t_in_next.get("type", "cut") != "cut":
+                    transition_specs[boundary] = t_in_next
+            clip_idx += n_shots
 
     # Every clip pair gets an xfade so the chain stays continuous.
     # "cut" transitions use a near-zero duration (1 frame ≈ 0.04s).
@@ -793,10 +873,12 @@ def _build_audio_mix_cmd(
 
     audio_codec, audio_bitrate = _resolve_audio_codec(instance)
 
-    # Resolve total timeline duration for audio padding
-    tl_duration = float(tl.get("durationSec", 0))
-    if not tl_duration:
-        tl_duration = float((instance.get("project") or {}).get("targetRuntimeSec", 30))
+    # Use actual video duration for audio padding (not timeline, which may differ)
+    tl_duration = _get_clip_duration(video_path)
+    if tl_duration <= 0:
+        tl_duration = float(tl.get("durationSec", 0)) or float(
+            (instance.get("project") or {}).get("targetRuntimeSec", 30)
+        )
 
     inputs: list[str] = ["-i", str(video_path)]
     filter_parts: list[str] = []
@@ -824,8 +906,14 @@ def _build_audio_mix_cmd(
 
         inputs += ["-i", str(audio_path)]
         stream = idx + 1
+        audio_type = asset.get("audioType", "")
 
         chain = f"[{stream}:a]"
+        # Loop short ambient/SFX/music to fill the target duration
+        if audio_type in ("ambient", "sfx", "music") and duration > 0:
+            # aloop: loop enough times to cover the target duration
+            # loop=-1 loops infinitely; atrim then trims to exact duration
+            chain += f"aloop=loop=-1:size=2e+09,"
         chain += f"atrim=duration={duration},"
         chain += f"adelay={int(t_in * 1000)}|{int(t_in * 1000)},"
         chain += f"apad=whole_dur={tl_duration}"
@@ -1223,11 +1311,11 @@ def execute_operation_dag(
             # when provided (schema: ConcatOp.clipRefs is required).
             # Fall back to scene-derived order only if clipRefs can't resolve.
             clip_refs = op.get("clipRefs") or []
-            ordered_clips = _resolve_clip_refs(clip_refs, shot_clips)
+            ordered_clips, clip_targets = _resolve_clip_refs_with_durations(
+                clip_refs, shot_clips, instance,
+            )
             if not ordered_clips:
                 ordered_clips, clip_targets = _shots_in_scene_order(instance, shot_clips)
-            else:
-                clip_targets = [0.0] * len(ordered_clips)
             if not ordered_clips:
                 raise RuntimeError("No shot clips available to assemble")
             out = inter / f"{step_num:02d}_{op_id}.mp4"

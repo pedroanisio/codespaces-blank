@@ -649,14 +649,15 @@ class TestReferenceLibrary:
         assert len(lib.all_environment_refs("env.office")) == 2
 
     def test_all_refs_flat_ordering(self):
-        """Characters first, then environments, then props."""
+        """Characters first, then environments, then POVs, then props."""
         from pipeline.generate import ReferenceLibrary
         lib = ReferenceLibrary()
         lib.characters["c"] = {"front": b"CHAR"}
         lib.environments["e"] = {"wide_plate": b"ENV"}
-        lib.props["p"] = b"PROP"
+        lib.pov_plates["c:e"] = b"POV"
+        lib.props["p"] = {"front": b"PROP"}
         flat = lib.all_refs_flat()
-        assert flat == [b"CHAR", b"ENV", b"PROP"]
+        assert flat == [b"CHAR", b"ENV", b"POV", b"PROP"]
 
 
 class TestS13ReferenceGeneration:
@@ -689,8 +690,8 @@ class TestS13ReferenceGeneration:
         assert "wide_plate" in views
         assert "detail_plate" in views
 
-    def test_generates_prop_references(self, tmp_path):
-        """S13 Step 4: Each significant prop should get 1 reference."""
+    def test_generates_prop_sprite_views(self, tmp_path):
+        """S13 Step 4: Each significant prop should get front + 3/4 sprite views."""
         from pipeline.generate import _generate_reference_images
         fake_img = b"\x89PNG" + b"\x00" * 500
 
@@ -705,6 +706,7 @@ class TestS13ReferenceGeneration:
                     "version": {"number": "1.0.0", "state": "approved"},
                 }],
                 "styleGuides": [],
+                "scenes": [],
             },
             "canonicalDocuments": {"directorInstructions": {}},
         }
@@ -713,6 +715,55 @@ class TestS13ReferenceGeneration:
             lib = _generate_reference_images(instance, tmp_path)
 
         assert "prop.gun" in lib.props
+        views = lib.props["prop.gun"]
+        assert "front" in views
+        assert "three_quarter" in views
+
+    def test_prop_sprite_uses_environment_lighting(self, tmp_path):
+        """S13 Step 4: Prop sprites use env lighting, NOT studio lighting."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        captured: list[str] = []
+
+        def capture(prompt, **kw):
+            captured.append(prompt)
+            return fake_img
+
+        instance = {
+            "production": {
+                "characters": [],
+                "environments": [{
+                    "id": "env.bar.v1", "logicalId": "env.bar",
+                    "entityType": "environment", "name": "Noir Bar",
+                    "description": "Smoky jazz bar with dim amber lighting.",
+                    "version": {"number": "1.0.0", "state": "approved"},
+                }],
+                "props": [{
+                    "id": "prop.glass.v1", "logicalId": "prop.glass",
+                    "entityType": "prop", "name": "Whiskey Glass",
+                    "description": "Half-empty crystal whiskey glass.",
+                    "version": {"number": "1.0.0", "state": "approved"},
+                }],
+                "styleGuides": [],
+                "scenes": [{
+                    "id": "s1.v1", "sceneNumber": 1,
+                    "environmentRef": {"id": "env.bar.v1"},
+                    "propRefs": [{"id": "prop.glass.v1"}],
+                    "characterRefs": [],
+                }],
+            },
+            "canonicalDocuments": {"directorInstructions": {}},
+        }
+
+        with patch("pipeline.providers.generate_image", side_effect=capture):
+            lib = _generate_reference_images(instance, tmp_path)
+
+        prop_prompts = [p for p in captured if "Whiskey Glass" in p]
+        assert len(prop_prompts) >= 2, "Should have 2 prop prompts (front + 3/4)"
+        for p in prop_prompts:
+            assert "SPRITE" in p, "Prop prompt should be sprite-style"
+            assert "Noir Bar" in p, "Prop prompt should reference env for lighting"
+            assert "#222222" in p, "Prop sprite should have solid dark background"
 
     def test_caches_on_disk(self, minimal_instance, tmp_path):
         """Reference images should be cached — second call doesn't regenerate."""
@@ -749,8 +800,8 @@ class TestS13ReferenceGeneration:
             assert "NO people" in p or "NO characters" in p, \
                 f"Environment prompt must exclude characters: {p[:100]}"
 
-    def test_character_views_reference_identity(self, minimal_instance, tmp_path):
-        """3/4 and full_body prompts must reference front-facing consistency."""
+    def test_character_sprites_are_isolated(self, minimal_instance, tmp_path):
+        """Character prompts must be sprite-style with solid background."""
         from pipeline.generate import _generate_reference_images
         fake_img = b"\x89PNG" + b"\x00" * 500
         captured_prompts: list[str] = []
@@ -762,7 +813,12 @@ class TestS13ReferenceGeneration:
         with patch("pipeline.providers.generate_image", side_effect=capture_gen):
             _generate_reference_images(minimal_instance, tmp_path)
 
-        char_prompts = [p for p in captured_prompts if "ALICE" in p]
+        char_prompts = [p for p in captured_prompts if p.startswith("Character reference of ALICE")]
+        assert len(char_prompts) == 3, "Should have 3 character sprite prompts"
+        for p in char_prompts:
+            assert "SPRITE" in p, f"Character prompt must be sprite-style: {p[:100]}"
+            assert "#222222" in p, f"Character sprite must have solid dark bg: {p[:100]}"
+
         three_q = [p for p in char_prompts if "Three-quarter" in p or "3/4" in p]
         full_body = [p for p in char_prompts if "Full body" in p]
         assert len(three_q) >= 1, "Should have 3/4 view prompt"
@@ -774,7 +830,7 @@ class TestS13ReferenceGeneration:
         """
         minimal_instance has 1 character + 1 environment + 0 props.
         1 char appears in 1 env via 1 scene → 1 POV plate.
-        Should generate: 3 char views + 2 env plates + 1 POV plate = 6 total.
+        Should generate: 3 char sprites + 2 env plates + 1 POV plate = 6 total.
         """
         from pipeline.generate import _generate_reference_images
         fake_img = b"\x89PNG" + b"\x00" * 500

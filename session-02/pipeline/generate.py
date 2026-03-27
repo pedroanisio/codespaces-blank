@@ -427,7 +427,7 @@ class ReferenceLibrary:
         self.characters: dict[str, dict[str, bytes]] = {}   # {char_lid: {view: bytes}}
         self.environments: dict[str, dict[str, bytes]] = {}  # {env_lid: {view: bytes}}
         self.pov_plates: dict[str, bytes] = {}               # {"char_lid:env_lid": bytes}
-        self.props: dict[str, bytes] = {}                    # {prop_lid: bytes}
+        self.props: dict[str, dict[str, bytes]] = {}         # {prop_lid: {view: bytes}}
 
     def all_character_refs(self, char_lid: str) -> list[bytes]:
         return list(self.characters.get(char_lid, {}).values())
@@ -442,6 +442,13 @@ class ReferenceLibrary:
     def pov_plate(self, char_lid: str, env_lid: str) -> bytes | None:
         return self.pov_plates.get(f"{char_lid}:{env_lid}")
 
+    def primary_prop_ref(self, prop_lid: str) -> bytes | None:
+        views = self.props.get(prop_lid, {})
+        return views.get("front") or next(iter(views.values()), None)
+
+    def all_prop_refs(self, prop_lid: str) -> list[bytes]:
+        return list(self.props.get(prop_lid, {}).values())
+
     def all_refs_flat(self) -> list[bytes]:
         """All reference images as a flat list (characters first, then envs, then POVs, then props)."""
         out: list[bytes] = []
@@ -450,7 +457,8 @@ class ReferenceLibrary:
         for views in self.environments.values():
             out.extend(views.values())
         out.extend(self.pov_plates.values())
-        out.extend(self.props.values())
+        for views in self.props.values():
+            out.extend(views.values())
         return out
 
 
@@ -459,21 +467,24 @@ class ReferenceLibrary:
 _CHARACTER_VIEWS = [
     (
         "front",
-        "Front-facing portrait, neutral expression, evenly lit, "
-        "head-to-waist framing, clean solid background. "
-        "This is the PRIMARY identity anchor — face structure and features must be crystal clear.",
+        "SPRITE REFERENCE: Front-facing view of the character, neutral expression. "
+        "Plain solid dark gray background (#222222). Character cleanly isolated like a game sprite. "
+        "Head-to-waist framing. NO environment, NO scene elements behind the character. "
+        "This is the PRIMARY identity anchor — face and features must be pixel-clear.",
     ),
     (
         "three_quarter",
-        "Three-quarter (3/4) view portrait with characteristic expression, "
-        "slightly turned to show facial depth and profile shape, same lighting as front view. "
-        "Face must be IDENTICAL to the front-facing reference.",
+        "SPRITE REFERENCE: Three-quarter (3/4) view of the character, characteristic expression. "
+        "Plain solid dark gray background (#222222). Character cleanly isolated like a game sprite. "
+        "Slightly turned to show facial depth and jaw/cheekbone profile. "
+        "NO environment behind. Face must be IDENTICAL to the front-facing sprite.",
     ),
     (
         "full_body",
-        "Full body standing pose showing complete wardrobe and proportions, "
-        "head-to-toe framing, neutral pose, same lighting as other views. "
-        "Face and clothing must be IDENTICAL to the front-facing reference.",
+        "SPRITE REFERENCE: Full body standing pose, head-to-toe framing. "
+        "Plain solid dark gray background (#222222). Character cleanly isolated like a game sprite. "
+        "Neutral T-pose or relaxed stand. Full wardrobe and proportions visible. "
+        "NO environment behind. Face and clothing IDENTICAL to the front-facing sprite.",
     ),
 ]
 
@@ -482,15 +493,34 @@ _CHARACTER_VIEWS = [
 _ENVIRONMENT_VIEWS = [
     (
         "wide_plate",
-        "Wide establishing shot of the EMPTY environment — absolutely NO people, "
-        "NO characters, NO human figures. Show the full spatial extent of the location. "
-        "This is a background plate for compositing.",
+        "BACKGROUND PLATE: Wide establishing shot of the EMPTY environment. "
+        "Absolutely NO people, NO characters, NO human figures. "
+        "Show the full spatial extent of the location — walls, ceiling, floor, lighting. "
+        "This is a compositing background plate.",
     ),
     (
         "detail_plate",
-        "Detail/atmosphere shot of the environment — NO people, NO characters. "
-        "Focus on textures, lighting quality, architectural details, and mood. "
-        "Close-up of the most visually distinctive element of this space.",
+        "BACKGROUND PLATE: Detail/atmosphere shot of the environment. "
+        "NO people, NO characters. Focus on textures, lighting quality, "
+        "architectural details, and mood. Close-up of the most distinctive element.",
+    ),
+]
+
+# ── Prop reference views (S13 Step 4) ────────────────────────────────────────
+
+_PROP_VIEWS = [
+    (
+        "front",
+        "SPRITE REFERENCE: Front view of the object, cleanly isolated. "
+        "Plain solid dark gray background (#222222). Object centered, fully visible. "
+        "NO hands, NO people. Sharp focus on every detail.",
+    ),
+    (
+        "three_quarter",
+        "SPRITE REFERENCE: Three-quarter (3/4) angled view of the object. "
+        "Plain solid dark gray background (#222222). Object cleanly isolated. "
+        "Shows depth and dimensional detail. NO hands, NO people. "
+        "Object appearance IDENTICAL to front view.",
     ),
 ]
 
@@ -517,7 +547,12 @@ def _generate_reference_images(
     production = instance.get("production") or {}
     lib = ReferenceLibrary()
 
-    # ── S13 Step 2: Character references (3 views each) ───────────────────
+    # ── Derive lighting context from director instructions ───────────────
+    di = (instance.get("canonicalDocuments") or {}).get("directorInstructions") or {}
+    color_dir = di.get("colorDirection", "")
+    lighting_hint = f"Lit with {color_dir} color cast." if color_dir else ""
+
+    # ── S13 Step 2: Character sprite references (3 views each) ────────────
     for char in production.get("characters", []):
         char_lid = char.get("logicalId") or char.get("id") or "unknown"
         char_name = char.get("name", "character")
@@ -541,9 +576,10 @@ def _generate_reference_images(
                 continue
 
             prompt = (
-                f"Character reference image of {char_name}: {identity_block}. "
+                f"Character reference of {char_name}: {identity_block}. "
                 f"{view_instruction} "
-                f"Photorealistic, cinematic. Style context: {preamble[:400]}"
+                f"{lighting_hint} "
+                f"Photorealistic, cinematic."
             )
 
             log.info("[ref] generating %s/%s", char_name, view_name)
@@ -579,30 +615,62 @@ def _generate_reference_images(
             lib.environments[env_lid][view_name] = img_bytes
             log.info("[ref] %s/%s → %s (%d bytes)", env_name, view_name, ref_path.name, len(img_bytes))
 
-    # ── S13 Step 4: Prop references (1 per significant prop) ──────────────
+    # ── S13 Step 4: Prop sprite references (multi-angle, env lighting) ────
+    # Find which environment each prop appears in via scenes
+    prop_to_env: dict[str, dict] = {}
+    for scene in production.get("scenes", []):
+        env_ref_id = (scene.get("environmentRef") or {}).get("id", "")
+        env = None
+        for e in production.get("environments", []):
+            if e.get("id") == env_ref_id or e.get("logicalId") == env_ref_id:
+                env = e
+                break
+        if not env:
+            continue
+        for prop_ref in scene.get("propRefs", []):
+            prop_id = prop_ref.get("id", "")
+            for p in production.get("props", []):
+                if p.get("id") == prop_id or p.get("logicalId") == prop_id:
+                    p_lid = p.get("logicalId") or p.get("id")
+                    if p_lid not in prop_to_env:
+                        prop_to_env[p_lid] = env
+                    break
+
     for prop in production.get("props", []):
         prop_lid = prop.get("logicalId") or prop.get("id") or "unknown"
         prop_name = prop.get("name", "prop")
         prop_desc = prop.get("description", "")
 
-        ref_path = refs_dir / f"{prop_lid}.png"
+        # Build environment lighting context for the sprite
+        env = prop_to_env.get(prop_lid)
+        if env:
+            env_light = f"Lit with the lighting of {env.get('name', 'environment')}: {env.get('description', '')[:150]}. "
+        elif color_dir:
+            env_light = f"Lit with {color_dir} color cast. "
+        else:
+            env_light = ""
 
-        if ref_path.exists():
-            lib.props[prop_lid] = ref_path.read_bytes()
-            log.info("[ref] cache hit: %s", ref_path.name)
-            continue
+        lib.props[prop_lid] = {}
+        for view_name, view_instruction in _PROP_VIEWS:
+            ref_path = refs_dir / f"{prop_lid}.{view_name}.png"
 
-        prompt = (
-            f"Isolated product-style render of {prop_name}: {prop_desc}. "
-            f"Clean background, studio lighting, showing full object with details visible. "
-            f"No people, no hands. Photorealistic. Style: {preamble[:300]}"
-        )
+            if ref_path.exists():
+                lib.props[prop_lid][view_name] = ref_path.read_bytes()
+                log.info("[ref] cache hit: %s", ref_path.name)
+                continue
 
-        log.info("[ref] generating prop %s", prop_name)
-        img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
-        ref_path.write_bytes(img_bytes)
-        lib.props[prop_lid] = img_bytes
-        log.info("[ref] %s → %s (%d bytes)", prop_name, ref_path.name, len(img_bytes))
+            prompt = (
+                f"Prop reference of {prop_name}: {prop_desc}. "
+                f"{view_instruction} "
+                f"{env_light}"
+                f"Photorealistic, cinematic."
+            )
+
+            log.info("[ref] generating prop %s/%s", prop_name, view_name)
+            img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
+            ref_path.write_bytes(img_bytes)
+            lib.props[prop_lid][view_name] = img_bytes
+            log.info("[ref] %s/%s → %s (%d bytes)", prop_name, view_name, ref_path.name, len(img_bytes))
 
     # ── S13 Step 3b: POV environment plates (per character × environment) ──
     # Find which characters appear in which environments via scenes
@@ -663,7 +731,7 @@ def _generate_reference_images(
     total_chars = sum(len(v) for v in lib.characters.values())
     total_envs = sum(len(v) for v in lib.environments.values())
     total_povs = len(lib.pov_plates)
-    total_props = len(lib.props)
+    total_props = sum(len(v) for v in lib.props.values())
     log.info(
         "[ref] S13 complete: %d character views, %d environment plates, %d POV plates, %d prop renders",
         total_chars, total_envs, total_povs, total_props,
@@ -810,6 +878,43 @@ def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
             anchor_descs.append(f"  - {strength} match {atype}: {name}")
         enriched_parts.append(f"\n[CONSISTENCY REQUIREMENTS]\n" + "\n".join(anchor_descs))
 
+    # ── Dialogue cues — tell the video model when a character is speaking ──
+    shot_start = float((shot.get("plannedPosition") or {}).get("startSec", 0))
+    shot_end = float((shot.get("plannedPosition") or {}).get("endSec", shot_start + float(shot.get("targetDurationSec", 5))))
+    dialogue_cues: list[str] = []
+    timelines = (instance.get("assembly") or {}).get("timelines") or []
+    tl = timelines[0] if timelines else {}
+    for ac in tl.get("audioClips") or []:
+        ac_start = float(ac.get("timelineStartSec", 0))
+        ac_dur = float(ac.get("durationSec", 0))
+        ac_end = ac_start + ac_dur
+        # Check if this audio clip overlaps with this shot's time window
+        if ac_end <= shot_start or ac_start >= shot_end:
+            continue
+        src_id = (ac.get("sourceRef") or {}).get("id", "")
+        # Find the audio asset to check if it's dialogue
+        for aa in (instance.get("assetLibrary") or {}).get("audioAssets") or []:
+            if aa.get("id") == src_id or aa.get("logicalId") == src_id:
+                if aa.get("audioType") in ("dialogue", "voice_over"):
+                    speaker_ref = (aa.get("characterRef") or {}).get("id", "")
+                    speaker_name = ""
+                    for ch in (instance.get("production") or {}).get("characters") or []:
+                        if ch.get("id") == speaker_ref or ch.get("logicalId") == speaker_ref:
+                            speaker_name = ch.get("name", "")
+                            break
+                    transcript = aa.get("transcript", "")
+                    offset = max(0, ac_start - shot_start)
+                    cue = f'{speaker_name or "Character"} speaks'
+                    if transcript:
+                        cue += f': "{transcript}"'
+                    cue += f" (at {offset:.1f}s into this shot)"
+                    dialogue_cues.append(cue)
+                break
+    if dialogue_cues:
+        enriched_parts.append(
+            f"\n[DIALOGUE — character must be visibly speaking]\n" + "\n".join(dialogue_cues)
+        )
+
     enriched_parts.append(f"\n[GENERATION PROMPT]\n{base_prompt}")
 
     # Director's must-avoid as negative guidance
@@ -901,7 +1006,7 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                 if plate:
                     ref_candidates.append((prio + 1, plate))
             elif entity_type == "prop":
-                prop_ref = ref_lib.props.get(entity_lid)
+                prop_ref = ref_lib.primary_prop_ref(entity_lid)
                 if prop_ref:
                     ref_candidates.append((prio + 1, prop_ref))
 
@@ -938,7 +1043,9 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                 prop = entity_index.get(prop_id, {})
                 prop_lid = prop.get("logicalId") or prop.get("id", "")
                 if prop_lid in ref_lib.props:
-                    ref_candidates.append((2, ref_lib.props[prop_lid]))
+                    p_front = ref_lib.primary_prop_ref(prop_lid)
+                    if p_front:
+                        ref_candidates.append((2, p_front))
 
         # D) If no explicit refs, use all character fronts + environment wide plate
         if not ref_candidates:

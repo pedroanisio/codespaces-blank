@@ -1,5 +1,5 @@
 ---
-name: reference-asset-gen
+name: s13-reference-asset-gen
 description: >
   Generate canonical reference images for characters, environments, and props —
   the visual anchors all subsequent video generation depends on. Creates
@@ -95,9 +95,19 @@ environment. When S14 generates a shot where the character looks around,
 the POV plate ensures the environment matches what was established. Critical
 for `shotType: "POV"` and subjective camera sequences.
 
-### Step 4: Generate prop references
+### Step 4: Generate prop references (in-environment)
 
-For significant props, generate 1 reference image each.
+For significant props, generate 1 reference image each, rendered **inside
+their scene environment** — NOT in isolation:
+- Find which environment the prop appears in via `scene.propRefs[]`
+- Render the prop with the environment's lighting, color temperature, and atmosphere
+- Close-up framing showing the prop with environment visible behind it
+- Same ambient lighting as the environment plates from Step 3
+- NO people, NO hands — focus on the object
+
+**Why**: Props rendered with studio lighting look disconnected when composited
+into the scene. By rendering them in-context, the lighting, shadows, and color
+temperature match the environment plates, maintaining visual coherence.
 
 ### Step 5: Create consistency anchors
 
