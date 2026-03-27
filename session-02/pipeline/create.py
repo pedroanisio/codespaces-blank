@@ -12,6 +12,18 @@ Usage:
     python create.py --title "My Short" --logline "A story about..." \
         --duration 60 --genre sci-fi --acts 3 --output my-project.json
 
+    # AI-powered: generate from idea using the 24-skill pipeline
+    python create.py --idea "A robot discovers music in an abandoned city"
+
+    # Refine an existing document through AI skills
+    python create.py --refine existing.json --output refined.json
+
+    # Run specific skills on an existing document
+    python create.py --refine existing.json --skills s04-character-designer,s05-environment-designer
+
+    # Resume the pipeline from a specific skill
+    python create.py --refine existing.json --start-from s07-director
+
     # Validate an existing document
     python create.py --validate existing.json
 """
@@ -19,12 +31,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import sys
 import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -1064,6 +1079,166 @@ def run_quick(args: argparse.Namespace) -> dict:
     )
 
 
+# ── Skills Integration ────────────────────────────────────────────────────────
+
+# All valid skill directory names
+ALL_SKILLS = [
+    "s01-concept-seed", "s02-story-architect", "s03-scriptwriter",
+    "s04-character-designer", "s05-environment-designer", "s06-prop-designer",
+    "s07-director", "s08-cinematographer",
+    "s09-scene-composer", "s10-music-composer", "s11-sound-designer", "s12-voice-producer",
+    "s13-reference-asset-gen", "s14-shot-video-gen", "s15-prompt-composer", "s16-consistency-enforcer",
+    "s17-timeline-assembler", "s18-post-production", "s19-audio-mixer", "s20-render-plan-builder",
+    "s21-qa-validator", "s22-deliverable-packager", "s23-marketing-asset-gen",
+    "s24-pipeline-orchestrator",
+]
+
+
+def _resolve_skill_names(raw: str) -> list[str]:
+    """Parse a comma-separated skill spec into valid skill directory names.
+
+    Accepts full names (s04-character-designer), short IDs (S04, s04),
+    or numeric ranges (4-6).
+    """
+    resolved: list[str] = []
+    for token in raw.split(","):
+        token = token.strip().lower()
+        if not token:
+            continue
+        # Full directory name
+        if token in ALL_SKILLS:
+            resolved.append(token)
+            continue
+        # Short ID: s04 or S04
+        match = re.match(r"^s?(\d{1,2})$", token)
+        if match:
+            num = int(match.group(1))
+            prefix = f"s{num:02d}-"
+            for s in ALL_SKILLS:
+                if s.startswith(prefix):
+                    resolved.append(s)
+            continue
+        # Range: 4-6
+        match = re.match(r"^(\d{1,2})-(\d{1,2})$", token)
+        if match:
+            start, end = int(match.group(1)), int(match.group(2))
+            for num in range(start, end + 1):
+                prefix = f"s{num:02d}-"
+                for s in ALL_SKILLS:
+                    if s.startswith(prefix):
+                        resolved.append(s)
+            continue
+        print(f"  ⚠ Unknown skill: {token}", file=sys.stderr)
+    return resolved
+
+
+def run_idea_pipeline(
+    idea: str,
+    output_dir: Path,
+    stub_media: bool = False,
+    start_from: str | None = None,
+) -> dict:
+    """Run the full 24-skill AI pipeline from a creative idea."""
+    from pipeline.skills import run_pipeline
+
+    log.info("Running full 24-skill pipeline from idea...")
+    return run_pipeline(
+        idea,
+        output_dir=output_dir,
+        stub_media=stub_media,
+        start_from=start_from,
+    )
+
+
+def run_refine(
+    instance: dict,
+    skill_names: list[str] | None = None,
+    output_dir: Path | None = None,
+    stub_media: bool = False,
+    start_from: str | None = None,
+) -> dict:
+    """Run specific skills (or the full pipeline) to refine an existing document.
+
+    Parameters
+    ----------
+    instance    : Existing v3 document to refine.
+    skill_names : Specific skills to run (None = full pipeline in order).
+    output_dir  : Where to save generated assets.
+    stub_media  : Skip real media generation.
+    start_from  : Resume full pipeline from this skill.
+    """
+    from pipeline.skills import run_skill, PIPELINE_PHASES, _deep_merge
+
+    if output_dir:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    # If specific skills requested, run them in pipeline order
+    if skill_names:
+        # Sort by pipeline order
+        flat_order = [s for phase in PIPELINE_PHASES for s in phase]
+        ordered = sorted(skill_names, key=lambda s: flat_order.index(s) if s in flat_order else 999)
+
+        for skill_dir in ordered:
+            log.info("── Refining with %s", skill_dir)
+            update = run_skill(
+                skill_dir, instance,
+                output_dir=output_dir,
+                stub_media=stub_media,
+            )
+            if update:
+                instance = _deep_merge(instance, update)
+                log.info("  ✓ Merged %d top-level keys", len(update))
+            else:
+                log.warning("  ⚠ %s returned empty update", skill_dir)
+        return instance
+
+    # No specific skills — run the full pipeline phases
+    skipping = start_from is not None
+    phase_num = 0
+
+    for phase in PIPELINE_PHASES:
+        phase_num += 1
+
+        if skipping:
+            if start_from in phase:
+                skipping = False
+            else:
+                log.info("Phase %d — skipped (resuming from %s)", phase_num, start_from)
+                continue
+
+        phase_label = ", ".join(s.split("-", 1)[1] for s in phase)
+        log.info("── Phase %d: %s", phase_num, phase_label)
+
+        for skill_dir in phase:
+            update = run_skill(
+                skill_dir, instance,
+                output_dir=output_dir,
+                stub_media=stub_media,
+            )
+            if update:
+                instance = _deep_merge(instance, update)
+
+    return instance
+
+
+def _print_providers_status() -> None:
+    """Print which AI providers are available."""
+    try:
+        from pipeline.providers import available_providers
+        avail = available_providers()
+        active = [k for k, v in avail.items() if v]
+        inactive = [k for k, v in avail.items() if not v]
+        if active:
+            print(f"  Active providers: {', '.join(active)}", file=sys.stderr)
+        if inactive:
+            print(f"  Inactive providers: {', '.join(inactive)}", file=sys.stderr)
+        if not active:
+            print("  ⚠ No AI providers configured. Set API keys in .env", file=sys.stderr)
+            print("    Skills will return empty updates.", file=sys.stderr)
+    except ImportError:
+        print("  ⚠ providers module not available", file=sys.stderr)
+
+
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1073,10 +1248,27 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             examples:
-              python create.py                                     # interactive mode
-              python create.py --quick --title "My Film"           # quick with defaults
+              python create.py                                        # interactive mode
+              python create.py --quick --title "My Film"              # quick with defaults
               python create.py --title "X" --logline "..." -o x.json
-              python create.py --validate existing.json            # validate only
+              python create.py --validate existing.json               # validate only
+
+            AI-powered skills:
+              python create.py --idea "A robot discovers music"       # full 24-skill pipeline
+              python create.py --refine doc.json                      # refine all sections via AI
+              python create.py --refine doc.json --skills s04,s05,s07 # run specific skills
+              python create.py --refine doc.json --start-from s07     # resume from skill
+              python create.py --quick -t "X" --skills s02,s07 -o x.json  # scaffold + refine
+
+            skill IDs:
+              s01 concept-seed         s09 scene-composer       s17 timeline-assembler
+              s02 story-architect      s10 music-composer       s18 post-production
+              s03 scriptwriter         s11 sound-designer       s19 audio-mixer
+              s04 character-designer   s12 voice-producer       s20 render-plan-builder
+              s05 environment-designer s13 reference-asset-gen  s21 qa-validator
+              s06 prop-designer        s14 shot-video-gen       s22 deliverable-packager
+              s07 director             s15 prompt-composer      s23 marketing-asset-gen
+              s08 cinematographer      s16 consistency-enforcer s24 pipeline-orchestrator
         """),
     )
 
@@ -1084,6 +1276,21 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Validate an existing JSON file against the v3 schema and exit")
     parser.add_argument("--quick", action="store_true",
                         help="Non-interactive mode — use flags and defaults")
+
+    ai = parser.add_argument_group("AI skills")
+    ai.add_argument("--idea", metavar="TEXT",
+                    help="Generate a full project from a creative idea using the 24-skill AI pipeline")
+    ai.add_argument("--refine", metavar="FILE",
+                    help="Refine an existing JSON document by running AI skills on it")
+    ai.add_argument("--skills", metavar="LIST",
+                    help="Comma-separated skills to run (e.g. s02,s04-s06,s07-director). "
+                         "Use with --refine or after scaffold generation")
+    ai.add_argument("--start-from", metavar="SKILL",
+                    help="Resume full pipeline from this skill (e.g. s07 or s07-director)")
+    ai.add_argument("--stub-media", action="store_true",
+                    help="Skip real image/TTS generation in media-producing skills")
+    ai.add_argument("--output-dir", metavar="DIR", default="./output",
+                    help="Directory for generated assets and progress snapshots (default: ./output)")
 
     proj = parser.add_argument_group("project")
     proj.add_argument("--title", "-t", help="Project title")
@@ -1107,28 +1314,16 @@ def build_parser() -> argparse.ArgumentParser:
                      help="Skip schema validation of generated document")
     out.add_argument("--schema", metavar="FILE",
                      help="Path to schema file (default: auto-detected)")
+    out.add_argument("-v", "--verbose", action="store_true",
+                     help="Enable DEBUG logging")
 
     return parser
 
 
-def main() -> int:
-    parser = build_parser()
-    args = parser.parse_args()
-
-    # ── Validate mode ────────────────────────────────────────
-    if args.validate:
-        return validate_file(args.validate)
-
-    # ── Generate mode ────────────────────────────────────────
-    if args.quick or args.title:
-        if not args.title:
-            parser.error("--title is required in quick/non-interactive mode")
-        doc = run_quick(args)
-    else:
-        doc = run_interactive(args)
-
-    # ── Validate output ──────────────────────────────────────
+def _write_output(doc: dict, args: argparse.Namespace) -> int:
+    """Validate and write the document. Returns exit code."""
     schema_path = Path(args.schema) if args.schema else None
+
     if not args.no_validate:
         errors = validate_document(doc, schema_path)
         if errors:
@@ -1140,7 +1335,6 @@ def main() -> int:
             print("\nDocument generated with warnings. Use --no-validate to suppress.\n",
                   file=sys.stderr)
 
-    # ── Output ───────────────────────────────────────────────
     output = json.dumps(doc, indent=args.indent, ensure_ascii=False)
 
     if args.output:
@@ -1153,7 +1347,127 @@ def main() -> int:
     else:
         print(output)
 
+    # Print summary for AI-generated docs
+    prod = doc.get("production", {})
+    assets = doc.get("assetLibrary", {})
+    counts = {
+        "characters": len(prod.get("characters", [])),
+        "environments": len(prod.get("environments", [])),
+        "scenes": len(prod.get("scenes", [])),
+        "shots": len(prod.get("shots", [])),
+        "audio": len(assets.get("audioAssets", [])),
+    }
+    non_zero = {k: v for k, v in counts.items() if v}
+    if non_zero:
+        summary = ", ".join(f"{v} {k}" for k, v in non_zero.items())
+        print(f"  Content: {summary}", file=sys.stderr)
+
     return 0
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+
+    # ── Logging setup ────────────────────────────────────────
+    logging.basicConfig(
+        level=logging.DEBUG if getattr(args, "verbose", False) else logging.INFO,
+        format="%(asctime)s  %(levelname)-7s  %(name)s — %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    # ── Validate mode ────────────────────────────────────────
+    if args.validate:
+        return validate_file(args.validate)
+
+    # ── Idea mode: full 24-skill AI pipeline ─────────────────
+    if args.idea:
+        print("═══════════════════════════════════════════════════════", file=sys.stderr)
+        print("  Video Project — AI Pipeline (24 skills)", file=sys.stderr)
+        print("═══════════════════════════════════════════════════════", file=sys.stderr)
+        _print_providers_status()
+        output_dir = Path(args.output_dir)
+
+        # Resolve --start-from short IDs
+        start_from = None
+        if args.start_from:
+            resolved = _resolve_skill_names(args.start_from)
+            start_from = resolved[0] if resolved else None
+
+        doc = run_idea_pipeline(
+            args.idea,
+            output_dir=output_dir,
+            stub_media=args.stub_media,
+            start_from=start_from,
+        )
+        return _write_output(doc, args)
+
+    # ── Refine mode: run skills on existing document ─────────
+    if args.refine:
+        print("═══════════════════════════════════════════════════════", file=sys.stderr)
+        print("  Video Project — Refine with AI Skills", file=sys.stderr)
+        print("═══════════════════════════════════════════════════════", file=sys.stderr)
+        _print_providers_status()
+
+        try:
+            with open(args.refine) as f:
+                doc = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError) as exc:
+            print(f"✗ Cannot read {args.refine}: {exc}", file=sys.stderr)
+            return 1
+
+        print(f"  Loaded: {args.refine}", file=sys.stderr)
+
+        skill_names = _resolve_skill_names(args.skills) if args.skills else None
+        start_from = None
+        if args.start_from:
+            resolved = _resolve_skill_names(args.start_from)
+            start_from = resolved[0] if resolved else None
+
+        if skill_names:
+            print(f"  Skills: {', '.join(skill_names)}", file=sys.stderr)
+        elif start_from:
+            print(f"  Resuming from: {start_from}", file=sys.stderr)
+        else:
+            print("  Running full pipeline refinement...", file=sys.stderr)
+
+        output_dir = Path(args.output_dir)
+        doc = run_refine(
+            doc,
+            skill_names=skill_names,
+            output_dir=output_dir,
+            stub_media=args.stub_media,
+            start_from=start_from,
+        )
+        return _write_output(doc, args)
+
+    # ── Scaffold + optional skills ───────────────────────────
+    if args.quick or args.title:
+        if not args.title:
+            parser.error("--title is required in quick/non-interactive mode")
+        doc = run_quick(args)
+    else:
+        doc = run_interactive(args)
+
+    # If --skills specified alongside scaffold, refine the scaffold
+    if args.skills:
+        print("═══════════════════════════════════════════════════════", file=sys.stderr)
+        print("  Refining scaffold with AI skills...", file=sys.stderr)
+        print("═══════════════════════════════════════════════════════", file=sys.stderr)
+        _print_providers_status()
+
+        skill_names = _resolve_skill_names(args.skills)
+        if skill_names:
+            print(f"  Skills: {', '.join(skill_names)}", file=sys.stderr)
+            output_dir = Path(args.output_dir)
+            doc = run_refine(
+                doc,
+                skill_names=skill_names,
+                output_dir=output_dir,
+                stub_media=args.stub_media,
+            )
+
+    return _write_output(doc, args)
 
 
 if __name__ == "__main__":

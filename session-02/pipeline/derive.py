@@ -372,7 +372,7 @@ def ensure_audio(instance: dict) -> dict:
                 "fadeInSec":  0.0,
                 "fadeOutSec": 4.0,
             },
-            "generation": {"steps": [{"tool": "stub", "prompt": (
+            "generation": {"steps": [{"tool": "auto", "prompt": (
                 "industrial factory ambience: creak of cooling steel, wind "
                 "through unseen gaps, distant knock of settling metal, "
                 "AXIOM-7 servo hum inside the acoustic — deeply still, 62 seconds"
@@ -391,7 +391,7 @@ def ensure_audio(instance: dict) -> dict:
                 "fadeInSec":  4.0,
                 "fadeOutSec": 0.0,
             },
-            "generation": {"steps": [{"tool": "stub", "prompt": (
+            "generation": {"steps": [{"tool": "auto", "prompt": (
                 "abandoned artist's studio ambience: faint wind against "
                 "factory windows, occasional paint-jar clink, soft brushstroke "
                 "texture, warm reverberant space, dust and silence"
@@ -410,7 +410,7 @@ def ensure_audio(instance: dict) -> dict:
                 "fadeInSec":  0.0,
                 "fadeOutSec": 0.0,
             },
-            "generation": {"steps": [{"tool": "stub", "prompt": (
+            "generation": {"steps": [{"tool": "auto", "prompt": (
                 "AXIOM-7 mechanical SFX layer: servo whir, hydraulic arm movement, "
                 "optical sensor focus click, chassis creak, power cell hum, "
                 "brushstroke scrape of metal on canvas, decreasing intensity "

@@ -201,23 +201,46 @@ def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
     log.info("runway → %s (%d bytes)", out_path.name, len(video_resp.content))
 
 
-def _veo_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
-    """Generate a video clip via Google Veo 3.1 (Gemini API)."""
+def _veo_generate_shot(
+    shot: dict,
+    api_key: str,
+    out_path: Path,
+    *,
+    enriched_prompt: str | None = None,
+    reference_images: list[bytes] | None = None,
+) -> None:
+    """Generate a video clip via Google Veo 3.1 (Gemini API) with reference images."""
     import requests as _req  # noqa: PLC0415
     from google import genai  # noqa: PLC0415
     from google.genai import types  # noqa: PLC0415
 
     gen_params = shot.get("genParams") or {}
-    prompt = gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+    prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
 
     client = genai.Client(api_key=api_key)
+
+    # Build reference images for character/style consistency
+    veo_refs: list[types.VideoGenerationReferenceImage] = []
+    for i, img_bytes in enumerate(reference_images or []):
+        if not img_bytes or len(img_bytes) < 100:
+            continue  # skip stubs
+        ref_type = types.VideoGenerationReferenceType.ASSET
+        veo_refs.append(types.VideoGenerationReferenceImage(
+            image=types.Image(image_bytes=img_bytes, mime_type="image/png"),
+            reference_type=ref_type,
+        ))
+    # Veo supports max 3 reference images
+    veo_refs = veo_refs[:3]
+
+    config = types.GenerateVideosConfig(aspect_ratio="16:9")
+    if veo_refs:
+        config.reference_images = veo_refs
+        log.info("veo 3.1: %d reference image(s) for %s", len(veo_refs), _shot_id(shot))
 
     operation = client.models.generate_videos(
         model="veo-3.1-generate-preview",
         prompt=prompt,
-        config=types.GenerateVideosConfig(
-            aspect_ratio="16:9",
-        ),
+        config=config,
     )
     log.info("veo 3.1 task started for %s", _shot_id(shot))
 
@@ -309,11 +332,156 @@ def _suno_generate_music(asset: dict, cookie: str, out_path: Path) -> None:
     log.info("suno → %s", out_path.name)
 
 
+# ── consistency layer ─────────────────────────────────────────────────────────
+
+def _build_style_preamble(instance: dict) -> str:
+    """
+    Extract a consistent visual preamble from the instance's characters,
+    environments, style guides, and director instructions.
+    Prepended to every shot prompt so the video model maintains coherence.
+    """
+    parts: list[str] = []
+
+    # Director style mandate
+    di = (instance.get("canonicalDocuments") or {}).get("directorInstructions") or {}
+    if di.get("visionStatement"):
+        parts.append(f"Director vision: {di['visionStatement']}")
+    if di.get("colorDirection"):
+        parts.append(f"Color palette: {di['colorDirection']}")
+
+    # Style guide
+    for sg in (instance.get("production") or {}).get("styleGuides", []):
+        gl = sg.get("guidelines") or {}
+        if gl.get("adjectives"):
+            parts.append(f"Visual style: {', '.join(gl['adjectives'])}")
+        if gl.get("palette"):
+            parts.append(f"Color references: {', '.join(gl['palette'])}")
+        neg = sg.get("negativeStylePrompt")
+        if neg:
+            parts.append(f"AVOID: {neg}")
+
+    # Character descriptions (canonical)
+    for char in (instance.get("production") or {}).get("characters", []):
+        desc = char.get("description", "")
+        if desc:
+            parts.append(f"Character {char.get('name', '?')}: {desc}")
+        # Use canonicalPromptFragments if available
+        for frag in char.get("canonicalPromptFragments", []):
+            if frag.get("locked"):
+                parts.append(f"  [locked] {frag['fragment']}")
+
+    # Environment descriptions
+    for env in (instance.get("production") or {}).get("environments", []):
+        desc = env.get("description", "")
+        if desc:
+            parts.append(f"Setting: {desc}")
+
+    return "\n".join(parts)
+
+
+def _generate_reference_images(
+    instance: dict, output_dir: Path
+) -> dict[str, bytes]:
+    """
+    Generate canonical reference images for each character.
+    Returns {character_logicalId: png_bytes}.
+    Uses providers.generate_image() (DALL-E → Imagen → stub).
+    """
+    from pipeline.providers import generate_image  # noqa: PLC0415
+
+    refs_dir = output_dir / "references"
+    refs_dir.mkdir(parents=True, exist_ok=True)
+
+    preamble = _build_style_preamble(instance)
+    characters = (instance.get("production") or {}).get("characters", [])
+    ref_images: dict[str, bytes] = {}
+
+    for char in characters:
+        char_lid = char.get("logicalId") or char.get("id") or "unknown"
+        ref_path = refs_dir / f"{char_lid}.png"
+
+        # Use cached reference if available
+        if ref_path.exists():
+            ref_images[char_lid] = ref_path.read_bytes()
+            log.info("[ref] cache hit: %s", ref_path.name)
+            continue
+
+        desc = char.get("description", "")
+        name = char.get("name", "character")
+
+        # Build a detailed character reference prompt
+        prompt = (
+            f"Full portrait reference sheet of {name}: {desc}. "
+            f"Front-facing, neutral lighting, full body visible, clean background. "
+            f"Photorealistic, cinematic, consistent with: {preamble[:500]}"
+        )
+
+        log.info("[ref] generating reference image for %s", name)
+        img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
+        ref_path.write_bytes(img_bytes)
+        ref_images[char_lid] = img_bytes
+        log.info("[ref] %s → %s (%d bytes)", name, ref_path.name, len(img_bytes))
+
+    return ref_images
+
+
+def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
+    """
+    Build a consistency-enriched prompt for a shot by combining:
+    - The style preamble (character/environment/color context)
+    - The shot's specific generation prompt
+    - Scene mood and shot type context
+    """
+    gen_params = shot.get("genParams") or {}
+    base_prompt = gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+
+    # Get scene context
+    scene_ref_id = (shot.get("sceneRef") or {}).get("id", "")
+    scene_mood = ""
+    for scene in (instance.get("production") or {}).get("scenes", []):
+        if scene.get("id") == scene_ref_id or scene.get("logicalId") == scene_ref_id:
+            scene_mood = scene.get("mood", "")
+            break
+
+    # Cinematic spec context
+    spec = shot.get("cinematicSpec") or {}
+    shot_type = spec.get("shotType", "")
+    movement = spec.get("cameraMovement", "")
+    angle = spec.get("cameraAngle", "")
+    style_adj = ", ".join((spec.get("style") or {}).get("adjectives", []))
+
+    # Build enriched prompt
+    enriched_parts = [
+        f"[GLOBAL STYLE CONTEXT]\n{preamble}",
+        f"\n[SHOT SPECIFICATION]",
+        f"Shot type: {shot_type}, Camera: {angle} angle, {movement} movement",
+    ]
+    if style_adj:
+        enriched_parts.append(f"Shot mood: {style_adj}")
+    if scene_mood:
+        enriched_parts.append(f"Scene mood: {scene_mood}")
+    enriched_parts.append(f"\n[GENERATION PROMPT]\n{base_prompt}")
+
+    # Director's must-avoid as negative guidance
+    di = (instance.get("canonicalDocuments") or {}).get("directorInstructions") or {}
+    avoid = di.get("mustAvoid", [])
+    if avoid:
+        enriched_parts.append(f"\nDO NOT include: {', '.join(avoid)}")
+
+    return "\n".join(enriched_parts)
+
+
 # ── public API ────────────────────────────────────────────────────────────────
 
 def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
     """
     Generate (or stub) one video clip per shot.
+
+    Consistency pipeline:
+      1. Generate canonical reference images for each character
+      2. Build style preamble from instance context
+      3. Enrich each shot prompt with character/environment/style context
+      4. Pass reference images to video model for visual anchoring
 
     Returns {shot_logical_id: path_to_clip}.
     """
@@ -328,6 +496,14 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
         log.warning("generate_shots: no shots found in instance — nothing to generate")
         return {}
 
+    # ── Step 1: Generate reference images for consistency ─────────────────
+    log.info("─── Reference image generation ─────────────────────────────")
+    ref_images = _generate_reference_images(instance, output_dir)
+
+    # ── Step 2: Build style preamble ──────────────────────────────────────
+    preamble = _build_style_preamble(instance)
+    log.info("Style preamble: %d chars", len(preamble))
+
     results: dict[str, Path] = {}
     errors: list[str] = []
 
@@ -337,6 +513,25 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
         if out_path.exists():
             log.debug("cache hit: %s", out_path.name)
             return sid, out_path
+
+        # Enrich the prompt with full context
+        enriched_prompt = _enrich_prompt(shot, instance, preamble)
+
+        # Collect reference images for this shot's consistency anchors
+        shot_refs: list[bytes] = []
+        anchors = (shot.get("genParams") or {}).get("consistencyAnchors", [])
+        for anchor in anchors:
+            ref_id = (anchor.get("ref") or {}).get("id", "")
+            # Map character ref IDs to their reference images
+            for char in (instance.get("production") or {}).get("characters", []):
+                if char.get("id") == ref_id or char.get("logicalId") == ref_id:
+                    char_lid = char.get("logicalId") or char.get("id")
+                    if char_lid in ref_images:
+                        shot_refs.append(ref_images[char_lid])
+        # If no explicit anchors but refs exist, use all refs
+        if not shot_refs and ref_images:
+            shot_refs = list(ref_images.values())
+
         # Try Runway first
         if runway_key:
             try:
@@ -344,10 +539,14 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                 return sid, out_path
             except Exception as exc:
                 log.warning("Runway failed for %s (%s) — trying Veo fallback", sid, exc)
-        # Try Veo 3.1 as fallback
+        # Try Veo 3.1 with reference images
         if gemini_key and "REPLACE_ME" not in gemini_key:
             try:
-                _veo_generate_shot(shot, gemini_key, out_path)
+                _veo_generate_shot(
+                    shot, gemini_key, out_path,
+                    enriched_prompt=enriched_prompt,
+                    reference_images=shot_refs,
+                )
                 return sid, out_path
             except Exception as exc:
                 log.warning("Veo 3.1 failed for %s (%s) — falling back to stub", sid, exc)
@@ -419,7 +618,35 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
                 _suno_generate_music(asset, suno_cookie, out_path)
                 return key, out_path
             except Exception as exc:
-                log.warning("Suno failed for %s (%s) — stub", key, exc)
+                log.warning("Suno failed for %s (%s) — trying ElevenLabs", key, exc)
+
+        # ElevenLabs: SFX / ambient
+        if elevenlabs_key and tool in ("elevenlabs", "auto") and atype in ("sfx", "ambient"):
+            prompt = steps[0].get("prompt") or asset.get("description") or atype
+            duration = asset.get("durationSec")
+            try:
+                from . import providers
+                data = providers.generate_sound_effect(prompt, duration_seconds=duration)
+                if data:
+                    out_path.write_bytes(data)
+                    log.info("[audio] ElevenLabs SFX ✓  %s", key)
+                    return key, out_path
+            except Exception as exc:
+                log.warning("ElevenLabs SFX failed for %s (%s) — stub", key, exc)
+
+        # ElevenLabs: music (fallback when Suno unavailable)
+        if elevenlabs_key and tool in ("elevenlabs", "suno", "auto") and atype == "music":
+            prompt = steps[0].get("prompt") or asset.get("description") or "cinematic score"
+            duration = asset.get("durationSec") or 30
+            try:
+                from . import providers
+                data = providers.generate_music(prompt, duration_seconds=int(duration))
+                if data:
+                    out_path.write_bytes(data)
+                    log.info("[audio] ElevenLabs Music ✓  %s", key)
+                    return key, out_path
+            except Exception as exc:
+                log.warning("ElevenLabs Music failed for %s (%s) — stub", key, exc)
 
         _stub_audio(asset, out_path)
         return key, out_path
