@@ -613,3 +613,173 @@ class TestDemoJsonCompleteness:
 
     def test_deliverable_has_platform(self, instance):
         assert instance["deliverables"][0].get("platform"), "deliverable missing platform"
+
+
+# ── S13 Reference Protocol tests ─────────────────────────────────────────────
+
+class TestReferenceLibrary:
+    """Test the ReferenceLibrary data structure."""
+
+    def test_empty_library(self):
+        from pipeline.generate import ReferenceLibrary
+        lib = ReferenceLibrary()
+        assert lib.all_refs_flat() == []
+        assert lib.all_character_refs("nonexistent") == []
+        assert lib.primary_character_ref("nonexistent") is None
+
+    def test_character_views(self):
+        from pipeline.generate import ReferenceLibrary
+        lib = ReferenceLibrary()
+        lib.characters["char.a"] = {
+            "front": b"FRONT",
+            "three_quarter": b"3Q",
+            "full_body": b"BODY",
+        }
+        assert lib.primary_character_ref("char.a") == b"FRONT"
+        assert len(lib.all_character_refs("char.a")) == 3
+        assert b"FRONT" in lib.all_refs_flat()
+
+    def test_environment_views(self):
+        from pipeline.generate import ReferenceLibrary
+        lib = ReferenceLibrary()
+        lib.environments["env.office"] = {
+            "wide_plate": b"WIDE",
+            "detail_plate": b"DETAIL",
+        }
+        assert len(lib.all_environment_refs("env.office")) == 2
+
+    def test_all_refs_flat_ordering(self):
+        """Characters first, then environments, then props."""
+        from pipeline.generate import ReferenceLibrary
+        lib = ReferenceLibrary()
+        lib.characters["c"] = {"front": b"CHAR"}
+        lib.environments["e"] = {"wide_plate": b"ENV"}
+        lib.props["p"] = b"PROP"
+        flat = lib.all_refs_flat()
+        assert flat == [b"CHAR", b"ENV", b"PROP"]
+
+
+class TestS13ReferenceGeneration:
+    """Test the full S13 reference generation protocol."""
+
+    def test_generates_3_character_views(self, minimal_instance, tmp_path):
+        """S13 Step 2: Each character should get front + 3/4 + full_body."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500  # minimal fake PNG
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img):
+            lib = _generate_reference_images(minimal_instance, tmp_path)
+
+        assert "char.a" in lib.characters
+        views = lib.characters["char.a"]
+        assert "front" in views
+        assert "three_quarter" in views
+        assert "full_body" in views
+
+    def test_generates_2_environment_plates(self, minimal_instance, tmp_path):
+        """S13 Step 3: Each environment should get wide_plate + detail_plate."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img):
+            lib = _generate_reference_images(minimal_instance, tmp_path)
+
+        assert "env.office" in lib.environments
+        views = lib.environments["env.office"]
+        assert "wide_plate" in views
+        assert "detail_plate" in views
+
+    def test_generates_prop_references(self, tmp_path):
+        """S13 Step 4: Each significant prop should get 1 reference."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        instance = {
+            "production": {
+                "characters": [],
+                "environments": [],
+                "props": [{
+                    "id": "prop.gun.v1", "logicalId": "prop.gun",
+                    "entityType": "prop", "name": "Revolver",
+                    "description": "A vintage snub-nose revolver.",
+                    "version": {"number": "1.0.0", "state": "approved"},
+                }],
+                "styleGuides": [],
+            },
+            "canonicalDocuments": {"directorInstructions": {}},
+        }
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img):
+            lib = _generate_reference_images(instance, tmp_path)
+
+        assert "prop.gun" in lib.props
+
+    def test_caches_on_disk(self, minimal_instance, tmp_path):
+        """Reference images should be cached — second call doesn't regenerate."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img) as mock_gen:
+            lib1 = _generate_reference_images(minimal_instance, tmp_path)
+            call_count_1 = mock_gen.call_count
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img) as mock_gen:
+            lib2 = _generate_reference_images(minimal_instance, tmp_path)
+            call_count_2 = mock_gen.call_count
+
+        assert call_count_1 > 0, "First run should generate images"
+        assert call_count_2 == 0, "Second run should use cache"
+
+    def test_environment_prompts_exclude_characters(self, minimal_instance, tmp_path):
+        """Environment plate prompts must say NO people / NO characters."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        captured_prompts: list[str] = []
+
+        def capture_gen(prompt, **kwargs):
+            captured_prompts.append(prompt)
+            return fake_img
+
+        with patch("pipeline.providers.generate_image", side_effect=capture_gen):
+            _generate_reference_images(minimal_instance, tmp_path)
+
+        env_prompts = [p for p in captured_prompts if "Environment reference" in p]
+        assert len(env_prompts) >= 2, "Should have at least 2 environment prompts"
+        for p in env_prompts:
+            assert "NO people" in p or "NO characters" in p, \
+                f"Environment prompt must exclude characters: {p[:100]}"
+
+    def test_character_views_reference_identity(self, minimal_instance, tmp_path):
+        """3/4 and full_body prompts must reference front-facing consistency."""
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        captured_prompts: list[str] = []
+
+        def capture_gen(prompt, **kwargs):
+            captured_prompts.append(prompt)
+            return fake_img
+
+        with patch("pipeline.providers.generate_image", side_effect=capture_gen):
+            _generate_reference_images(minimal_instance, tmp_path)
+
+        char_prompts = [p for p in captured_prompts if "ALICE" in p]
+        three_q = [p for p in char_prompts if "Three-quarter" in p or "3/4" in p]
+        full_body = [p for p in char_prompts if "Full body" in p]
+        assert len(three_q) >= 1, "Should have 3/4 view prompt"
+        assert len(full_body) >= 1, "Should have full body prompt"
+        for p in three_q + full_body:
+            assert "IDENTICAL" in p, f"Non-front views must reference identity: {p[:100]}"
+
+    def test_total_reference_count(self, minimal_instance, tmp_path):
+        """
+        minimal_instance has 1 character + 1 environment + 0 props.
+        Should generate: 3 char views + 2 env plates = 5 total.
+        """
+        from pipeline.generate import _generate_reference_images
+        fake_img = b"\x89PNG" + b"\x00" * 500
+
+        with patch("pipeline.providers.generate_image", return_value=fake_img) as mock_gen:
+            lib = _generate_reference_images(minimal_instance, tmp_path)
+
+        assert mock_gen.call_count == 5, f"Expected 5 generate_image calls, got {mock_gen.call_count}"
+        assert len(lib.all_refs_flat()) == 5

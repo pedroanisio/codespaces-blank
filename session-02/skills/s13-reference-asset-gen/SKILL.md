@@ -22,11 +22,12 @@ for all downstream video generation.
 
 ### Writes (primary owner)
 - `assetLibrary.visualAssets[]` → `VisualAssetEntity[]` where `isCanonicalReference: true`:
-  - `visualType`: "character_reference" | "environment_reference" | "prop_reference"
+  - `visualType`: "character_reference" | "environment_reference" | "environment_pov_plate" | "prop_reference"
   - `modality`: "image"
   - `purpose`: "canonical_reference"
   - `characterRefs[]`: Back-references for character reference images
   - `environmentRefs[]`: Back-references for environment reference images
+  - `povCharacterRef`: EntityRef to the character whose POV defines the camera (for `environment_pov_plate`)
   - `propRefs[]`: Back-references for prop reference images
   - `spec` → `VisualAssetSpec` (resolution, style, lighting)
   - `generation` → `GenerationManifest`:
@@ -71,9 +72,28 @@ Each image gets a `GenerationStep` with:
 
 ### Step 3: Generate environment references
 
-For each environment, generate 1-2 reference images:
-- Wide establishing shot
-- Detail/atmosphere shot (if complex environment)
+For each environment, generate 2 reference images (NO characters present):
+- Wide establishing shot — full spatial extent, lighting, atmosphere
+- Detail/atmosphere shot — textures, distinctive elements, mood
+
+**Important**: Environment plates must contain absolutely NO people, NO human
+figures, NO characters. They are background plates for spatial/lighting reference.
+
+### Step 3b: Generate POV environment plates
+
+For each (character, environment) pair where the character appears in scenes
+using that environment, generate 1 POV plate:
+- Camera at character eye-level: `character.heightM × 0.94` (eye-to-height ratio)
+- Camera facing the direction the character would look in their primary scene
+- First-person perspective — what the character sees when they enter the space
+- Same lighting/atmosphere as environment plates
+- `visualType: "environment_pov_plate"`
+- `povCharacterRef`: EntityRef to the character defining the viewpoint
+
+**Why**: POV plates anchor the spatial relationship between character and
+environment. When S14 generates a shot where the character looks around,
+the POV plate ensures the environment matches what was established. Critical
+for `shotType: "POV"` and subjective camera sequences.
 
 ### Step 4: Generate prop references
 
@@ -99,7 +119,10 @@ Set `referenceAssetRefs[]` on each character, environment, and prop entity.
 
 ## Output Contract
 
-- ≥2 reference images per character, ≥1 per environment, ≥1 per significant prop
+- ≥3 reference images per character (front, 3/4, full body)
+- ≥2 plates per environment (wide, detail) — NO characters in frame
+- ≥1 POV plate per (character, environment) pair appearing in the same scene
+- ≥1 render per significant prop (isolated, studio lighting)
 - All images have `isCanonicalReference: true`
 - Each image has a complete `GenerationManifest` with seeds and model info
 - `ConsistencyAnchor[]` is populated with `lockLevel: "hard"`

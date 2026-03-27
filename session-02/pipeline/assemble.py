@@ -120,7 +120,9 @@ def validate_spatial_consistency(instance: dict) -> list[str]:
                     camera_positions.append((shot.get("name", shot.get("id")), pos))
 
             if len(camera_positions) >= 2:
-                _check_180_rule(scene_name, camera_positions, warnings)
+                action_line = _find_action_line(scene)
+                _check_180_rule(scene_name, camera_positions, warnings,
+                                action_line=action_line)
 
         # Check screen direction consistency
         if sc.get("enforceScreenDirection"):
@@ -148,16 +150,61 @@ def validate_spatial_consistency(instance: dict) -> list[str]:
     return warnings
 
 
+def _find_action_line(scene: dict) -> tuple[dict, dict] | None:
+    """Extract the action_line anchor pair from a scene's sceneSpace.spatialAnchors."""
+    space = scene.get("sceneSpace") or {}
+    anchors = space.get("spatialAnchors") or []
+    by_id: dict[str, dict] = {a.get("anchorId", ""): a for a in anchors}
+
+    for anc in anchors:
+        if anc.get("anchorType") == "action_line" and anc.get("linkedAnchorId"):
+            linked = by_id.get(anc["linkedAnchorId"])
+            if linked and linked.get("position") and anc.get("position"):
+                return (anc["position"], linked["position"])
+    return None
+
+
 def _check_180_rule(
     scene_name: str,
     camera_positions: list[tuple[str, dict]],
     warnings: list[str],
+    action_line: tuple[dict, dict] | None = None,
 ) -> None:
-    """Check if all cameras are on the same side of the X=0 plane (simplified).
+    """Check if all cameras are on the same side of the action line.
 
-    Real 180-degree validation would use the action line spatial anchors,
-    but this provides a basic check using camera X positions.
+    When *action_line* is provided (two Position3D dicts from paired
+    SpatialAnchors), uses a 2-D cross product on the XZ plane to determine
+    the side.  Falls back to a simplified X=0 heuristic otherwise.
     """
+    if action_line is not None:
+        a, b = action_line
+        dx = b.get("x", 0.0) - a.get("x", 0.0)
+        dz = b.get("z", 0.0) - a.get("z", 0.0)
+        if dx == 0.0 and dz == 0.0:
+            return  # degenerate
+
+        sides: list[tuple[str, bool]] = []
+        for shot_name, pos in camera_positions:
+            cx = pos.get("x", 0.0) - a.get("x", 0.0)
+            cz = pos.get("z", 0.0) - a.get("z", 0.0)
+            cross = dx * cz - dz * cx
+            if abs(cross) < 1e-6:
+                continue
+            sides.append((shot_name, cross > 0))
+
+        if len(sides) >= 2:
+            first_side = sides[0][1]
+            for shot_name, side in sides[1:]:
+                if side != first_side:
+                    warnings.append(
+                        f"[{scene_name}] 180-degree rule violation: "
+                        f"{shot_name} camera is on the {'positive' if side else 'negative'} "
+                        f"side of the action line, first shot is on the "
+                        f"{'positive' if first_side else 'negative'} side"
+                    )
+        return
+
+    # Fallback: simplified X=0 heuristic
     x_signs = []
     for shot_name, pos in camera_positions:
         x = pos.get("x", 0.0)
@@ -332,20 +379,28 @@ def _concat_clips_ffmpeg(
                 break
 
     if not has_transitions or len(clip_paths) <= 1:
-        list_file = out_path.parent / "_concat_list.txt"
-        list_file.write_text(
-            "\n".join(f"file '{p.resolve()}'" for p in clip_paths),
-            encoding="utf-8",
-        )
+        inputs = []
+        scale_filters = []
+        for i, p in enumerate(clip_paths):
+            inputs += ["-i", str(p)]
+            scale_filters.append(
+                f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
+                f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[n{i}]"
+            )
+        concat_filter = "".join(f"[n{i}]" for i in range(len(clip_paths)))
+        concat_filter += f"concat=n={len(clip_paths)}:v=1:a=0[vout]"
+        scale_filters.append(concat_filter)
+
         cmd = [
             "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0",
-            "-i", str(list_file),
-            "-c", "copy",
+            *inputs,
+            "-filter_complex", ";".join(scale_filters),
+            "-map", "[vout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-pix_fmt", "yuv420p", "-an",
             str(out_path),
         ]
         subprocess.run(cmd, check=True, capture_output=True)
-        list_file.unlink(missing_ok=True)
         return
 
     # Build xfade filter chain
@@ -370,9 +425,22 @@ def _concat_clips_ffmpeg(
     for p in clip_paths:
         inputs += ["-i", str(p)]
 
-    filter_parts = []
+    # Normalize all inputs to the same resolution so xfade works across
+    # mixed sources (e.g. Veo 720p + stub 1080p).
+    scale_parts = []
+    for i in range(len(clip_paths)):
+        scale_parts.append(
+            f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
+            f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[n{i}]"
+        )
+
+    # Every clip pair gets an xfade so the chain stays continuous.
+    # "cut" transitions use a near-zero duration (1 frame ≈ 0.04s).
+    _CUT_DUR = 0.04
+
+    filter_parts = list(scale_parts)
     current_offset = 0.0
-    prev_label = "[0:v]"
+    prev_label = "[n0]"
 
     for i in range(len(clip_paths) - 1):
         t_spec = transition_specs[i] if i < len(transition_specs) else {"type": "cut"}
@@ -380,16 +448,15 @@ def _concat_clips_ffmpeg(
         t_dur = float(t_spec.get("durationSec", 0.5))
 
         if t_type == "cut" or t_type not in xfade_map:
-            current_offset += durations[i]
-            prev_label = f"[{i + 1}:v]"
-            continue
+            xfade_name = "fade"
+            t_dur = _CUT_DUR
+        else:
+            xfade_name = xfade_map[t_type]
+            t_dur = min(t_dur, durations[i] * 0.5, durations[i + 1] * 0.5)
 
-        xfade_name = xfade_map[t_type]
-        t_dur = min(t_dur, durations[i] * 0.5, durations[i + 1] * 0.5)
         offset = current_offset + durations[i] - t_dur
-
-        out_label = f"[v{i}]" if i < len(clip_paths) - 2 else "[vout]"
-        next_label = f"[{i + 1}:v]"
+        out_label = "[vout]" if i == len(clip_paths) - 2 else f"[v{i}]"
+        next_label = f"[n{i + 1}]"
 
         filter_parts.append(
             f"{prev_label}{next_label}xfade=transition={xfade_name}:duration={t_dur:.2f}:offset={offset:.2f}{out_label}"
@@ -397,29 +464,13 @@ def _concat_clips_ffmpeg(
         prev_label = out_label
         current_offset = offset
 
-    if not filter_parts:
-        list_file = out_path.parent / "_concat_list.txt"
-        list_file.write_text(
-            "\n".join(f"file '{p.resolve()}'" for p in clip_paths),
-            encoding="utf-8",
-        )
-        cmd = [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0",
-            "-i", str(list_file),
-            "-c", "copy",
-            str(out_path),
-        ]
-        subprocess.run(cmd, check=True, capture_output=True)
-        list_file.unlink(missing_ok=True)
-        return
-
     cmd = [
         "ffmpeg", "-y",
         *inputs,
         "-filter_complex", ";".join(filter_parts),
         "-map", "[vout]",
         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-pix_fmt", "yuv420p",
         "-an",
         str(out_path),
     ]
@@ -483,6 +534,11 @@ def _build_audio_mix_cmd(
 
     audio_codec, audio_bitrate = _resolve_audio_codec(instance)
 
+    # Resolve total timeline duration for audio padding
+    tl_duration = float(tl.get("durationSec", 0))
+    if not tl_duration:
+        tl_duration = float((instance.get("project") or {}).get("targetRuntimeSec", 30))
+
     inputs: list[str] = ["-i", str(video_path)]
     filter_parts: list[str] = []
     mix_inputs: list[str] = []
@@ -513,7 +569,7 @@ def _build_audio_mix_cmd(
         chain = f"[{stream}:a]"
         chain += f"atrim=duration={duration},"
         chain += f"adelay={int(t_in * 1000)}|{int(t_in * 1000)},"
-        chain += f"apad=whole_dur=300"
+        chain += f"apad=whole_dur={tl_duration}"
         if gain_db != 0:
             chain += f",volume={gain_db}dB"
         if pan_value is not None and pan_value != 0:
@@ -552,7 +608,7 @@ def _parse_color_direction(direction: str) -> dict:
     brightness, contrast, saturation = 0.0, 1.0, 1.0
     if "desaturated" in d or "muted" in d:
         saturation = 0.75
-    if "vibrant" in d or "saturated" in d:
+    elif "vibrant" in d or ("saturated" in d and "desaturated" not in d):
         saturation = 1.3
     if "warm" in d or "amber" in d:
         brightness, contrast = 0.05, 1.05
@@ -575,31 +631,66 @@ def _parse_color_direction(direction: str) -> dict:
     }
 
 
-def _resolve_color_grade_params(instance: dict) -> tuple[dict, float]:
+def _resolve_lut_path(lut_ref: dict | None, instance: dict) -> Path | None:
+    """Resolve a lutRef EntityRef to a .cube file path on disk.
+
+    Searches visualAssets and genericAssets for the referenced entity and
+    returns its _filePath if it exists as a readable .cube / .3dl file.
+    """
+    if not lut_ref:
+        return None
+    ref_id = lut_ref.get("id") or lut_ref.get("logicalId") or ""
+    if not ref_id:
+        return None
+
+    for pool_key in ("visualAssets", "genericAssets"):
+        for asset in (instance.get("assetLibrary") or {}).get(pool_key) or []:
+            if asset.get("id") == ref_id or asset.get("logicalId") == ref_id:
+                fp = asset.get("_filePath", "")
+                if fp:
+                    p = Path(fp)
+                    if p.exists() and p.suffix.lower() in (".cube", ".3dl"):
+                        return p
+    return None
+
+
+def _resolve_color_grade_params(instance: dict) -> tuple[dict, float, Path | None]:
     """Resolve color grade parameters from renderPlan ColorGradeOp, then directorInstructions.
 
-    Returns (eq_params dict, strength 0-1).
+    Returns (eq_params dict, strength 0-1, lut_path or None).
     """
     render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
     rp = render_plans[0] if render_plans else {}
     strength = 1.0
+    lut_path: Path | None = None
 
     for op in rp.get("operations") or []:
         if op.get("opType") == "colorGrade":
             intent = op.get("intent", "")
             strength = float(op.get("strength", 1.0))
+            lut_path = _resolve_lut_path(op.get("lutRef"), instance)
             if intent:
-                return _parse_color_direction(intent), strength
+                return _parse_color_direction(intent), strength, lut_path
 
     color_direction = _pick(instance, "canonicalDocuments.directorInstructions.colorDirection") or ""
-    return _parse_color_direction(color_direction), strength
+    return _parse_color_direction(color_direction), strength, lut_path
 
 
-def _color_grade_cmd(input_path: Path, params: dict, strength: float, out_path: Path) -> list[str]:
+def _color_grade_cmd(
+    input_path: Path,
+    params: dict,
+    strength: float,
+    out_path: Path,
+    *,
+    lut_path: Path | None = None,
+) -> list[str]:
     """Build color grade FFmpeg command.
 
-    Fix #1: Uses -c copy when no grading is needed. Uses near-lossless CRF 1
-    for the intermediate to minimize quality loss before the final encode.
+    Supports:
+      - LUT application via lut3d filter when lutRef resolves to a .cube file
+      - eq filter from intent text heuristic, scaled by strength
+      - -c copy passthrough when grade is a no-op
+      - Near-lossless CRF 1 intermediate when re-encoding is needed
     """
     brightness = params.get("brightness", 0.0) * strength
     contrast = 1.0 + (params.get("contrast", 1.0) - 1.0) * strength
@@ -609,19 +700,29 @@ def _color_grade_cmd(input_path: Path, params: dict, strength: float, out_path: 
         abs(brightness) < 0.001
         and abs(contrast - 1.0) < 0.001
         and abs(saturation - 1.0) < 0.001
+        and lut_path is None
     )
     if is_noop:
         return ["ffmpeg", "-y", "-i", str(input_path), "-c", "copy", str(out_path)]
 
-    eq_filter = (
-        f"eq=brightness={brightness:.3f}"
-        f":contrast={contrast:.3f}"
-        f":saturation={saturation:.3f}"
-    )
+    # Build filter chain
+    filters: list[str] = []
+    if lut_path is not None:
+        lut_str = str(lut_path).replace("\\", "/").replace(":", "\\:")
+        filters.append(f"lut3d='{lut_str}'")
+    if not (abs(brightness) < 0.001 and abs(contrast - 1.0) < 0.001 and abs(saturation - 1.0) < 0.001):
+        filters.append(
+            f"eq=brightness={brightness:.3f}"
+            f":contrast={contrast:.3f}"
+            f":saturation={saturation:.3f}"
+        )
+
+    vf = ",".join(filters)
     return [
         "ffmpeg", "-y",
         "-i", str(input_path),
-        "-vf", eq_filter,
+        "-vf", vf,
+        "-pix_fmt", "yuv420p",
         "-c:v", "libx264", "-preset", "fast", "-crf", "1",
         "-movflags", "+faststart",
         "-c:a", "copy",
@@ -674,6 +775,7 @@ def _encode_cmd(
         "ffmpeg", "-y",
         "-i", str(input_path),
         "-vf", f"scale={width}:{height},fps={fps}",
+        "-pix_fmt", "yuv420p",
         "-c:v", codec, *bitrate_flag, *profile_flag, "-preset", "fast",
         "-movflags", "+faststart",
         "-c:a", audio_codec, "-b:a", audio_bitrate,
@@ -718,6 +820,213 @@ def populate_final_output(instance: dict, final_path: Path) -> dict:
     return instance
 
 
+# ── Operation DAG executor ────────────────────────────────────────────────────
+
+# Supported opTypes and the executor functions they dispatch to.
+# Each executor receives (op, ctx) and returns the output Path.
+# ctx holds instance, paths, intermediate dir, etc.
+
+def _exec_retime(op: dict, input_path: Path, out_path: Path) -> list[str]:
+    """Build FFmpeg command for RetimeOp (speed change / reverse)."""
+    retime = op.get("retime") or {}
+    speed_pct = float(retime.get("speedPercent", 100))
+    reverse = retime.get("reverse", False)
+    interpolation = retime.get("frameInterpolation", "none")
+
+    pts_factor = 100.0 / speed_pct if speed_pct > 0 else 1.0
+    atempo = speed_pct / 100.0
+
+    vf_parts = []
+    if reverse:
+        vf_parts.append("reverse")
+    if abs(speed_pct - 100) > 0.1:
+        vf_parts.append(f"setpts={pts_factor:.4f}*PTS")
+    if interpolation == "blend" and abs(speed_pct - 100) > 0.1:
+        vf_parts.append("minterpolate='mi_mode=blend'")
+    elif interpolation == "optical_flow" and abs(speed_pct - 100) > 0.1:
+        vf_parts.append("minterpolate='mi_mode=mci:mc_mode=aobmc:vsbmc=1'")
+
+    af_parts = []
+    if reverse:
+        af_parts.append("areverse")
+    if abs(speed_pct - 100) > 0.1:
+        # atempo only accepts 0.5..100; chain for extremes
+        t = atempo
+        while t > 2.0:
+            af_parts.append("atempo=2.0")
+            t /= 2.0
+        while t < 0.5:
+            af_parts.append("atempo=0.5")
+            t *= 2.0
+        af_parts.append(f"atempo={t:.4f}")
+
+    cmd = ["ffmpeg", "-y", "-i", str(input_path)]
+    if vf_parts:
+        cmd += ["-vf", ",".join(vf_parts)]
+    if af_parts:
+        cmd += ["-af", ",".join(af_parts)]
+    cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "1", "-c:a", "aac", str(out_path)]
+    return cmd
+
+
+def _exec_filter(op: dict, input_path: Path, out_path: Path) -> list[str]:
+    """Build FFmpeg command for FilterOp (generic filter pass-through)."""
+    filter_type = op.get("filterType", "")
+    parameters = op.get("parameters") or {}
+
+    # Map common filter types to FFmpeg filtergraphs
+    if filter_type == "denoise":
+        strength = parameters.get("strength", 5)
+        vf = f"nlmeans={strength}"
+    elif filter_type == "sharpen":
+        amount = parameters.get("amount", 1.0)
+        vf = f"unsharp=5:5:{amount}:5:5:0"
+    elif filter_type == "stabilize":
+        crop = parameters.get("maxCropPercent", 10)
+        vf = f"vidstabdetect,vidstabtransform=crop=black:zoom={crop}"
+    elif filter_type == "ffmpeg":
+        # Direct FFmpeg filter string pass-through
+        vf = parameters.get("vf", "null")
+    else:
+        # Unknown filter type: pass through as-is if it looks like an FFmpeg filter
+        vf = filter_type if filter_type else "null"
+
+    return [
+        "ffmpeg", "-y", "-i", str(input_path),
+        "-vf", vf,
+        "-c:v", "libx264", "-preset", "fast", "-crf", "1",
+        "-c:a", "copy",
+        str(out_path),
+    ]
+
+
+def execute_operation_dag(
+    operations: list[dict],
+    instance: dict,
+    output_dir: Path,
+    shot_clips: dict[str, Path],
+    audio_files: dict[str, Path],
+) -> Path:
+    """Execute renderPlan operations in declared order.
+
+    Supported opTypes: concat, audioMix, colorGrade, encode, filter, retime.
+    Unsupported opTypes (overlay, transition, manim, custom) are logged and skipped.
+
+    Returns the path to the final output file.
+    """
+    inter = output_dir / "intermediate"
+    inter.mkdir(parents=True, exist_ok=True)
+
+    quality_profiles = instance.get("qualityProfiles") or []
+    qp = (quality_profiles[0] if quality_profiles else {}).get("profile") or {}
+    audio_codec, audio_bitrate = _resolve_audio_codec(instance)
+    scenes = sorted(
+        (instance.get("production") or {}).get("scenes") or [],
+        key=lambda s: s.get("sceneNumber", 0),
+    )
+
+    # The render plan operations reference each other via inputRef/outputRef.
+    # We track the "current" video path, updated after each step.
+    current_path: Path | None = None
+    step_num = 0
+
+    for op in operations:
+        op_type = op.get("opType", "")
+        op_id = op.get("opId", f"step-{step_num}")
+        step_num += 1
+
+        if op_type == "concat":
+            ordered_clips = _shots_in_scene_order(instance, shot_clips)
+            if not ordered_clips:
+                raise RuntimeError("No shot clips available to assemble")
+            out = inter / f"{step_num:02d}_{op_id}.mp4"
+            log.info("▶ [%s] concat — %d clips", op_id, len(ordered_clips))
+            _concat_clips_ffmpeg(ordered_clips, out, scenes=scenes)
+            current_path = out
+
+        elif op_type == "audioMix":
+            if current_path is None:
+                log.warning("[%s] audioMix with no prior video — skipping", op_id)
+                continue
+            out = inter / f"{step_num:02d}_{op_id}.mp4"
+            log.info("▶ [%s] audioMix — %d tracks", op_id, len(audio_files))
+            cmd = _build_audio_mix_cmd(current_path, audio_files, instance, out)
+            result = subprocess.run(cmd, capture_output=True)
+            if result.returncode != 0:
+                log.error("[%s] audioMix failed:\n%s", op_id, result.stderr.decode())
+                shutil.copy(current_path, out)
+            current_path = out
+
+        elif op_type == "colorGrade":
+            if current_path is None:
+                continue
+            intent = op.get("intent", "")
+            strength = float(op.get("strength", 1.0))
+            lut_path = _resolve_lut_path(op.get("lutRef"), instance)
+            params = _parse_color_direction(intent) if intent else _parse_color_direction(
+                _pick(instance, "canonicalDocuments.directorInstructions.colorDirection") or ""
+            )
+            out = inter / f"{step_num:02d}_{op_id}.mp4"
+            log.info("▶ [%s] colorGrade — strength=%.2f lut=%s", op_id, strength, lut_path)
+            cmd = _color_grade_cmd(current_path, params, strength, out, lut_path=lut_path)
+            result = subprocess.run(cmd, capture_output=True)
+            if result.returncode != 0:
+                log.error("[%s] colorGrade failed:\n%s", op_id, result.stderr.decode())
+                shutil.copy(current_path, out)
+            current_path = out
+
+        elif op_type == "encode":
+            if current_path is None:
+                continue
+            project_name = (
+                (instance.get("project") or {}).get("name", "output")
+                .lower().replace(" ", "-")[:40]
+            )
+            out = output_dir / f"{project_name}.mp4"
+            rp = {"operations": [op]}  # wrap single op for _encode_cmd
+            log.info("▶ [%s] encode → %s", op_id, out.name)
+            cmd = _encode_cmd(current_path, qp, out, render_plan=rp,
+                              audio_codec=audio_codec, audio_bitrate=audio_bitrate)
+            result = subprocess.run(cmd, capture_output=True)
+            if result.returncode != 0:
+                log.error("[%s] encode failed:\n%s", op_id, result.stderr.decode())
+                shutil.copy(current_path, out)
+            current_path = out
+
+        elif op_type == "filter":
+            if current_path is None:
+                continue
+            out = inter / f"{step_num:02d}_{op_id}.mp4"
+            log.info("▶ [%s] filter — type=%s", op_id, op.get("filterType", "?"))
+            cmd = _exec_filter(op, current_path, out)
+            result = subprocess.run(cmd, capture_output=True)
+            if result.returncode != 0:
+                log.error("[%s] filter failed:\n%s", op_id, result.stderr.decode())
+                shutil.copy(current_path, out)
+            current_path = out
+
+        elif op_type == "retime":
+            if current_path is None:
+                continue
+            out = inter / f"{step_num:02d}_{op_id}.mp4"
+            log.info("▶ [%s] retime — speed=%s%% reverse=%s", op_id,
+                     (op.get("retime") or {}).get("speedPercent", 100),
+                     (op.get("retime") or {}).get("reverse", False))
+            cmd = _exec_retime(op, current_path, out)
+            result = subprocess.run(cmd, capture_output=True)
+            if result.returncode != 0:
+                log.error("[%s] retime failed:\n%s", op_id, result.stderr.decode())
+                shutil.copy(current_path, out)
+            current_path = out
+
+        else:
+            log.warning("▶ [%s] unsupported opType '%s' — skipped", op_id, op_type)
+
+    if current_path is None:
+        raise RuntimeError("Operation DAG produced no output")
+    return current_path
+
+
 # ── public API ────────────────────────────────────────────────────────────────
 
 def assemble(
@@ -731,43 +1040,40 @@ def assemble(
     """
     Assemble a final video from shot clips and audio tracks.
 
-    Pre-flight:
-      - Checks editVersion approval (#4)
-      - Validates spatial consistency (#10)
-
-    Pipeline reads from v3 instance:
-      - Color grade from ColorGradeOp or directorInstructions (#1, #2)
-      - Audio timing from timeline/syncPoints/TimeRange (#3)
-      - Audio codec from AudioTechnicalSpec (#6)
-      - Audio pan from AudioMixTrack.pan (#7)
-      - Encode settings from EncodeOp compression (#8)
-      - Scene transitions from TransitionSpec (#5)
-
-    Post-render:
-      - Populates FinalOutputEntity (#9)
+    When the renderPlan contains operations, executes them as a DAG.
+    Otherwise falls back to the default 4-step pipeline.
 
     Returns the path to the final encoded file.
     """
     inter = output_dir / "intermediate"
     inter.mkdir(parents=True, exist_ok=True)
 
-    # ── Pre-flight: approval gate (#4) ────────────────────────────────────────
+    # ── Pre-flight ────────────────────────────────────────────────────────────
     check_approval(instance, force=force)
-
-    # ── Pre-flight: spatial consistency (#10) ─────────────────────────────────
     spatial_warnings = validate_spatial_consistency(instance)
     for w in spatial_warnings:
         log.warning("spatial: %s", w)
 
-    # ── Derive pipeline params ────────────────────────────────────────────────
-    grade_params, grade_strength = _resolve_color_grade_params(instance)
-
-    quality_profiles = instance.get("qualityProfiles") or []
-    qp = (quality_profiles[0] if quality_profiles else {}).get("profile") or {}
-
+    # ── Check for renderPlan operations ───────────────────────────────────────
     render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
     render_plan = render_plans[0] if render_plans else {}
+    operations = render_plan.get("operations") or []
 
+    if operations:
+        log.info("Executing renderPlan DAG (%d operations)", len(operations))
+        final_path = execute_operation_dag(
+            operations, instance, output_dir, shot_clips, audio_files,
+        )
+        if final_path.exists():
+            populate_final_output(instance, final_path)
+        return final_path
+
+    # ── Fallback: default 4-step pipeline ─────────────────────────────────────
+    log.info("No renderPlan operations — using default pipeline")
+
+    grade_params, grade_strength, lut_path = _resolve_color_grade_params(instance)
+    quality_profiles = instance.get("qualityProfiles") or []
+    qp = (quality_profiles[0] if quality_profiles else {}).get("profile") or {}
     audio_codec, audio_bitrate = _resolve_audio_codec(instance)
 
     project_name = (
@@ -781,7 +1087,6 @@ def assemble(
         key=lambda s: s.get("sceneNumber", 0),
     )
 
-    # ── Step 1: concat (#5) ───────────────────────────────────────────────────
     ordered_clips = _shots_in_scene_order(instance, shot_clips)
     if not ordered_clips:
         raise RuntimeError("No shot clips available to assemble")
@@ -790,7 +1095,6 @@ def assemble(
     log.info("▶ concat — %d clips → %s", len(ordered_clips), concat_path.name)
     _concat_clips_ffmpeg(ordered_clips, concat_path, scenes=scenes)
 
-    # ── Step 2: audio mix (#3, #6, #7) ────────────────────────────────────────
     mixed_path = inter / "02_mixed.mp4"
     log.info("▶ audio_mix — %d track(s) → %s", len(audio_files), mixed_path.name)
     cmd = _build_audio_mix_cmd(concat_path, audio_files, instance, mixed_path)
@@ -799,20 +1103,18 @@ def assemble(
         log.error("audio mix failed:\n%s", result.stderr.decode())
         shutil.copy(concat_path, mixed_path)
 
-    # ── Step 3: color grade (#1, #2) ──────────────────────────────────────────
     graded_path = inter / "03_graded.mp4"
     log.info(
-        "▶ color_grade — b=%.2f c=%.2f s=%.2f strength=%.2f → %s",
+        "▶ color_grade — b=%.2f c=%.2f s=%.2f strength=%.2f lut=%s → %s",
         grade_params["brightness"], grade_params["contrast"],
-        grade_params["saturation"], grade_strength, graded_path.name,
+        grade_params["saturation"], grade_strength, lut_path, graded_path.name,
     )
-    cmd = _color_grade_cmd(mixed_path, grade_params, grade_strength, graded_path)
+    cmd = _color_grade_cmd(mixed_path, grade_params, grade_strength, graded_path, lut_path=lut_path)
     result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
         log.error("color grade failed:\n%s", result.stderr.decode())
         shutil.copy(mixed_path, graded_path)
 
-    # ── Step 4: final encode (#8) ─────────────────────────────────────────────
     final_path = output_dir / output_filename
     log.info("▶ encode → %s", final_path.name)
     cmd = _encode_cmd(
@@ -826,7 +1128,6 @@ def assemble(
         log.error("encode failed:\n%s", result.stderr.decode())
         shutil.copy(graded_path, final_path)
 
-    # ── Post-render: populate FinalOutputEntity (#9) ──────────────────────────
     if final_path.exists():
         populate_final_output(instance, final_path)
 
