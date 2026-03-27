@@ -569,6 +569,32 @@ def bridge_v3_to_v2(instance: dict) -> dict:
             })
         v2_scenes = [{"scene_id": "scene-001", "shots": v2_shots}]
 
+    # Ultimate fallback: inject 3 stub shots when the pipeline returned no data
+    # (e.g. no API keys configured — skills all returned {})
+    if not v2_scenes:
+        title = instance.get("project", {}).get("title", "stub project")
+        _stub_shots = [
+            ("Opening — wide establishing shot", "#1a1a2e"),
+            ("Mid-section — character close-up", "#16213e"),
+            ("Closing — wide pullback", "#0f3460"),
+        ]
+        v2_scenes = [{"scene_id": "scene-001", "shots": [
+            {
+                "shot_id": f"stub-shot-{i:03d}",
+                "order": i,
+                "label": label,
+                "duration_sec": 5.0,
+                "cinematic_spec": {"color_palette": [color]},
+                "gen_params": {
+                    "prompt": f"{title} — {label}",
+                    "model_id": "gen4_turbo",
+                    "seed": None,
+                },
+            }
+            for i, (label, color) in enumerate(_stub_shots)
+        ]}]
+        log.info("bridge: no shots in instance — injected %d stub shots", len(_stub_shots))
+
     # Build v2-style audio_assets dict
     v2_audio: dict[str, dict] = {}
     for asset in instance.get("assetLibrary", {}).get("audioAssets", []):

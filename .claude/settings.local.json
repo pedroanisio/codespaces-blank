@@ -38,7 +38,12 @@
       "Bash(python3 validate.py example-project.json --schema video-project-schema-v2.json)",
       "Bash(python3 validate.py example-project.json --schema video-project-schema-v2.json --verbose)",
       "Bash(python3 validate.py example-project.json --schema claude-unified-video-project-v3.schema.json --verbose)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(pip install -r session-02/pipeline/requirements.txt)",
+      "Bash(python -m pipeline.run --idea:*)",
+      "Bash(python -m pipeline.run --stub-only --idea:*)",
+      "Bash(python session-02/pipeline/run.py --idea:*)",
+      "Bash(python -m pipeline.run example-project.json --output-dir ./output/the-last-signal --stub-only --skip-validation)"
     ]
   }
 }

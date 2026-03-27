@@ -32,10 +32,17 @@ import zlib
 from pathlib import Path
 from typing import Any, Literal
 
-# Load .env from repo root before anything else
+# Load .env — search from most-specific (session dir) to least-specific (repo root).
+# Later calls with override=True take precedence over earlier ones.
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parents[2] / ".env")
+    for _env_candidate in [
+        Path(__file__).parents[2] / ".env",   # repo root
+        Path(__file__).parents[1] / ".env",   # session-02/
+        Path(__file__).parent / ".env",        # pipeline/
+    ]:
+        if _env_candidate.exists():
+            load_dotenv(_env_candidate, override=True)
 except ImportError:
     pass  # python-dotenv not installed yet; env vars must be set manually
 
