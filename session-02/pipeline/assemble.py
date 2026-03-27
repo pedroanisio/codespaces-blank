@@ -183,6 +183,7 @@ def _color_grade_cmd(input_path: Path, params: dict, out_path: Path) -> list[str
         "-i", str(input_path),
         "-vf", eq_filter,
         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-movflags", "+faststart",
         "-c:a", "copy",
         str(out_path),
     ]
@@ -198,15 +199,12 @@ def _encode_cmd(input_path: Path, qp: dict, output_path: Path) -> list[str]:
     audio_cfg = qp.get("audio") or {}
     sample_rate = audio_cfg.get("sampleRateHz", 44100)
 
-    # Check libx265 availability; fall back to libx264
-    probe = subprocess.run(["ffmpeg", "-codecs"], capture_output=True, text=True)
-    codec = "libx265" if "libx265" in probe.stdout else "libx264"
-
     return [
         "ffmpeg", "-y",
         "-i", str(input_path),
         "-vf", f"scale={width}:{height},fps={fps}",
-        "-c:v", codec, "-crf", "18", "-preset", "slow",
+        "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+        "-movflags", "+faststart",
         "-c:a", "aac", "-b:a", "192k",
         "-ar", str(sample_rate),
         str(output_path),
