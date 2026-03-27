@@ -43,7 +43,8 @@
       "Bash(python -m pipeline.run --idea:*)",
       "Bash(python -m pipeline.run --stub-only --idea:*)",
       "Bash(python session-02/pipeline/run.py --idea:*)",
-      "Bash(python -m pipeline.run example-project.json --output-dir ./output/the-last-signal --stub-only --skip-validation)"
+      "Bash(python -m pipeline.run example-project.json --output-dir ./output/the-last-signal --stub-only --skip-validation)",
+      "Bash(python -m pipeline.run --idea \"A short film about a robot learning to paint\")"
     ]
   }
 }

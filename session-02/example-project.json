@@ -4,10 +4,7 @@
   "package": {
     "packageId": "pkg.the-last-signal",
     "createdAt": "2026-03-27T00:00:00Z",
-    "versioningPolicy": {
-      "strategy": "semantic",
-      "autoIncrement": "patch"
-    }
+    "versioningPolicy": {}
   },
 
   "project": {
@@ -18,22 +15,10 @@
     "version": { "number": "1.0.0", "state": "draft" },
     "description": "A 90-second sci-fi short about the last radio operator on a dying space station receiving an unexpected message.",
     "tags": ["sci-fi", "short-film", "generative-ai"],
+    "genres": ["science_fiction", "drama"],
+    "languages": ["en-US"],
     "targetRuntimeSec": 90,
-    "frameRate": 24,
-    "resolution": { "widthPx": 1920, "heightPx": 1080 },
-    "aspectRatio": "16:9",
-    "defaultQualityProfileRef": { "id": "qp.broadcast-hd.v1" },
-    "localization": {
-      "defaultLocale": "en-US",
-      "targetLocales": ["pt-BR"]
-    },
-    "accessibility": {
-      "captionsRequired": true,
-      "wcagLevel": "AA"
-    },
-    "team": [
-      { "memberId": "member.director.v1", "role": "director", "name": "SAFE AI Production" }
-    ]
+    "defaultQualityProfileRef": { "id": "qp.broadcast-hd.v1" }
   },
 
   "qualityProfiles": [
@@ -44,21 +29,22 @@
       "name": "Broadcast HD",
       "version": { "number": "1.0.0", "state": "approved" },
       "profile": {
+        "name": "Broadcast HD",
         "video": {
-          "minResolution": { "widthPx": 1920, "heightPx": 1080 },
-          "minFrameRate": 24,
-          "allowedCodecs": ["libx265", "libx264"],
+          "resolution": { "widthPx": 1920, "heightPx": 1080 },
+          "frameRate": { "fps": 24, "mode": "constant" },
+          "aspectRatio": { "expression": "16:9", "preset": "16:9" },
           "spatialConsistency": {
+            "required": true,
             "enforce180DegreeRule": true,
-            "enforceMatchingEyelines": true,
-            "flagAxisCrossings": true
+            "enforceScreenDirection": true
           }
         },
         "audio": {
-          "minSampleRateHz": 44100,
-          "allowedFormats": ["aac", "flac"]
+          "sampleRateHz": 44100,
+          "channelLayout": "stereo"
         },
-        "qualityRules": [
+        "validationRules": [
           { "name": "Temporal consistency", "id": "qr.temporal", "severity": "error" },
           { "name": "180-degree rule", "id": "qr.180deg", "severity": "error" }
         ]
@@ -73,27 +59,31 @@
       "entityType": "story",
       "name": "The Last Signal — Story",
       "version": { "number": "1.0.0", "state": "approved" },
+      "logline": "The last radio operator on a dying space station receives a mysterious signal — not a distress call, but an invitation.",
+      "synopsis": "Three-act 90-second sci-fi short exploring isolation, wonder, and hope.",
+      "themes": ["isolation", "hope", "first_contact"],
+      "tone": ["melancholic", "wonder", "hopeful"],
       "beats": [
         {
           "beatId": "beat.act1",
-          "title": "Isolation",
-          "synopsis": "MIRA, the last operator on the dying Helix-7 station, maintains her vigil alone in the communications bay.",
-          "emotionalObjective": "melancholy",
-          "positionHint": "opening"
+          "name": "Isolation",
+          "order": 1,
+          "description": "MIRA, the last operator on the dying Helix-7 station, maintains her vigil alone in the communications bay.",
+          "emotionalObjective": "melancholy"
         },
         {
           "beatId": "beat.act2",
-          "title": "Contact",
-          "synopsis": "An anomalous signal arrives — the QRA device lights up for the first time in months.",
-          "emotionalObjective": "wonder",
-          "positionHint": "midpoint"
+          "name": "Contact",
+          "order": 2,
+          "description": "An anomalous signal arrives — the QRA device lights up for the first time in months.",
+          "emotionalObjective": "wonder"
         },
         {
           "beatId": "beat.act3",
-          "title": "Transmission",
-          "synopsis": "MIRA deciphers the message. It is not distress — it is an invitation.",
-          "emotionalObjective": "hope",
-          "positionHint": "climax"
+          "name": "Transmission",
+          "order": 3,
+          "description": "MIRA deciphers the message. It is not distress — it is an invitation.",
+          "emotionalObjective": "hope"
         }
       ]
     },
@@ -103,43 +93,50 @@
       "entityType": "script",
       "name": "The Last Signal — Script",
       "version": { "number": "1.0.0", "state": "approved" },
+      "format": "fountain",
       "segments": [
         {
           "segmentId": "seg.s1",
+          "order": 1,
           "segmentType": "scene_heading",
           "text": "INT. HELIX-7 COMMUNICATIONS BAY — NIGHT",
-          "sceneRef": "scene.act1"
+          "sceneRef": { "id": "scene.act1.v1" }
         },
         {
           "segmentId": "seg.s2",
+          "order": 2,
           "segmentType": "action",
           "text": "Emergency lights pulse amber. MIRA sits at a console covered in static.",
-          "sceneRef": "scene.act1"
+          "sceneRef": { "id": "scene.act1.v1" }
         },
         {
           "segmentId": "seg.s3",
+          "order": 3,
           "segmentType": "scene_heading",
           "text": "INT. HELIX-7 COMMUNICATIONS BAY — CONTINUOUS",
-          "sceneRef": "scene.act2"
+          "sceneRef": { "id": "scene.act2.v1" }
         },
         {
           "segmentId": "seg.s4",
+          "order": 4,
           "segmentType": "action",
           "text": "The QRA device CHIRPS. MIRA snaps forward, hands trembling over the controls.",
-          "sceneRef": "scene.act2"
+          "sceneRef": { "id": "scene.act2.v1" }
         },
         {
           "segmentId": "seg.s5",
+          "order": 5,
           "segmentType": "scene_heading",
           "text": "INT. HELIX-7 COMMUNICATIONS BAY — MOMENTS LATER",
-          "sceneRef": "scene.act3"
+          "sceneRef": { "id": "scene.act3.v1" }
         },
         {
           "segmentId": "seg.s6",
+          "order": 6,
           "segmentType": "dialogue",
           "text": "They know we're here.",
-          "characterRef": "char.mira",
-          "sceneRef": "scene.act3"
+          "speakerRef": { "id": "char.mira.v1" },
+          "sceneRef": { "id": "scene.act3.v1" }
         }
       ]
     },
@@ -159,7 +156,7 @@
         "bright natural or daylight sources",
         "cheerful expressions before Act 3"
       ],
-      "editingLanguage": "Deliberate pacing with cuts on action. Dissolve reserved for the Act 3 revelation moment only.",
+      "editingLanguage": "Deliberate pacing with cuts on action. Dissolve reserved for the Act 3 revelation only.",
       "colorDirection": "Amber/dark palette in Acts 1–2. Warm green console glow grows through Act 3.",
       "qualityRules": [
         { "name": "Temporal consistency", "id": "qr.temporal", "severity": "error" },
@@ -197,8 +194,8 @@
         "defaultSceneSpace": {
           "coordinateSystem": {
             "handedness": "right",
-            "upAxis": "Y",
-            "unitScale": "meters"
+            "upAxis": "+Y",
+            "unitM": 1.0
           },
           "floorPlaneCoord": 0.0
         },
@@ -272,16 +269,15 @@
         "sceneSpace": {
           "coordinateSystem": {
             "handedness": "right",
-            "upAxis": "Y",
-            "unitScale": "meters"
+            "upAxis": "+Y",
+            "unitM": 1.0
           },
           "floorPlaneCoord": 0.0,
           "spatialAnchors": []
         },
         "spatialConsistency": {
-          "enforce180DegreeRule": true,
-          "enforceMatchingEyelines": true,
-          "flagAxisCrossings": true
+          "required": true,
+          "enforce180DegreeRule": true
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "audio_sync"],
@@ -316,8 +312,8 @@
         "sceneSpace": {
           "coordinateSystem": {
             "handedness": "right",
-            "upAxis": "Y",
-            "unitScale": "meters"
+            "upAxis": "+Y",
+            "unitM": 1.0
           },
           "floorPlaneCoord": 0.0,
           "spatialAnchors": [
@@ -340,9 +336,12 @@
           ]
         },
         "spatialConsistency": {
+          "required": true,
           "enforce180DegreeRule": true,
-          "enforceMatchingEyelines": true,
-          "flagAxisCrossings": true
+          "anchorRefs": [
+            { "id": "sa.act2.action-line-a" },
+            { "id": "sa.act2.action-line-b" }
+          ]
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "audio_sync"],
@@ -377,16 +376,15 @@
         "sceneSpace": {
           "coordinateSystem": {
             "handedness": "right",
-            "upAxis": "Y",
-            "unitScale": "meters"
+            "upAxis": "+Y",
+            "unitM": 1.0
           },
           "floorPlaneCoord": 0.0,
           "spatialAnchors": []
         },
         "spatialConsistency": {
-          "enforce180DegreeRule": true,
-          "enforceMatchingEyelines": true,
-          "flagAxisCrossings": true
+          "required": true,
+          "enforce180DegreeRule": true
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "audio_sync"],
@@ -417,8 +415,9 @@
           }
         },
         "genParams": {
-          "promptText": "Wide establishing shot of a cramped space-station communications bay, amber emergency lighting, a lone woman at a console surrounded by dead screens, cinematic dark.",
-          "model": "runway-gen3"
+          "stepId": "step.s1.gen",
+          "operationType": "video_generation",
+          "prompt": "Wide establishing shot of a cramped space-station communications bay, amber emergency lighting, a lone woman at a console surrounded by dead screens, cinematic dark."
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "duration_compliance", "resolution_compliance"],
@@ -446,8 +445,9 @@
           }
         },
         "genParams": {
-          "promptText": "Medium shot of MIRA, mid-30s woman in worn flight suit, staring at static-filled console screens, amber light, haunted expression, slow push-in.",
-          "model": "runway-gen3",
+          "stepId": "step.s2.gen",
+          "operationType": "video_generation",
+          "prompt": "Medium shot of MIRA, mid-30s woman in worn flight suit, staring at static-filled console screens, amber light, haunted expression, slow push-in.",
           "consistencyAnchors": [
             {
               "anchorType": "character",
@@ -483,8 +483,9 @@
           }
         },
         "genParams": {
-          "promptText": "Close-up of MIRA's face, amber light casting shadows, melancholy expression, tears barely held back. This is the face anchor frame.",
-          "model": "runway-gen3",
+          "stepId": "step.s3.gen",
+          "operationType": "video_generation",
+          "prompt": "Close-up of MIRA's face, amber light casting shadows, melancholy expression, tears barely held back. Face anchor reference frame.",
           "consistencyAnchors": [
             {
               "anchorType": "character",
@@ -522,16 +523,14 @@
           "cameraExtrinsics": {
             "transform": {
               "position": { "x": 0.0, "y": 0.3, "z": 0.5 },
-              "orientation": {
-                "type": "euler",
-                "euler": { "rx": -15.0, "ry": 0.0, "rz": 0.0 }
-              }
+              "orientation": { "eulerDeg": { "pitch": -15.0, "yaw": 0.0, "roll": 0.0 } }
             }
           }
         },
         "genParams": {
-          "promptText": "Extreme close-up of the QRA communication device, blinking blue indicators suddenly illuminating, low angle, tension.",
-          "model": "runway-gen3"
+          "stepId": "step.s4.gen",
+          "operationType": "video_generation",
+          "prompt": "Extreme close-up of the QRA communication device, blinking blue indicators suddenly illuminating, low angle, tension."
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "duration_compliance", "resolution_compliance"],
@@ -561,16 +560,14 @@
           "cameraExtrinsics": {
             "transform": {
               "position": { "x": 1.5, "y": 1.6, "z": 0.8 },
-              "orientation": {
-                "type": "euler",
-                "euler": { "rx": 0.0, "ry": -30.0, "rz": 0.0 }
-              }
+              "orientation": { "eulerDeg": { "pitch": 0.0, "yaw": -30.0, "roll": 0.0 } }
             }
           }
         },
         "genParams": {
-          "promptText": "Medium close-up of MIRA's face, shock and wonder, blue light from QRA device illuminating her face, mixing with amber emergency light.",
-          "model": "runway-gen3",
+          "stepId": "step.s5.gen",
+          "operationType": "video_generation",
+          "prompt": "Medium close-up of MIRA's face, shock and wonder, blue light from QRA device illuminating her face, mixing with amber emergency light.",
           "consistencyAnchors": [
             {
               "anchorType": "character",
@@ -608,16 +605,14 @@
           "cameraExtrinsics": {
             "transform": {
               "position": { "x": -1.5, "y": 1.6, "z": 0.8 },
-              "orientation": {
-                "type": "euler",
-                "euler": { "rx": 0.0, "ry": 30.0, "rz": 0.0 }
-              }
+              "orientation": { "eulerDeg": { "pitch": 0.0, "yaw": 30.0, "roll": 0.0 } }
             }
           }
         },
         "genParams": {
-          "promptText": "Over-shoulder shot from behind MIRA looking at the QRA device, blue glow increasing, MIRA reaching forward, slow zoom in. Camera MUST stay on same side of action line as S5.",
-          "model": "runway-gen3"
+          "stepId": "step.s6.gen",
+          "operationType": "video_generation",
+          "prompt": "Over-shoulder shot from behind MIRA looking at the QRA device, blue glow increasing, MIRA reaching forward, slow zoom in. Camera stays on same side of action line as S5."
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "duration_compliance", "resolution_compliance"],
@@ -646,8 +641,9 @@
           "temporalBridgeAnchorRef": { "id": "shot.s4.v1" }
         },
         "genParams": {
-          "promptText": "Insert close-up of console display showing decoded alien message, green text scrolling, high angle, technical readout aesthetic.",
-          "model": "runway-gen3"
+          "stepId": "step.s7.gen",
+          "operationType": "video_generation",
+          "prompt": "Insert close-up of console display showing decoded alien message, green text scrolling, high angle, technical readout aesthetic."
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "duration_compliance", "resolution_compliance"],
@@ -675,8 +671,9 @@
           }
         },
         "genParams": {
-          "promptText": "Medium close-up of MIRA reading the decoded message, relief and wonder spreading across her face, mixed amber and green light.",
-          "model": "runway-gen3",
+          "stepId": "step.s8.gen",
+          "operationType": "video_generation",
+          "prompt": "Medium close-up of MIRA reading the decoded message, relief and wonder spreading across her face, mixed amber and green light.",
           "consistencyAnchors": [
             {
               "anchorType": "character",
@@ -712,8 +709,9 @@
           }
         },
         "genParams": {
-          "promptText": "Wide shot of MIRA standing at the console, all screens now lit green, she begins transmitting a reply. Slow pull-back reveals the full communications bay. A moment of hope.",
-          "model": "runway-gen3"
+          "stepId": "step.s9.gen",
+          "operationType": "video_generation",
+          "prompt": "Wide shot of MIRA standing at the console, all screens now lit green, she begins transmitting a reply. Slow pull-back reveals the full communications bay. A moment of hope."
         },
         "qaGate": {
           "requiredChecks": ["temporal_consistency", "character_coherence", "duration_compliance", "resolution_compliance"],
@@ -822,10 +820,10 @@
           { "clipId": "vc.s9", "sourceRef": { "id": "shot.s9.v1" }, "timelineStartSec": 75, "durationSec": 15 }
         ],
         "audioClips": [
-          { "clipId": "ac.ambient",  "sourceRef": { "id": "audio.ambient.v1" },      "timelineStartSec": 0,  "durationSec": 90 },
-          { "clipId": "ac.dial.act2","sourceRef": { "id": "audio.dialogue.act2.v1" }, "timelineStartSec": 27, "durationSec": 3 },
-          { "clipId": "ac.dial.act3","sourceRef": { "id": "audio.dialogue.act3.v1" }, "timelineStartSec": 70, "durationSec": 4 },
-          { "clipId": "ac.score",    "sourceRef": { "id": "audio.score.v1" },         "timelineStartSec": 0,  "durationSec": 90 }
+          { "clipId": "ac.ambient",   "sourceRef": { "id": "audio.ambient.v1" },       "timelineStartSec": 0,  "durationSec": 90 },
+          { "clipId": "ac.dial.act2", "sourceRef": { "id": "audio.dialogue.act2.v1" }, "timelineStartSec": 27, "durationSec": 3 },
+          { "clipId": "ac.dial.act3", "sourceRef": { "id": "audio.dialogue.act3.v1" }, "timelineStartSec": 70, "durationSec": 4 },
+          { "clipId": "ac.score",     "sourceRef": { "id": "audio.score.v1" },         "timelineStartSec": 0,  "durationSec": 90 }
         ]
       }
     ],
@@ -884,9 +882,8 @@
             "inputRef": { "id": "op.color-grade" },
             "compression": {
               "codec": "libx265",
-              "containerFormat": "mp4",
-              "crf": 23,
-              "preset": "medium"
+              "profile": "main",
+              "bitrateMbps": 8
             }
           }
         ]
