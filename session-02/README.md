@@ -13,14 +13,25 @@ This work is subject to the methodological caveats and commitments described in 
 
 The canonical production schema is **[video-project-schema-v2.json](./video-project-schema-v2.json)**.
 Production terminology is defined in **[term-map.json](./term-map.json)**.
+A fully valid worked example is **[example-project.json](./example-project.json)**.
 
 ```
 prompt-video-schema.md          ← original requirements
         ↓
 [AI schema drafts]              ← grok, manus, perplexity, claude v1
         ↓
-video-project-schema-v2.json    ← unified v2 (canonical)
-term-map.json                   ← machine-readable vocabulary
+video-project-schema-v2.json    ← unified v2 (canonical)  ◄── term-map.json
+example-project.json            ← valid instance ("The Last Signal", 90s sci-fi short)
+validate.py                     ← CLI validator (jsonschema Draft 2020-12)
+```
+
+### Validate an instance
+
+```bash
+pip install jsonschema
+python validate.py                        # validates example-project.json
+python validate.py my-project.json        # validates any instance
+python validate.py my-project.json -v     # verbose: error details + instance summary
 ```
 
 ---
@@ -31,12 +42,17 @@ term-map.json                   ← machine-readable vocabulary
 
 | File | Version | Size | Description |
 |------|---------|------|-------------|
-| [video-project-schema-v2.json](./video-project-schema-v2.json) | **v2.0.0** | 54 KB | **Canonical unified schema.** Merges all drafts and adds cost tracking, retry/async logic, rights, collaboration, QA gates, platform delivery, localization, accessibility. |
+| [video-project-schema-v2.json](./video-project-schema-v2.json) | **v2.0.0** | ~57 KB | **Canonical unified schema.** Merges all drafts; adds cost tracking, retry/async logic, rights, collaboration, QA gates, platform delivery, localization, accessibility, and formal taxonomy enums (`VideoStyleEnum`, `AnimationProductionMethodEnum`, `AnimationPlaybackModalityEnum`). |
+| [example-project.json](./example-project.json) | — | ~45 KB | **Valid instance document.** "The Last Signal" — a 90-second sci-fi short. Demonstrates 3 scenes, 9 shots, temporal bridges, character anchors, 4 audio assets, render pipeline, platform delivery, and dependency graph. |
+| [validate.py](./validate.py) | — | — | **CLI validator.** Validates any instance against `video-project-schema-v2.json` using `jsonschema` Draft 2020-12. Run `python validate.py --help`. |
 | [grok-video-schema.json](./grok-video-schema.json) | v1.0 + patch | 19 KB | Grok draft — strict `additionalProperties: false`. Patched with canonical status enum, `cost`, `retryConfig`, `asyncConfig`, `promptVersion`. |
 | [claude-video-production-schema-v1.0.json](./claude-video-production-schema-v1.0.json) | v1.0 | 49 KB | Claude v1 draft — comprehensive GenParams, temporal bridge pattern, asset registry, CinematicSpec, Manim integration. |
+| [chatgpt-generative_video_project_package.schema.json](./chatgpt-generative_video_project_package.schema.json) | v1.0 | 21 KB | ChatGPT draft — package-oriented schema with ProjectEntity, AssetLibrary, Orchestration, and Relationships sections. |
+| [chatgpt-schema-guide.md](./chatgpt-schema-guide.md) | — | — | ChatGPT design rationale: Draft 2020-12 choice, four-layer assembly model, and mapping to MoviePy/PyAV/OpenCV/Manim. |
 | [manus-video_orchestration_schema_complete.md](./manus-video_orchestration_schema_complete.md) | v1.0 | 48 KB | Manus draft — full entity-relationship model, assembly instructions, Python library bindings, usage examples. |
-| [perplexity-VideoProject JSON Schema — Comprehensive Generative-AI Video Production Schema.md](./perplexity-VideoProject%20JSON%20Schema%20%E2%80%94%20Comprehensive%20Generative-AI%20Video%20Production%20Schema.md) | v1.0 | 50 KB | Perplexity draft — five design principles, temporal bridge pattern, QualitySpec presets, CinematicSpec, LoRA/ControlNet anchors. Updated with v2 navigation banner. |
+| [perplexity-VideoProject JSON Schema — Comprehensive Generative-AI Video Production Schema.md](./perplexity-VideoProject%20JSON%20Schema%20%E2%80%94%20Comprehensive%20Generative-AI%20Video%20Production%20Schema.md) | v1.0 | 50 KB | Perplexity draft — five design principles, temporal bridge pattern, QualitySpec presets, CinematicSpec, LoRA/ControlNet anchors. |
 | [prompt-video-schema.md](./prompt-video-schema.md) | — | 2 KB | Original requirements spec: what the schema must support. Start here for context. |
+| [prompt-create-skills.md](./prompt-create-skills.md) | — | — | Design prompt: how many modular AI agent skills would a full autonomous video production pipeline require? |
 
 ### Taxonomies
 
@@ -110,6 +126,7 @@ VideoProject
 | 9 | **Collaborative review** | `Team`, timecoded `Comment[]`, `ApprovalRecord[]` with deadlines on every entity |
 | 10 | **Quality-gated assembly** | `QaGate` on scenes and shots; `ValidationResult` on the render pipeline |
 | 11 | **Multi-platform delivery** | `PlatformDelivery[]`, `LocalizationConfig`, `AccessibilityConfig` on every output |
+| 12 | **Formal taxonomy enums** | `VideoStyleEnum` (20 styles), `AnimationProductionMethodEnum` (7 methods), and `AnimationPlaybackModalityEnum` (4 modalities) — derived from the formal taxonomy files and machine-enforced by the schema |
 
 ### Canonical Status Lifecycle
 
@@ -171,9 +188,9 @@ The [term-map.json](./term-map.json) defines terms along four axes:
 
 ### 20 Video Styles ([claude-20-styles-video-v1.1.md](./claude-20-styles-video-v1.1.md))
 
-Defined as formal biconditional predicates on capture modality × epistemic contract × temporal coupling × distribution format × production intent:
+Defined as formal biconditional predicates on capture modality × epistemic contract × temporal coupling × distribution format × production intent. Now machine-enforced as `VideoStyleEnum` in `GlobalSpecs.video_style[]`:
 
-Documentary · Narrative Fiction · Animation · Commercial · Music Video · News Broadcast · Essay Film · Experimental · Tutorial · Vlog · Live Stream · Short-Form Vertical · Interview · Motion Graphics · Sports Broadcast · Surveillance/CCTV · 360°/VR · Screencast · Found Footage · Mockumentary
+`documentary` · `narrative_fiction` · `animation` · `commercial` · `music_video` · `news_broadcast` · `essay_film` · `experimental` · `tutorial` · `vlog` · `live_stream` · `short_form_vertical` · `interview_talking_head` · `motion_graphics_explainer` · `sports_broadcast` · `surveillance_cctv` · `vr_360` · `screencast` · `found_footage` · `mockumentary`
 
 ### Camera System ([claude-20-styles-camera-v1.0.md](./claude-20-styles-camera-v1.0.md))
 
@@ -194,10 +211,12 @@ Scene tuple `Σ = (F, T, α, λ, τ_d, ω, η, ψ, ρ)`:
 ### Animation Taxonomy ([claude-animation-taxonomy-v1.0.md](./claude-animation-taxonomy-v1.0.md))
 
 Animation artifact `A = (F, T, μ, s, ι, χ, β, δ)`:
-- **Production methods:** drawn-2d, rendered-3d, stop-motion, physical-manipulation, screen-capture, hybrid, generative
+- **Production methods (`AnimationProductionMethodEnum`):** `optical`, `drawn_2d`, `rendered_3d`, `physical_manipulation`, `direct_on_medium`, `screen_capture`, `hybrid`
 - **Automation degree:** 0 (fully manual) → 1 (fully algorithmic)
-- **Playback modality:** fixed, interactive, generative, live-rendered
+- **Playback modality (`AnimationPlaybackModalityEnum`):** `fixed`, `interactive`, `generative`, `live_rendered`
 - **Delivery channels:** linear, interactive, spatial, real-time
+
+These enums are now machine-enforced as `$defs` in [video-project-schema-v2.json](./video-project-schema-v2.json) and referenced by `CinematicSpec.animation_method` and `CinematicSpec.animation_playback_modality`.
 
 ---
 
@@ -208,19 +227,26 @@ perplexity-youtube_styles_research.xlsx
         │  (empirical data)
         ▼
 prompt-video-schema.md ──────────────────────────────────────────────────┐
+prompt-create-skills.md                                                   │
         │  (requirements)                                                  │
         ▼                                                                  │
-┌───────────────────────────────────────────────┐                         │
-│  AI Schema Drafts (v1)                        │                         │
-│  ├── grok-video-schema.json                   │  (formal taxonomy)      │
-│  ├── manus-video_orchestration_schema...md    │◄────────────────────────┤
-│  ├── perplexity-VideoProject...md             │  claude-20-styles-*.md  │
-│  └── claude-video-production-schema-v1.0.json │  claude-animation-*.md  │
-└───────────────────────────────────────────────┘                         │
+┌────────────────────────────────────────────────────┐                    │
+│  AI Schema Drafts (v1)                             │  (formal taxonomy) │
+│  ├── grok-video-schema.json                        │◄───────────────────┤
+│  ├── manus-video_orchestration_schema...md         │  claude-20-styles- │
+│  ├── perplexity-VideoProject...md                  │  video/camera/scene│
+│  ├── claude-video-production-schema-v1.0.json      │  claude-animation- │
+│  ├── chatgpt-generative_video_project_package.json │  taxonomy-v1.0.md  │
+│  └── chatgpt-schema-guide.md                       │                    │
+└────────────────────────────────────────────────────┘                    │
         │  (merged + enhanced)                                             │
         ▼                                                                  │
-video-project-schema-v2.json  ◄──── term-map.json ◄── claude-corrected_  │
-   (canonical schema v2)             (vocabulary)      term_map.html      │
+video-project-schema-v2.json  ◄── term-map.json ◄── claude-corrected_    │
+   (canonical schema v2)           (vocabulary)      term_map.html        │
+        │                                                                  │
+        ▼                          ▼                                      │
+example-project.json          validate.py                                 │
+  (valid instance)            (CLI validator)                             ◄┘
 ```
 
 ---
@@ -232,6 +258,4 @@ This session is part of the **SAFE AI Production** project. See [session-01](../
 **Next steps for session-03:**
 - Pydantic v2 models generated from `video-project-schema-v2.json`
 - TypeScript types (`zod` schema) for frontend tooling
-- Example project instance (a complete 3-minute short film JSON)
-- Validation CLI: `vidproject validate <project.json>`
-- Integration guide for each supported AI tool
+- Integration guide for each supported AI tool (Runway, Kling, ElevenLabs, Suno)
