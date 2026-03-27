@@ -1,0 +1,275 @@
+{
+  "format_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "schema_version": "1.0.0",
+  "variant": {
+    "variant_type": "hollywood_spec",
+    "label": "Hollywood Spec Script (Feature Film)",
+    "region": "US",
+    "medium": "feature_film",
+    "language": "en-US",
+    "page_time_ratio": { "value": 60, "unit": "seconds" }
+  },
+  "page_setup": {
+    "paper_size": {
+      "format": "us_letter",
+      "width": { "value": 8.5, "unit": "inches" },
+      "height": { "value": 11, "unit": "inches" }
+    },
+    "margins": {
+      "top": { "value": 1.0, "unit": "inches" },
+      "bottom": { "value": 1.0, "unit": "inches" },
+      "left": { "value": 1.5, "unit": "inches" },
+      "right": { "value": 1.0, "unit": "inches" }
+    },
+    "font": {
+      "family": "Courier",
+      "size_pt": 12,
+      "monospaced": true,
+      "characters_per_inch": 10,
+      "lines_per_page": 55
+    },
+    "line_spacing": { "type": "single" },
+    "binding": {
+      "method": "three_hole_brads",
+      "brad_positions": [
+        { "value": 1.0, "unit": "inches" },
+        { "value": 5.5, "unit": "inches" },
+        { "value": 10.0, "unit": "inches" }
+      ]
+    }
+  },
+  "elements": [
+    {
+      "element_type": "scene_heading",
+      "label": "Scene Heading (Slug Line)",
+      "aliases": ["slug line", "master scene heading"],
+      "indentation": {
+        "left_offset": { "value": 0.0, "unit": "inches" },
+        "right_offset": { "value": 0.0, "unit": "inches" }
+      },
+      "capitalization": { "rule": "all_caps" },
+      "spacing_before": { "lines": 2 },
+      "spacing_after": { "lines": 1 },
+      "alignment": "left",
+      "syntax": {
+        "prefix_options": ["INT.", "EXT.", "INT./EXT.", "I/E."],
+        "content_pattern": "^(INT\\.|EXT\\.|INT\\./EXT\\.|I/E\\.)\\s+.+\\s*-\\s*.+$",
+        "structural_pattern": "<INT./EXT.> <LOCATION> - <TIME OF DAY>",
+        "permitted_time_of_day_values": [
+          "DAY", "NIGHT", "DAWN", "DUSK", "CONTINUOUS",
+          "LATER", "SAME TIME", "MOMENTS LATER", "MORNING",
+          "AFTERNOON", "EVENING"
+        ]
+      },
+      "page_break_behavior": "keep_with_next"
+    },
+    {
+      "element_type": "action",
+      "label": "Action (Description / Direction)",
+      "aliases": ["description", "direction", "scene description", "business"],
+      "indentation": {
+        "left_offset": { "value": 0.0, "unit": "inches" },
+        "right_offset": { "value": 0.0, "unit": "inches" }
+      },
+      "capitalization": {
+        "rule": "sentence_case",
+        "exceptions": [
+          "First appearance of a character name in action is ALL CAPS.",
+          "Sound effects (SFX) are written in ALL CAPS.",
+          "Camera directions (if used) are ALL CAPS, though spec scripts should minimize these."
+        ]
+      },
+      "spacing_before": { "lines": 1 },
+      "spacing_after": { "lines": 0 },
+      "alignment": "left",
+      "syntax": {
+        "tense": "present"
+      },
+      "page_break_behavior": "orphan_widow_control"
+    },
+    {
+      "element_type": "character_name",
+      "label": "Character Name (Character Cue)",
+      "aliases": ["character cue", "speaker"],
+      "indentation": {
+        "left_offset": { "value": 3.7, "unit": "inches" },
+        "right_offset": { "value": 0.0, "unit": "inches" }
+      },
+      "capitalization": { "rule": "all_caps" },
+      "spacing_before": { "lines": 1 },
+      "spacing_after": { "lines": 0 },
+      "alignment": "left",
+      "page_break_behavior": "keep_with_next",
+      "continuation_rules": {
+        "dialogue_continued_tag": "(CONT'D)",
+        "character_contd_for_interruption": true
+      }
+    },
+    {
+      "element_type": "dialogue",
+      "label": "Dialogue",
+      "aliases": [],
+      "indentation": {
+        "left_offset": { "value": 2.5, "unit": "inches" },
+        "right_offset": { "value": 2.5, "unit": "inches" }
+      },
+      "capitalization": { "rule": "as_written" },
+      "spacing_before": { "lines": 0 },
+      "spacing_after": { "lines": 0 },
+      "alignment": "left",
+      "max_width": { "value": 3.5, "unit": "inches" },
+      "continuation_rules": {
+        "dialogue_more_tag": "(MORE)",
+        "dialogue_continued_tag": "(CONT'D)"
+      },
+      "page_break_behavior": "orphan_widow_control"
+    },
+    {
+      "element_type": "parenthetical",
+      "label": "Parenthetical (Wryly / Actor Direction)",
+      "aliases": ["wrylies", "personal direction"],
+      "indentation": {
+        "left_offset": { "value": 3.1, "unit": "inches" },
+        "right_offset": { "value": 2.9, "unit": "inches" }
+      },
+      "capitalization": { "rule": "lowercase" },
+      "spacing_before": { "lines": 0 },
+      "spacing_after": { "lines": 0 },
+      "alignment": "left",
+      "max_width": { "value": 2.5, "unit": "inches" },
+      "syntax": {
+        "required_prefix": "(",
+        "required_suffix": ")"
+      },
+      "page_break_behavior": "keep_with_next"
+    },
+    {
+      "element_type": "transition",
+      "label": "Transition",
+      "aliases": [],
+      "indentation": {
+        "left_offset": { "value": 0.0, "unit": "inches" },
+        "right_offset": { "value": 0.0, "unit": "inches" }
+      },
+      "capitalization": { "rule": "all_caps" },
+      "spacing_before": { "lines": 2 },
+      "spacing_after": { "lines": 1 },
+      "alignment": "right",
+      "syntax": {
+        "required_suffix": ":",
+        "prefix_options": [
+          "CUT TO:", "DISSOLVE TO:", "FADE TO:", "SMASH CUT TO:",
+          "MATCH CUT TO:", "JUMP CUT TO:", "FADE IN:", "FADE OUT.",
+          "FADE TO BLACK."
+        ]
+      },
+      "page_break_behavior": "allow_break"
+    },
+    {
+      "element_type": "shot",
+      "label": "Shot (Camera Direction)",
+      "aliases": ["camera angle", "camera direction"],
+      "indentation": {
+        "left_offset": { "value": 0.0, "unit": "inches" },
+        "right_offset": { "value": 0.0, "unit": "inches" }
+      },
+      "capitalization": { "rule": "all_caps" },
+      "spacing_before": { "lines": 2 },
+      "spacing_after": { "lines": 1 },
+      "alignment": "left",
+      "page_break_behavior": "keep_with_next"
+    }
+  ],
+  "pagination": {
+    "page_number_position": "top_right",
+    "first_page_numbered": false,
+    "number_format": "{n}.",
+    "header_text": null,
+    "footer_text": null
+  },
+  "title_page": {
+    "fields": [
+      {
+        "field_type": "title",
+        "label": "Title",
+        "vertical_position": "upper_third",
+        "horizontal_alignment": "center",
+        "capitalization": { "rule": "all_caps" },
+        "style_modifiers": ["underline"],
+        "required_in_spec": true,
+        "required_in_shooting": true
+      },
+      {
+        "field_type": "credit",
+        "label": "Written by",
+        "vertical_position": "center",
+        "horizontal_alignment": "center",
+        "capitalization": { "rule": "as_written" },
+        "required_in_spec": true,
+        "required_in_shooting": true
+      },
+      {
+        "field_type": "author",
+        "label": "Author Name(s)",
+        "vertical_position": "center",
+        "horizontal_alignment": "center",
+        "capitalization": { "rule": "as_written" },
+        "required_in_spec": true,
+        "required_in_shooting": true
+      },
+      {
+        "field_type": "contact_info",
+        "label": "Contact Information / Representation",
+        "vertical_position": "lower_left",
+        "horizontal_alignment": "left",
+        "capitalization": { "rule": "as_written" },
+        "required_in_spec": true,
+        "required_in_shooting": false
+      },
+      {
+        "field_type": "draft_info",
+        "label": "Draft Number / Date",
+        "vertical_position": "lower_right",
+        "horizontal_alignment": "right",
+        "capitalization": { "rule": "as_written" },
+        "required_in_spec": false,
+        "required_in_shooting": true
+      },
+      {
+        "field_type": "wga_registration",
+        "label": "WGA Registration Number",
+        "vertical_position": "lower_left",
+        "horizontal_alignment": "left",
+        "capitalization": { "rule": "as_written" },
+        "required_in_spec": false,
+        "required_in_shooting": false
+      }
+    ],
+    "counts_as_page": false
+  },
+  "scene_numbering": {
+    "enabled": false,
+    "position": "both_margins",
+    "format": "{n}",
+    "added_scene_suffix": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "omitted_scene_notation": "OMITTED"
+  },
+  "revision_tracking": {
+    "color_sequence": [
+      { "order": 1, "color_name": "White", "hex_code": "#FFFFFF" },
+      { "order": 2, "color_name": "Blue", "hex_code": "#ADD8E6" },
+      { "order": 3, "color_name": "Pink", "hex_code": "#FFB6C1" },
+      { "order": 4, "color_name": "Yellow", "hex_code": "#FFFF99" },
+      { "order": 5, "color_name": "Green", "hex_code": "#90EE90" },
+      { "order": 6, "color_name": "Goldenrod", "hex_code": "#DAA520" },
+      { "order": 7, "color_name": "Buff", "hex_code": "#F0DC82" },
+      { "order": 8, "color_name": "Salmon", "hex_code": "#FA8072" },
+      { "order": 9, "color_name": "Cherry", "hex_code": "#DE3163" },
+      { "order": 10, "color_name": "Tan", "hex_code": "#D2B48C" }
+    ],
+    "revision_mark": "*",
+    "revision_mark_position": "right_margin",
+    "revision_date_in_header": true
+  },
+  "notes": "This is the standard Hollywood spec script format for feature films. Scene numbers and CONTINUED tags are intentionally disabled — these are production elements added during the shooting script phase. Parenthetical use should be minimal. Transitions other than FADE IN / FADE OUT are discouraged in modern spec scripts."
+}

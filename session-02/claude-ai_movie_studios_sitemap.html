@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Movie Studios — App Sitemap</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede9;
+    --text: #1a1a1a; --text2: #6b6b68; --text3: #9c9a92;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --info-bg: #E6F1FB; --info-text: #0C447C;
+    --success-bg: #EAF3DE; --success-text: #27500A;
+    --warn-bg: #FAEEDA; --warn-text: #633806;
+    --purple-bg: #EEEDFE; --purple-text: #3C3489;
+    --coral-bg: #FAECE7; --coral-text: #712B13;
+    --teal-bg: #E1F5EE; --teal-text: #085041;
+    --pink-bg: #FBEAF0; --pink-text: #72243E;
+    --amber-bg: #FAEEDA; --amber-text: #633806;
+    --red-bg: #FCEBEB; --red-text: #791F1F;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --bg2: #2c2c2a; --bg3: #3d3d3a;
+      --text: #e8e6df; --text2: #9c9a92; --text3: #73726c;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --info-bg: #042C53; --info-text: #85B7EB;
+      --success-bg: #173404; --success-text: #97C459;
+      --warn-bg: #412402; --warn-text: #FAC775;
+      --purple-bg: #26215C; --purple-text: #AFA9EC;
+      --coral-bg: #4A1B0C; --coral-text: #F0997B;
+      --teal-bg: #04342C; --teal-text: #5DCAA5;
+      --pink-bg: #4B1528; --pink-text: #ED93B1;
+      --amber-bg: #412402; --amber-text: #FAC775;
+      --red-bg: #501313; --red-text: #F09595;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); color: var(--text); background: var(--bg); padding: 24px; line-height: 1.5; }
+  .container { max-width: 780px; margin: 0 auto; }
+
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: var(--text2); margin-bottom: 20px; }
+
+  .legend {
+    display: flex; gap: 16px; padding: 10px 0; margin-bottom: 16px;
+    border-bottom: 0.5px solid var(--border); font-size: 12px; color: var(--text2); flex-wrap: wrap;
+  }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+
+  .badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500;
+    background: var(--info-bg); color: var(--info-text);
+  }
+  .badge.req { background: var(--success-bg); color: var(--success-text); }
+  .badge.layer { background: var(--warn-bg); color: var(--warn-text); }
+
+  .section { margin-bottom: 2px; }
+  .section-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; cursor: pointer; user-select: none;
+    border-radius: var(--radius); transition: background .12s;
+  }
+  .section-header:hover { background: var(--bg2); }
+  .chevron {
+    width: 16px; height: 16px; flex-shrink: 0;
+    transition: transform .2s; color: var(--text3);
+  }
+  .section-header.open .chevron { transform: rotate(90deg); }
+  .section-header .label { font-size: 15px; font-weight: 500; }
+  .section-header .schema-tag {
+    margin-left: auto; font-size: 11px; font-family: var(--mono);
+    color: var(--text3); background: var(--bg3); padding: 2px 7px; border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .children { display: none; padding-left: 24px; }
+  .children.vis { display: block; }
+
+  .page {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 7px 14px; border-left: 0.5px solid var(--border);
+    margin-left: 7px; border-radius: 0 var(--radius) var(--radius) 0;
+    transition: background .1s;
+  }
+  .page:hover { background: var(--bg2); }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border2); flex-shrink: 0; margin-top: 7px;
+  }
+  .info { flex: 1; min-width: 0; }
+  .pname { font-size: 13px; font-weight: 500; }
+  .pdesc { font-size: 12px; color: var(--text2); line-height: 1.4; margin-top: 1px; }
+  .entity-tag {
+    font-size: 10px; font-family: var(--mono); color: var(--text3);
+    background: var(--bg3); padding: 2px 6px; border-radius: 4px;
+    flex-shrink: 0; margin-top: 3px; white-space: nowrap;
+  }
+  .sub-children { padding-left: 16px; }
+
+  .color-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  .assembly-layers {
+    display: flex; gap: 6px; align-items: center;
+    padding: 8px 14px; margin: 4px 0 4px 31px;
+    font-size: 11px; color: var(--text2);
+    border-left: 0.5px solid var(--border);
+  }
+  .assembly-layers .arrow { color: var(--text3); }
+
+  .search-box {
+    width: 100%; padding: 8px 12px; margin-bottom: 16px;
+    border: 0.5px solid var(--border2); border-radius: var(--radius);
+    background: var(--bg); color: var(--text); font-size: 14px;
+    font-family: var(--font); outline: none;
+  }
+  .search-box:focus { border-color: var(--info-text); }
+  .search-box::placeholder { color: var(--text3); }
+
+  .stats-row {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .stat-card {
+    flex: 1; min-width: 100px; padding: 10px 14px;
+    background: var(--bg2); border-radius: var(--radius);
+  }
+  .stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-val { font-size: 20px; font-weight: 500; margin-top: 2px; }
+
+  .no-results { padding: 20px 14px; font-size: 14px; color: var(--text3); text-align: center; display: none; }
+</style>
+
+<div class="container">
+  <h1>AI Movie Studios — app sitemap</h1>
+  <p class="subtitle">Derived from unified-video-project-v3 schema (5,257 lines, 80+ entity types)</p>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Root sections</div><div class="stat-val">14</div></div>
+    <div class="stat-card"><div class="stat-label">Pages</div><div class="stat-val">47</div></div>
+    <div class="stat-card"><div class="stat-label">Sub-views</div><div class="stat-val">31</div></div>
+    <div class="stat-card"><div class="stat-label">Entity types</div><div class="stat-val">80+</div></div>
+  </div>
+
+  <input class="search-box" type="text" placeholder="Filter pages..." id="search" oninput="filterTree(this.value)">
+
+  <div class="legend">
+    <span><span class="badge req">required</span> Required root section</span>
+    <span><span class="badge">optional</span> Optional section</span>
+    <span><code style="font-size:10px;background:var(--bg3);padding:2px 5px;border-radius:3px;font-family:var(--mono)">$def</code> Schema entity</span>
+  </div>
+
+  <div id="tree"></div>
+  <div class="no-results" id="no-results">No pages match your filter.</div>
+</div>
+
+<script>
+const sections = [
+  { id:'dash', label:'Dashboard', req:true, schema:'ProjectEntity', color:'--info-bg', pages:[
+    { n:'Project overview', d:'ID, name, summary, status, created/updated timestamps', t:'ProjectEntity' },
+    { n:'Target & audience', d:'Target runtime (max 1800s), genres, audiences, languages (BCP-47)', t:'ProjectEntity' },
+    { n:'Global character refs', d:'Project-wide character references for consistency', t:'EntityRef[]' },
+    { n:'Global environment refs', d:'Project-wide environment references', t:'EntityRef[]' },
+    { n:'Global style refs', d:'Project-wide style guide references', t:'EntityRef[]' },
+    { n:'Budget tracker', d:'Currency (ISO 4217), total amount, spent amount, category breakdown', t:'Budget' },
+    { n:'Compliance', d:'Content classifications, certifications, review history', t:'Compliance' },
+  ]},
+  { id:'pkg', label:'Package & governance', req:true, schema:'PackageInfo', color:'--purple-bg', pages:[
+    { n:'Package metadata', d:'Package ID, creation/update timestamps, schema URI', t:'PackageInfo' },
+    { n:'Schedule', d:'Scheduled start & delivery dates using FuzzyDate (exact, approximate, range, unknown)', t:'FuzzyDate' },
+    { n:'Versioning policy', d:'Immutable published versions, default reference mode, content hash requirements', t:'VersioningPolicy' },
+    { n:'Governance rules', d:'Release criteria, project-level validation rules', t:'Governance' },
+    { n:'Naming conventions', d:'ID prefix, separator style, case style, file name template, version suffix', t:'NamingConventions' },
+  ]},
+  { id:'team', label:'Team', req:false, schema:'Team', color:'--teal-bg', pages:[
+    { n:'Member directory', d:'All team members with name, role, org, contact (PII-flagged)', t:'TeamMember[]' },
+    { n:'Roles', d:'Producer, director, writer, art-director, cinematographer, editor, sound-designer, QA-lead, developer, viewer, custom', t:'role enum' },
+    { n:'Permissions matrix', d:'Per-member: read, write, approve, publish, admin', t:'permissions[]' },
+  ]},
+  { id:'quality', label:'Quality profiles', req:true, schema:'QualityProfileEntity[]', color:'--amber-bg', pages:[
+    { n:'Profile list', d:'Reusable quality specs referenced by ID from every entity (D4 fix)', t:'QualityProfileEntity', sub:[
+      { n:'Video spec', d:'Resolution, aspect ratio, frame rate, scan type, bit depth, color space, dynamic range', t:'QualityProfile.video' },
+      { n:'Audio spec', d:'Sample rate (Hz), bit depth, channel layout, integrated loudness (LUFS), true peak (dBTP)', t:'AudioQualityControls' },
+      { n:'Temporal consistency', d:'Required flag, min consistency score, max flicker score, max identity drift, strategies', t:'TemporalConsistency' },
+      { n:'Character coherence', d:'Required flag, character refs, min similarity, locked attributes, anchors', t:'CharacterCoherence' },
+      { n:'Lighting guidelines', d:'Mood, style, key-to-fill ratio, backlight ratio, color temperature (K), contrast', t:'LightingGuidelines' },
+      { n:'Style guidelines', d:'Genres, adjectives, palette (hex/named), textures, camera language, editing language', t:'StyleGuidelines' },
+      { n:'Video quality controls', d:'Color grading intent, LUT refs, motion blur, denoise, sharpen, stabilization, anti-flicker, compression (codec, profile, bitrate)', t:'VideoQualityControls' },
+    ]},
+    { n:'Validation rules', d:'Named rules: metric + operator (eq, gt, lt, in, matches...) + target value + CEL/JSONPath expression', t:'ValidationRule[]' },
+  ]},
+  { id:'docs', label:'Canonical documents', req:true, schema:'canonicalDocuments', color:'--coral-bg', pages:[
+    { n:'Story', d:'Logline, synopsis, premise, themes, tone', t:'StoryEntity', sub:[
+      { n:'Story beats', d:'Ordered beats: ID, name, order, purpose, target time range, emotional objective, scene refs', t:'StoryBeat[]' },
+      { n:'Narrative arcs', d:'Character arcs with start/end beat refs, trajectory array', t:'NarrativeArc[]' },
+    ]},
+    { n:'Script', d:'Script body with segments: dialogue, action, parentheticals, scene heading', t:'ScriptEntity' },
+    { n:'Director instructions', d:'Per-scene director notes, visual intent, performance direction, reference assets', t:'DirectorInstructionsEntity' },
+  ]},
+  { id:'prod', label:'Production', req:true, schema:'production', color:'--info-bg', pages:[
+    { n:'Characters', d:'Appearance, wardrobe, personality traits, age range', t:'CharacterEntity', sub:[
+      { n:'Voice profile', d:'Provider, voice ID, style, pitch, speed, SSML config', t:'VoiceProfile' },
+      { n:'Canonical prompt fragments', d:'Weighted, ordered, categorized (appearance/style/action/mood/constraint), lockable', t:'PromptFragment[]' },
+      { n:'Banned traits', d:'Negative constraints for generation', t:'string[]' },
+      { n:'Coherence requirements', d:'Min similarity, locked attributes, anchor refs', t:'CharacterCoherence' },
+      { n:'Reference assets', d:'Canonical images and style references', t:'EntityRef[]' },
+    ]},
+    { n:'Environments', d:'Location type (interior/exterior/mixed/virtual/abstract), architecture style', t:'EnvironmentEntity', sub:[
+      { n:'Defaults', d:'Time of day defaults, weather defaults, continuity notes', t:'EnvironmentEntity' },
+      { n:'Canonical prompts', d:'Weighted prompt fragments for environment generation', t:'PromptFragment[]' },
+    ]},
+    { n:'Props', d:'Category, continuity notes, canonical prompts, reference assets', t:'PropEntity' },
+    { n:'Scenes', d:'Scene number, synopsis, character/environment/prop refs, mood, time of day, weather', t:'SceneEntity', sub:[
+      { n:'Timeline placement', d:'Target duration, planned position (TimeRange), story beat refs, script segment refs', t:'SceneEntity' },
+      { n:'Transitions', d:'In/out transitions: cut, dissolve, fade, wipe, push, zoom, custom', t:'TransitionSpec' },
+      { n:'QA gate', d:'Required checks, pass threshold (0-1), per-check scores, overall pass, evaluated timestamp', t:'QaGate' },
+    ]},
+    { n:'Shots', d:'Shot number, purpose, description, target duration, continuity notes, VFX notes', t:'ShotEntity', sub:[
+      { n:'Cinematic spec', d:'Shot type, camera angle, focal length, aperture, DOF, lens, movement, stabilization, framing, lighting, style', t:'CinematicSpec' },
+      { n:'Manim config', d:'Scene class, quality preset, background color, frame rate, resolution for procedural animation', t:'ManimConfig' },
+      { n:'Generation params', d:'Per-shot: provider, model, prompt + history, seed, guidance scale, inference steps, sampler, scheduler, strength, CFG', t:'GenerationStep' },
+      { n:'Cost tracking', d:'Estimate & actual: currency (ISO 4217), amount, provider, units (tokens/frames/seconds/images), unit count', t:'GenerationCost' },
+      { n:'Retry & async', d:'Max attempts, backoff strategy, fallback tool, polling/webhook/callback mode, timeout', t:'RetryConfig + AsyncConfig' },
+      { n:'Consistency anchors', d:'Type (character/style/environment/prop/camera), weight, lock level (soft/medium/hard), attributes', t:'ConsistencyAnchor[]' },
+      { n:'Reference inputs', d:'Entity refs with role, weight, locked attributes for conditioning', t:'ReferenceInput[]' },
+      { n:'Adapter inputs', d:'LoRA, ControlNet, IP-Adapter, T2I-Adapter with weight and params', t:'AdapterInput[]' },
+      { n:'Assembly hints', d:'Track, layer order, speed%, reverse, opacity, blend mode, transitions', t:'AssemblyHints' },
+      { n:'QA gate', d:'Per-shot quality gate with required checks and pass threshold', t:'QaGate' },
+    ]},
+  ]},
+  { id:'assets', label:'Asset library', req:true, schema:'assetLibrary', color:'--teal-bg', pages:[
+    { n:'Visual assets', d:'Type + modality: image, video, vector, 3D, depth, mask, alpha, storyboard, document', t:'VisualAssetEntity', sub:[
+      { n:'Visual spec', d:'Resolution, aspect ratio, frame rate, dominant palette, lighting, style, continuity notes', t:'VisualAssetSpec' },
+      { n:'Generation manifest', d:'Mode (manual/ai_generated/hybrid/captured/licensed/procedural), steps, anchors, reproducibility', t:'GenerationManifest' },
+      { n:'Variant set', d:'Variant set ID for grouping alternative versions', t:'variantSetId' },
+    ]},
+    { n:'Audio assets', d:'Type: dialogue, music, sfx, ambience, voiceover, foley', t:'AudioAssetEntity', sub:[
+      { n:'Audio tech spec', d:'Sample rate, bit depth, channel layout, loudness (LUFS), true peak (dBTP), codec, container, dynamics', t:'AudioTechnicalSpec' },
+      { n:'Cue points', d:'Sync points with time ranges, beat positions for beat-locked editing', t:'SyncPoint[]' },
+    ]},
+    { n:'Marketing assets', d:'Thumbnails, posters, trailers, social clips, promotional materials', t:'MarketingAssetEntity' },
+    { n:'Generic assets', d:'Catch-all: LUTs, LoRAs, ControlNets, IP-Adapters, fonts, configs, templates', t:'GenericAssetEntity' },
+    { n:'File management', d:'URI, storage provider, MIME type, byte size, checksum (SHA-256/512/MD5/BLAKE3), codec, container format', t:'FileObject' },
+  ]},
+  { id:'assembly', label:'Assembly pipeline', req:true, schema:'Assembly', color:'--purple-bg', pages:[
+    { n:'Timelines (layer 1)', d:'Clip/track-based edit graph: duration (max 1800s), frame rate, resolution, aspect ratio', t:'TimelineEntity', sub:[
+      { n:'Video clips', d:'Source ref, in/out points (seconds), timeline start, duration, layer order, transform, retime, sync points', t:'TimelineClip' },
+      { n:'Audio clips', d:'Same structure as video clips, placed on audio tracks', t:'TimelineClip' },
+      { n:'Subtitle clips', d:'Subtitle track clips with timing and sync', t:'TimelineClip' },
+      { n:'Stream bindings', d:'PyAV stream/time-base binding: stream type (video/audio/subtitle/data), index, codec, timebase', t:'StreamBinding' },
+      { n:'Operations', d:'Typed ops applied to timeline content', t:'Operation[]' },
+    ]},
+    { n:'Edit versions (layer 2)', d:'Versioned cut referencing a timeline, change list, approved-for-render flag', t:'EditVersionEntity' },
+    { n:'Render plans (layer 3)', d:'Typed operation list with compatible runtimes (moviepy/movis/opencv/pyav/manim/ffmpeg)', t:'RenderPlanEntity', sub:[
+      { n:'Concat op', d:'Concatenate clips in sequence', t:'ConcatOp' },
+      { n:'Overlay op', d:'Composite foreground on background with transform and time range', t:'OverlayOp' },
+      { n:'Color grade op', d:'Apply LUT or color grade with intent and strength', t:'ColorGradeOp' },
+      { n:'Audio mix op', d:'Multi-track mix: per-track gain (dB), pan (-1 to 1), time range, sync points', t:'AudioMixOp' },
+      { n:'Transition op', d:'Apply cut/dissolve/fade/wipe/push/zoom between clips', t:'TransitionOp' },
+      { n:'Filter op', d:'OpenCV frame-level filter with type and parameters', t:'FilterOp' },
+      { n:'Encode op', d:'PyAV/FFmpeg encode with compression controls', t:'EncodeOp' },
+      { n:'Manim op', d:'Manim CE procedural animation: scene class, config, output', t:'ManimOp' },
+      { n:'Retime op', d:'Speed change, reverse, ease curves', t:'RetimeOp' },
+      { n:'Custom op', d:'Escape hatch: executor, input/output refs, parameters', t:'CustomOp' },
+    ]},
+  ]},
+  { id:'orch', label:'Orchestration', req:true, schema:'Orchestration', color:'--pink-bg', pages:[
+    { n:'Workflow graphs', d:'Named DAGs with status (pending/running/paused/succeeded/failed/cancelled)', t:'WorkflowGraph', sub:[
+      { n:'Generation node', d:'AI generation step: full GenerationStep with model descriptor, cost tracking, retry, async', t:'GenerationNode' },
+      { n:'Approval node', d:'Human-in-the-loop gate: role, assignee refs, deadline, status (pending/approved/rejected/waived)', t:'ApprovalNode' },
+      { n:'Transform node', d:'Holds a typed Operation (overlay, color grade, filter, etc.) with executor config', t:'TransformNode' },
+      { n:'Render node', d:'Executes a RenderPlan with compatible runtimes and executor environment', t:'RenderNode' },
+      { n:'Validation node', d:'Automated QA: validation rules, QA gate, QC results', t:'ValidationNode' },
+      { n:'Notification node', d:'Alerts via webhook, email, Slack, or custom channel with template and payload', t:'NotificationNode' },
+      { n:'Custom node', d:'User-defined workflow step: executor (kind, target, runtimes, environment) + parameters', t:'CustomWorkflowNode' },
+    ]},
+    { n:'Workflow edges', d:'Conditional edges with CEL/JSONPath guard expressions, from/to node IDs', t:'WorkflowEdge' },
+  ]},
+  { id:'deliver', label:'Deliverables', req:true, schema:'FinalOutputEntity[]', color:'--success-bg', pages:[
+    { n:'Final outputs (layer 4)', d:'Output type, platform, release channel, runtime, source timeline/edit/render plan refs', t:'FinalOutputEntity', sub:[
+      { n:'Platform deliveries', d:'Per-platform: YouTube, Instagram, TikTok, Vimeo, broadcast, theatrical, streaming, custom — with format, aspect ratio, resolution, frame rate, max duration, publish schedule', t:'PlatformDelivery' },
+      { n:'Localization', d:'Per-language (BCP-47): subtitle track refs, dubbed audio ref, adapted marketing ref', t:'LocalizationConfig' },
+      { n:'Accessibility', d:'WCAG level (A/AA/AAA), closed/open captions, audio description ref, sign language ref', t:'AccessibilityConfig' },
+      { n:'QC results', d:'Per-metric pass/fail: actual vs expected value, severity (info/warning/error), evidence refs', t:'QCResult[]' },
+      { n:'Publication metadata', d:'Open-ended platform-specific metadata for distribution', t:'publicationMetadata' },
+    ]},
+  ]},
+  { id:'rel', label:'Relationships', req:true, schema:'Relationship[]', color:'--coral-bg', pages:[
+    { n:'Relationship graph', d:'Typed cross-entity edges: relationship ID, type, from/to entity refs, required flag, attributes, notes', t:'Relationship' },
+  ]},
+  { id:'dep', label:'Dependencies', req:false, schema:'DependencyEdge[]', color:'--amber-bg', pages:[
+    { n:'Dependency DAG', d:'Typed edges: requires, blocks, derives_from, supersedes, references, syncs_with, custom — with required flag', t:'DependencyEdge' },
+  ]},
+  { id:'ext', label:'Extensions', req:false, schema:'Extensions', color:'--bg3', pages:[
+    { n:'Extension registry', d:'Open additionalProperties point for tool-specific, domain-specific, or plugin data', t:'Extensions' },
+  ]},
+];
+
+const tree = document.getElementById('tree');
+const noResults = document.getElementById('no-results');
+
+function chevron() {
+  return '<svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 4l4 4-4 4"/></svg>';
+}
+
+function renderPage(p, depth) {
+  let cls = depth > 0 ? 'page sub-page' : 'page';
+  let html = '<div class="'+cls+'" data-search="'+p.n.toLowerCase()+' '+p.d.toLowerCase()+' '+p.t.toLowerCase()+'">';
+  html += '<div class="dot"></div>';
+  html += '<div class="info"><div class="pname">'+p.n+'</div><div class="pdesc">'+p.d+'</div></div>';
+  html += '<div class="entity-tag">'+p.t+'</div>';
+  html += '</div>';
+  if (p.sub) {
+    html += '<div class="sub-children">';
+    p.sub.forEach(function(s) { html += renderPage(s, depth+1); });
+    html += '</div>';
+  }
+  return html;
+}
+
+function renderSection(s) {
+  var badge = s.req ? '<span class="badge req">required</span>' : '<span class="badge">optional</span>';
+  var html = '<div class="section" data-id="'+s.id+'">';
+  html += '<div class="section-header" onclick="toggle(this)">';
+  html += chevron();
+  html += '<span class="label">'+s.label+'</span>';
+  html += badge;
+  html += '<span class="schema-tag">'+s.schema+'</span>';
+  html += '</div>';
+  html += '<div class="children">';
+  if (s.id === 'assembly') {
+    html += '<div class="assembly-layers">';
+    html += '<span class="badge layer">Layer 1</span> Timeline';
+    html += '<span class="arrow"> → </span>';
+    html += '<span class="badge layer">Layer 2</span> Edit version';
+    html += '<span class="arrow"> → </span>';
+    html += '<span class="badge layer">Layer 3</span> Render plan';
+    html += '<span class="arrow"> → </span>';
+    html += '<span class="badge layer">Layer 4</span> Final output';
+    html += '</div>';
+  }
+  s.pages.forEach(function(p) { html += renderPage(p, 0); });
+  html += '</div></div>';
+  return html;
+}
+
+tree.innerHTML = sections.map(renderSection).join('');
+
+function toggle(el) {
+  el.classList.toggle('open');
+  var ch = el.nextElementSibling;
+  ch.classList.toggle('vis');
+}
+
+// Open first 4 sections by default
+document.querySelectorAll('.section-header').forEach(function(h, i) {
+  if (i < 4) { h.classList.add('open'); h.nextElementSibling.classList.add('vis'); }
+});
+
+function filterTree(q) {
+  q = q.toLowerCase().trim();
+  var anyVisible = false;
+  document.querySelectorAll('.section').forEach(function(sec) {
+    var header = sec.querySelector('.section-header');
+    var children = sec.querySelector('.children');
+    var pages = sec.querySelectorAll('.page');
+    var sectionMatch = false;
+    if (!q) {
+      sec.style.display = '';
+      pages.forEach(function(p) { p.style.display = ''; });
+      return;
+    }
+    var sLabel = header.querySelector('.label').textContent.toLowerCase();
+    var sSchema = header.querySelector('.schema-tag').textContent.toLowerCase();
+    if (sLabel.includes(q) || sSchema.includes(q)) {
+      sectionMatch = true;
+    }
+    var pageMatch = false;
+    pages.forEach(function(p) {
+      var searchText = p.getAttribute('data-search') || '';
+      if (searchText.includes(q) || sectionMatch) {
+        p.style.display = '';
+        pageMatch = true;
+      } else {
+        p.style.display = 'none';
+      }
+    });
+    if (sectionMatch || pageMatch) {
+      sec.style.display = '';
+      anyVisible = true;
+      if (q && !header.classList.contains('open')) {
+        header.classList.add('open');
+        children.classList.add('vis');
+      }
+    } else {
+      sec.style.display = 'none';
+    }
+  });
+  noResults.style.display = (!q || anyVisible) ? 'none' : 'block';
+}
+</script>

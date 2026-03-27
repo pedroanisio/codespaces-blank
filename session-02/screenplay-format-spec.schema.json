@@ -1,0 +1,809 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.screenplay.org/format-spec/1.0.0",
+  "title": "Screenplay Format Specification",
+  "description": "A machine-readable specification of screenplay formatting rules across industry variants. Covers page setup, element formatting, pagination, title page, and regional/medium conventions. This schema defines the *format contract* — not screenplay content.",
+  "x-schema-version": "1.0.0",
+  "x-disclaimer": "No information within should be taken for granted. Any statement or premise not backed by a real logical definition or verifiable reference may be invalid, erroneous, or a hallucination. Verify against primary sources (e.g., Writers Guild formatting guides, Final Draft documentation, BBC Writers Room guidelines).",
+  "x-references": [
+    {
+      "source": "Writers Guild of America",
+      "description": "Standard screenplay submission guidelines",
+      "url": "https://www.wga.org"
+    },
+    {
+      "source": "BBC Writers Room",
+      "description": "BBC script formatting guidelines",
+      "url": "https://www.bbc.co.uk/writersroom"
+    },
+    {
+      "source": "The Screenwriter's Bible (David Trottier)",
+      "description": "Widely cited industry formatting reference",
+      "isbn": "978-1935247210"
+    },
+    {
+      "source": "Final Draft Software Documentation",
+      "description": "De facto standard screenplay software, element definitions",
+      "url": "https://www.finaldraft.com"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "format_id",
+    "schema_version",
+    "variant",
+    "page_setup",
+    "elements",
+    "pagination",
+    "title_page"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Opaque unique identifier for this format specification instance.",
+      "x-immutable": true
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+      "description": "Semantic version of this schema (not the screenplay content).",
+      "const": "1.0.0"
+    },
+    "variant": {
+      "$ref": "#/$defs/FormatVariant"
+    },
+    "page_setup": {
+      "$ref": "#/$defs/PageSetup"
+    },
+    "elements": {
+      "type": "array",
+      "description": "Ordered list of element format definitions. Each element type (scene heading, action, dialogue, etc.) has its own formatting rules. Order reflects typical visual hierarchy but does not constrain content sequencing.",
+      "items": {
+        "$ref": "#/$defs/ElementFormat"
+      },
+      "minItems": 1,
+      "x-ordering": "semantic_hierarchy"
+    },
+    "pagination": {
+      "$ref": "#/$defs/PaginationRules"
+    },
+    "title_page": {
+      "$ref": "#/$defs/TitlePageLayout"
+    },
+    "scene_numbering": {
+      "$ref": "#/$defs/SceneNumberingRules",
+      "description": "Scene numbering conventions. Typically absent in spec scripts, present in shooting scripts."
+    },
+    "revision_tracking": {
+      "$ref": "#/$defs/RevisionTracking",
+      "description": "Color-coded revision page conventions used in production drafts."
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Free-text notes about this format variant, e.g. deviations from the base standard or studio-specific overrides."
+    }
+  },
+
+  "$defs": {
+
+    "FormatVariant": {
+      "type": "object",
+      "description": "Identifies which screenplay format tradition this spec belongs to.",
+      "required": ["variant_type", "label", "region", "medium"],
+      "additionalProperties": false,
+      "properties": {
+        "variant_type": {
+          "type": "string",
+          "enum": [
+            "hollywood_spec",
+            "hollywood_shooting",
+            "tv_single_camera",
+            "tv_multi_camera",
+            "bbc_standard",
+            "french_continuite_dialoguee",
+            "bollywood_bound",
+            "japanese_standard",
+            "korean_standard",
+            "stage_play",
+            "custom"
+          ],
+          "description": "Discriminator for the format tradition. 'hollywood_spec' is the global default for unsolicited feature submissions. 'hollywood_shooting' adds scene numbers and revision colors. 'tv_multi_camera' uses distinct spacing and capitalization rules. 'french_continuite_dialoguee' is a prose-oriented format. 'custom' requires a note explaining the deviation."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Human-readable label for this variant, e.g. 'Hollywood Spec Script (Feature Film)'."
+        },
+        "region": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2 country code for the primary region of this format tradition.",
+          "examples": ["US", "GB", "FR", "IN", "JP", "KR"]
+        },
+        "medium": {
+          "type": "string",
+          "enum": [
+            "feature_film",
+            "television_episodic",
+            "television_pilot",
+            "short_film",
+            "web_series",
+            "stage",
+            "other"
+          ],
+          "description": "The production medium this format targets."
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$",
+          "description": "BCP 47 language tag for the primary language of scripts using this format.",
+          "examples": ["en-US", "en-GB", "fr-FR", "hi-IN", "ja-JP", "ko-KR"]
+        },
+        "page_time_ratio": {
+          "$ref": "#/$defs/Duration",
+          "description": "Approximate screen time per page. The Hollywood standard targets ~60 seconds/page in Courier 12pt. Multi-camera TV is roughly 30 seconds/page due to double-spacing."
+        }
+      }
+    },
+
+    "PageSetup": {
+      "type": "object",
+      "description": "Physical page dimensions, margins, and base font. These define the canvas on which all element formatting is applied.",
+      "required": ["paper_size", "margins", "font", "line_spacing"],
+      "additionalProperties": false,
+      "properties": {
+        "paper_size": {
+          "$ref": "#/$defs/PaperSize"
+        },
+        "margins": {
+          "$ref": "#/$defs/Margins"
+        },
+        "font": {
+          "$ref": "#/$defs/Font"
+        },
+        "line_spacing": {
+          "$ref": "#/$defs/LineSpacing",
+          "description": "Default line spacing for the body. Individual elements may override this."
+        },
+        "binding": {
+          "type": "object",
+          "description": "Physical binding conventions.",
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": ["three_hole_brads", "two_hole_brads", "spiral", "perfect_bound", "stapled", "none"],
+              "default": "three_hole_brads",
+              "description": "Physical binding method. Hollywood standard uses two or three brass brads through three-hole punched pages."
+            },
+            "brad_positions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Measurement"
+              },
+              "description": "Vertical positions of brads from page top.",
+              "x-ordering": "positional"
+            }
+          }
+        }
+      }
+    },
+
+    "PaperSize": {
+      "type": "object",
+      "description": "Physical paper dimensions.",
+      "required": ["format", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["us_letter", "a4", "custom"],
+          "description": "Named paper format. Hollywood standard is US Letter. A4 is common in European and Asian industries."
+        },
+        "width": {
+          "$ref": "#/$defs/Measurement",
+          "description": "Page width."
+        },
+        "height": {
+          "$ref": "#/$defs/Measurement",
+          "description": "Page height."
+        }
+      }
+    },
+
+    "Margins": {
+      "type": "object",
+      "description": "Page margins. The left margin is typically wider to accommodate binding.",
+      "required": ["top", "bottom", "left", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "top": { "$ref": "#/$defs/Measurement" },
+        "bottom": { "$ref": "#/$defs/Measurement" },
+        "left": {
+          "$ref": "#/$defs/Measurement",
+          "description": "Left margin. Typically 1.5 inches in Hollywood format to allow for three-hole binding."
+        },
+        "right": {
+          "$ref": "#/$defs/Measurement",
+          "description": "Right margin. Typically 1.0 inches. Some elements (dialogue, parenthetical) have their own narrower effective margins."
+        }
+      }
+    },
+
+    "Measurement": {
+      "type": "object",
+      "description": "A physical measurement with explicit unit declaration.",
+      "required": ["value", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Numeric value of the measurement."
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["inches", "centimeters", "millimeters", "points", "picas"],
+          "description": "Unit of measurement. Hollywood convention uses inches; European variants may use centimeters or millimeters."
+        }
+      }
+    },
+
+    "Font": {
+      "type": "object",
+      "description": "Typeface specification. Courier 12pt is the industry standard because it is a monospaced font that produces the page-per-minute timing approximation.",
+      "required": ["family", "size_pt", "monospaced"],
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "type": "string",
+          "description": "Font family name. 'Courier', 'Courier New', 'Courier Prime', and 'Courier Final Draft' are the accepted industry fonts.",
+          "examples": ["Courier", "Courier New", "Courier Prime", "Courier Final Draft"]
+        },
+        "size_pt": {
+          "type": "number",
+          "minimum": 6,
+          "maximum": 16,
+          "description": "Font size in typographic points. The industry standard is 12pt.",
+          "x-unit": "pt"
+        },
+        "monospaced": {
+          "type": "boolean",
+          "description": "Whether the font is monospaced. MUST be true for screenplay formatting; the page-per-minute rule depends on fixed character width."
+        },
+        "characters_per_inch": {
+          "type": "number",
+          "minimum": 8,
+          "maximum": 15,
+          "description": "Horizontal character density. Courier 12pt yields 10 characters per inch.",
+          "x-unit": "characters/inch"
+        },
+        "lines_per_page": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 70,
+          "description": "Approximate lines of text per page at single spacing with standard margins. Courier 12pt on US Letter with standard margins yields approximately 55-56 lines.",
+          "x-computed": true
+        }
+      }
+    },
+
+    "LineSpacing": {
+      "type": "object",
+      "description": "Line spacing specification.",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["single", "double", "one_and_half", "exact"],
+          "description": "Spacing type. Hollywood single-camera uses single spacing for action, single for dialogue. Multi-camera TV uses double spacing for dialogue."
+        },
+        "exact_value_pt": {
+          "type": "number",
+          "minimum": 6,
+          "maximum": 36,
+          "description": "Exact line spacing in points. Only used when type is 'exact'.",
+          "x-unit": "pt"
+        }
+      }
+    },
+
+    "ElementFormat": {
+      "type": "object",
+      "description": "Formatting rules for a single screenplay element type. Each element (scene heading, action, dialogue, etc.) has distinct indentation, capitalization, spacing, and alignment rules.",
+      "required": ["element_type", "label", "indentation", "capitalization", "spacing_before", "spacing_after", "alignment"],
+      "additionalProperties": false,
+      "properties": {
+        "element_type": {
+          "$ref": "#/$defs/ElementType"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Human-readable label, e.g. 'Scene Heading (Slug Line)'."
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "description": "Alternative names for this element type, e.g. ['slug line', 'master scene heading'] for scene_heading.",
+          "x-ordering": "unordered"
+        },
+        "indentation": {
+          "$ref": "#/$defs/Indentation"
+        },
+        "capitalization": {
+          "$ref": "#/$defs/Capitalization"
+        },
+        "spacing_before": {
+          "$ref": "#/$defs/Spacing",
+          "description": "Vertical space inserted BEFORE this element."
+        },
+        "spacing_after": {
+          "$ref": "#/$defs/Spacing",
+          "description": "Vertical space inserted AFTER this element."
+        },
+        "alignment": {
+          "type": "string",
+          "enum": ["left", "center", "right"],
+          "description": "Horizontal text alignment within the element's effective margins."
+        },
+        "line_spacing_override": {
+          "$ref": "#/$defs/LineSpacing",
+          "description": "If present, overrides the page-level line spacing for this element only."
+        },
+        "max_width": {
+          "$ref": "#/$defs/Measurement",
+          "description": "Maximum horizontal width of the text block for this element. Dialogue, for example, is narrower than action."
+        },
+        "syntax": {
+          "$ref": "#/$defs/ElementSyntax",
+          "description": "Content syntax rules — prefixes, suffixes, permitted patterns."
+        },
+        "continuation_rules": {
+          "$ref": "#/$defs/ContinuationRules",
+          "description": "How this element handles page breaks: (CONT'D), (MORE), etc."
+        },
+        "style_modifiers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["bold", "italic", "underline", "strikethrough"],
+            "description": "Typographic modifiers applied to this element."
+          },
+          "description": "Default typographic styling. Scene headings are sometimes underlined in shooting scripts.",
+          "x-ordering": "unordered"
+        },
+        "page_break_behavior": {
+          "type": "string",
+          "enum": [
+            "keep_with_next",
+            "allow_break",
+            "force_break_before",
+            "orphan_widow_control"
+          ],
+          "default": "allow_break",
+          "description": "How the element interacts with page boundaries. Character names should keep_with_next to avoid separation from dialogue."
+        }
+      }
+    },
+
+    "ElementType": {
+      "type": "string",
+      "enum": [
+        "scene_heading",
+        "action",
+        "character_name",
+        "dialogue",
+        "parenthetical",
+        "transition",
+        "shot",
+        "dual_dialogue",
+        "montage_header",
+        "intercut_header",
+        "flashback_header",
+        "superimpose",
+        "chyron",
+        "title_card",
+        "lyrics",
+        "voice_over_tag",
+        "off_screen_tag",
+        "continued_tag",
+        "act_break",
+        "cold_open_header",
+        "end_of_act",
+        "teaser_header",
+        "note",
+        "revision_marker"
+      ],
+      "description": "Discriminator for the type of screenplay element. Core elements (scene_heading through transition) are present in all variants. Extended elements (shot, dual_dialogue, montage_header, etc.) are variant-dependent. TV-specific elements (act_break, cold_open_header, end_of_act, teaser_header) appear only in television formats."
+    },
+
+    "Indentation": {
+      "type": "object",
+      "description": "Horizontal positioning of the text block relative to the page's left margin.",
+      "required": ["left_offset", "right_offset"],
+      "additionalProperties": false,
+      "properties": {
+        "left_offset": {
+          "$ref": "#/$defs/Measurement",
+          "description": "Distance from the left margin to the start of this element's text."
+        },
+        "right_offset": {
+          "$ref": "#/$defs/Measurement",
+          "description": "Distance from the right margin that this element's text stops at (effective right boundary)."
+        }
+      }
+    },
+
+    "Capitalization": {
+      "type": "object",
+      "description": "Text case rules for this element.",
+      "required": ["rule"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {
+          "type": "string",
+          "enum": ["all_caps", "title_case", "sentence_case", "lowercase", "as_written"],
+          "description": "The capitalization rule. Scene headings and character names are ALL CAPS in Hollywood format. Action is sentence case. 'as_written' means the author controls case."
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": "Documented exceptions to the capitalization rule, e.g. 'First appearance of a character name in action lines is ALL CAPS regardless of action line's sentence_case rule.'",
+          "x-ordering": "unordered"
+        }
+      }
+    },
+
+    "Spacing": {
+      "type": "object",
+      "description": "Vertical spacing measured in blank lines.",
+      "required": ["lines"],
+      "additionalProperties": false,
+      "properties": {
+        "lines": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Number of blank lines. 0 = no extra space, 1 = one blank line (i.e. double-spaced from previous element).",
+          "x-unit": "blank_lines"
+        }
+      }
+    },
+
+    "ElementSyntax": {
+      "type": "object",
+      "description": "Content-level syntax rules for a screenplay element.",
+      "additionalProperties": false,
+      "properties": {
+        "required_prefix": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "A mandatory prefix string. Scene headings must start with 'INT.', 'EXT.', or 'INT./EXT.'.",
+          "examples": ["INT.", "EXT.", "CUT TO:"]
+        },
+        "prefix_options": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "description": "If the prefix is one-of-many (e.g. scene headings can be INT., EXT., INT./EXT., I/E.), list all valid options here.",
+          "examples": [["INT.", "EXT.", "INT./EXT.", "I/E."]],
+          "x-ordering": "unordered"
+        },
+        "required_suffix": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "A mandatory suffix. Transitions typically end with a colon, e.g. 'CUT TO:'."
+        },
+        "content_pattern": {
+          "type": "string",
+          "format": "regex",
+          "description": "A regex pattern the element's content must match. Scene headings: '^(INT\\.|EXT\\.|INT\\./EXT\\.|I/E\\.)\\s+.+\\s*-\\s*(DAY|NIGHT|DAWN|DUSK|CONTINUOUS|LATER|SAME TIME|MOMENTS LATER)$'."
+        },
+        "tense": {
+          "type": "string",
+          "enum": ["present", "past", "any"],
+          "default": "present",
+          "description": "Required grammatical tense. Action lines MUST be written in present tense."
+        },
+        "structural_pattern": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Human-readable structural description. For scene headings: 'INT./EXT. <LOCATION> - <TIME OF DAY>'. Three components separated by specific delimiters."
+        },
+        "permitted_time_of_day_values": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "description": "Recognized time-of-day designations for scene headings.",
+          "examples": [["DAY", "NIGHT", "DAWN", "DUSK", "CONTINUOUS", "LATER", "SAME TIME", "MOMENTS LATER", "MORNING", "AFTERNOON", "EVENING"]],
+          "x-ordering": "unordered"
+        }
+      }
+    },
+
+    "ContinuationRules": {
+      "type": "object",
+      "description": "Rules for handling page breaks within or between elements.",
+      "additionalProperties": false,
+      "properties": {
+        "dialogue_more_tag": {
+          "type": "string",
+          "default": "(MORE)",
+          "description": "Tag placed at the bottom of a page when dialogue is split across pages."
+        },
+        "dialogue_continued_tag": {
+          "type": "string",
+          "default": "(CONT'D)",
+          "description": "Tag placed after the character name at the top of the next page when dialogue continues."
+        },
+        "scene_continued_tag": {
+          "type": "string",
+          "default": "CONTINUED:",
+          "description": "Tag placed at the bottom/top of pages when a scene spans a page break. Used in shooting scripts; generally omitted in spec scripts."
+        },
+        "use_scene_continued": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to use CONTINUED: tags at page breaks within scenes. Typically false for spec scripts, true for shooting scripts."
+        },
+        "character_contd_for_interruption": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to append (CONT'D) to a character name when the same character speaks again after an action line interruption (non-page-break continuation)."
+        }
+      }
+    },
+
+    "PaginationRules": {
+      "type": "object",
+      "description": "Page numbering and header/footer conventions.",
+      "required": ["page_number_position", "first_page_numbered"],
+      "additionalProperties": false,
+      "properties": {
+        "page_number_position": {
+          "type": "string",
+          "enum": ["top_right", "top_center", "top_left", "bottom_right", "bottom_center", "bottom_left"],
+          "default": "top_right",
+          "description": "Where page numbers appear. Hollywood standard is top-right."
+        },
+        "first_page_numbered": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether page 1 (the first page of content, after the title page) displays a page number. Hollywood convention: page 1 is unnumbered; numbering starts on page 2."
+        },
+        "number_format": {
+          "type": "string",
+          "default": "{n}.",
+          "description": "Format template for page numbers. '{n}.' produces '2.', '3.', etc.",
+          "examples": ["{n}.", "{n}", "Page {n}"]
+        },
+        "header_text": {
+          "type": ["string", "null"],
+          "default": null,
+          "maxLength": 200,
+          "description": "Optional running header text (e.g. draft title). Null means no header beyond page number."
+        },
+        "footer_text": {
+          "type": ["string", "null"],
+          "default": null,
+          "maxLength": 200,
+          "description": "Optional running footer text. Null means no footer."
+        }
+      }
+    },
+
+    "SceneNumberingRules": {
+      "type": "object",
+      "description": "Scene numbering conventions. Present in shooting scripts, absent in spec scripts.",
+      "required": ["enabled", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether scene numbers are displayed. False for spec scripts."
+        },
+        "position": {
+          "type": "string",
+          "enum": ["both_margins", "left_only", "right_only"],
+          "default": "both_margins",
+          "description": "Where scene numbers appear relative to the scene heading."
+        },
+        "format": {
+          "type": "string",
+          "default": "{n}",
+          "description": "Number format template. Some productions use letter suffixes for added scenes: '23A'."
+        },
+        "added_scene_suffix": {
+          "type": "string",
+          "default": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+          "description": "Characters used as suffixes when scenes are added between existing numbered scenes."
+        },
+        "omitted_scene_notation": {
+          "type": "string",
+          "default": "OMITTED",
+          "description": "Text used when a previously numbered scene is removed but its number must be preserved for continuity."
+        }
+      }
+    },
+
+    "TitlePageLayout": {
+      "type": "object",
+      "description": "Layout and content rules for the screenplay title page.",
+      "required": ["fields"],
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TitlePageField"
+          },
+          "minItems": 1,
+          "description": "Ordered list of fields that appear on the title page.",
+          "x-ordering": "vertical_position"
+        },
+        "counts_as_page": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the title page is counted in pagination. Hollywood standard: the title page is NOT counted; page 1 begins on the first page of content."
+        }
+      }
+    },
+
+    "TitlePageField": {
+      "type": "object",
+      "description": "A single field on the title page (title, author, contact info, etc.).",
+      "required": ["field_type", "label", "vertical_position", "horizontal_alignment"],
+      "additionalProperties": false,
+      "properties": {
+        "field_type": {
+          "type": "string",
+          "enum": [
+            "title",
+            "credit",
+            "author",
+            "source_material",
+            "draft_info",
+            "date",
+            "contact_info",
+            "copyright_notice",
+            "wga_registration",
+            "custom"
+          ],
+          "description": "Discriminator for the type of title page field."
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Human-readable label, e.g. 'Written by'."
+        },
+        "vertical_position": {
+          "type": "string",
+          "enum": ["upper_third", "center", "lower_left", "lower_right", "lower_center"],
+          "description": "Vertical zone on the title page where this field appears."
+        },
+        "horizontal_alignment": {
+          "type": "string",
+          "enum": ["left", "center", "right"],
+          "description": "Horizontal alignment within the field's zone."
+        },
+        "capitalization": {
+          "$ref": "#/$defs/Capitalization"
+        },
+        "style_modifiers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["bold", "italic", "underline"]
+          },
+          "x-ordering": "unordered"
+        },
+        "required_in_spec": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this field is required for a spec script submission."
+        },
+        "required_in_shooting": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this field is required for a shooting script."
+        }
+      }
+    },
+
+    "RevisionTracking": {
+      "type": "object",
+      "description": "Revision color and marking conventions used in production scripts.",
+      "required": ["color_sequence", "revision_mark"],
+      "additionalProperties": false,
+      "properties": {
+        "color_sequence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RevisionColor"
+          },
+          "minItems": 1,
+          "description": "Ordered sequence of revision page colors. Industry standard is: White, Blue, Pink, Yellow, Green, Goldenrod, Buff, Salmon, Cherry, Tan, then second round prefixed with '2nd'.",
+          "x-ordering": "revision_order"
+        },
+        "revision_mark": {
+          "type": "string",
+          "default": "*",
+          "maxLength": 5,
+          "description": "Character placed in the right margin to indicate a revised line."
+        },
+        "revision_mark_position": {
+          "type": "string",
+          "enum": ["right_margin", "left_margin"],
+          "default": "right_margin",
+          "description": "Which margin receives revision asterisks."
+        },
+        "revision_date_in_header": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the revision date appears in the page header."
+        }
+      }
+    },
+
+    "RevisionColor": {
+      "type": "object",
+      "description": "A single entry in the revision color sequence.",
+      "required": ["order", "color_name"],
+      "additionalProperties": false,
+      "properties": {
+        "order": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Sequence position (1 = first revision, 2 = second, etc.)."
+        },
+        "color_name": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Name of the paper color, e.g. 'Blue', 'Pink', 'Goldenrod'."
+        },
+        "hex_code": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Approximate hex color code for digital representation."
+        }
+      }
+    },
+
+    "Duration": {
+      "type": "object",
+      "description": "A time duration with explicit unit.",
+      "required": ["value", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Numeric value."
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["seconds", "minutes"],
+          "description": "Time unit."
+        }
+      }
+    }
+  }
+}

@@ -24,7 +24,15 @@
       "Bash(python validate.py)",
       "Bash(ls session-02/*.md session-02/*.json session-02/*.py)",
       "Bash(python session-02/validate.py)",
-      "Bash(grep -oP '\\(?<=\"\"\"\"\\)\\\\w+\\(?\"\"\"\": \\\\{$\\)' /workspaces/codespaces-blank/session-02/claude-unified-video-project-v3.schema.json)"
+      "Bash(grep -oP '\\(?<=\"\"\"\"\\)\\\\w+\\(?\"\"\"\": \\\\{$\\)' /workspaces/codespaces-blank/session-02/claude-unified-video-project-v3.schema.json)",
+      "Bash(python -c \"import json; d=json.load\\(open\\(''claude-unified-video-project-v3.schema.json''\\)\\); defs=list\\(d[''$defs''].keys\\(\\)\\); print\\(f''Valid JSON. $defs count: {len\\(defs\\)}''\\); print\\(''StyleGuideEntity'' in defs, ''StyleGuidelines'' in defs\\)\")",
+      "Bash(python3 -c \"import moviepy; print\\(moviepy.__version__\\)\")",
+      "Bash(python3 -c \"import ffmpeg; print\\(''''ffmpeg-python ok''''\\)\")",
+      "Bash(ffmpeg -version)",
+      "Bash(python3 -c \"import moviepy; print\\(''moviepy'', moviepy.__version__\\)\")",
+      "Bash(python3 -c \"from PIL import Image; print\\(''Pillow ok''\\)\")",
+      "Bash(python -m pipeline.run example-project.json --output-dir ./output/the-last-signal --stub-only)",
+      "Bash(grep -n \"    }$\" /workspaces/codespaces-blank/session-02/claude-unified-video-project-v3.schema.json)"
     ]
   }
 }
