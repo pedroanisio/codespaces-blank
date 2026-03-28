@@ -64,7 +64,7 @@ VERSION_STATES = [
     "changes_requested", "approved", "published", "archived", "deprecated",
 ]
 
-SCHEMA_FILE = Path(__file__).resolve().parent.parent / "schemas" / "claude-unified-video-project-v3.schema.json"
+SCHEMA_FILE = Path(__file__).resolve().parent.parent / "schemas" / "active" / "gvpp-v3.schema.json"
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

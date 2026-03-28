@@ -51,7 +51,7 @@ log = structlog.get_logger("pipeline.check")
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 _SESSION_DIR = Path(__file__).parent.parent
-_V3_SCHEMA = _SESSION_DIR / "schemas" / "claude-unified-video-project-v3.schema.json"
+_V3_SCHEMA = _SESSION_DIR / "schemas" / "active" / "gvpp-v3.schema.json"
 _SKILLS_SCHEMA = _SESSION_DIR / "skills" / "schema.json"
 _DEMO_INSTANCE = _SESSION_DIR / "examples" / "demo-30s.json"
 

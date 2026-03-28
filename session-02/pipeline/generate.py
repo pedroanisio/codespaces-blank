@@ -119,9 +119,20 @@ def _stub_audio(asset: dict, out_path: Path) -> None:
     Silent (or soft-tone for music) MP3 matching the asset's sync window.
     Reads v3 syncPoints.timelineInSec / timelineOutSec.
     """
-    sync = asset.get("syncPoints") or {}
-    t_in  = float(sync.get("timelineInSec",  0))
-    t_out = float(sync.get("timelineOutSec", t_in + 5))
+    raw_sync = asset.get("syncPoints")
+    if isinstance(raw_sync, list) and raw_sync:
+        # v3 format: array of SyncPoint objects with time.startSec / time.endSec
+        first = raw_sync[0].get("time") or {} if isinstance(raw_sync[0], dict) else {}
+        last = raw_sync[-1].get("time") or {} if isinstance(raw_sync[-1], dict) else {}
+        t_in = float(first.get("startSec", 0))
+        t_out = float(last.get("endSec", last.get("startSec", t_in + 5)))
+    elif isinstance(raw_sync, dict):
+        # v2 compat: single object with timelineInSec / timelineOutSec
+        t_in = float(raw_sync.get("timelineInSec", 0))
+        t_out = float(raw_sync.get("timelineOutSec", t_in + 5))
+    else:
+        t_in = 0
+        t_out = 5
     duration = max(t_out - t_in, 0.5)
     audio_type = asset.get("audioType") or "ambient"
 
@@ -148,13 +159,92 @@ def _stub_audio(asset: dict, out_path: Path) -> None:
 
 # ── real generators ───────────────────────────────────────────────────────────
 
-def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
+# ── provider constraints ──────────────────────────────────────────────────────
+
+# Each provider's hard constraints for video generation.
+# Used by _pick_video_provider() to route shots without trial-and-error.
+_VIDEO_PROVIDER_CONSTRAINTS = {
+    "runway": {
+        "min_duration_sec": 2,
+        "max_duration_sec": 10,
+        "supports_reference_images": False,
+        "supported_ratios": ["1280:720", "720:1280", "1280:768"],
+    },
+    "veo": {
+        "min_duration_sec": 1,
+        "max_duration_sec": 8,
+        "supports_reference_images": True,
+        "max_reference_images": 3,
+        "supported_ratios": ["16:9", "9:16", "1:1"],
+    },
+}
+
+
+def _pick_video_provider(
+    shot: dict,
+    *,
+    runway_key: str | None,
+    gemini_key: str | None,
+    reference_images: list[bytes] | None = None,
+) -> list[str]:
+    """
+    Return an ordered list of eligible providers for a given shot,
+    based on provider constraints and shot requirements.
+
+    Checks duration limits, reference image support, and API key availability.
+    Always includes "stub" as the final fallback.
+    """
+    duration = float(shot.get("targetDurationSec", 5))
+    has_refs = bool(reference_images and any(len(b) > 100 for b in reference_images))
+    candidates: list[str] = []
+
+    # Runway
+    rc = _VIDEO_PROVIDER_CONSTRAINTS["runway"]
+    if (runway_key
+            and rc["min_duration_sec"] <= duration <= rc["max_duration_sec"]):
+        candidates.append("runway")
+
+    # Veo
+    vc = _VIDEO_PROVIDER_CONSTRAINTS["veo"]
+    if (gemini_key and "REPLACE_ME" not in gemini_key
+            and vc["min_duration_sec"] <= duration <= vc["max_duration_sec"]):
+        # Prefer Veo when reference images are available and provider supports them
+        if has_refs and vc["supports_reference_images"]:
+            candidates.insert(0, "veo")
+        else:
+            candidates.append("veo")
+
+    candidates.append("stub")
+
+    log.debug(
+        "video_provider_routing",
+        shot_id=_shot_id(shot),
+        duration=duration,
+        has_refs=has_refs,
+        providers=candidates,
+    )
+    return candidates
+
+
+def _runway_generate_shot(
+    shot: dict,
+    api_key: str,
+    out_path: Path,
+    *,
+    enriched_prompt: str | None = None,
+) -> None:
     """Generate a video clip via Runway Gen4.5 text-to-video REST API."""
     import requests  # noqa: PLC0415
 
     gen_params = shot.get("genParams") or {}
-    prompt = gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
-    duration = min(int(shot.get("targetDurationSec", 5)), 10)
+    prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+    # Runway has a prompt length limit — truncate to 2000 chars
+    prompt = prompt[:2000]
+    duration = max(
+        _VIDEO_PROVIDER_CONSTRAINTS["runway"]["min_duration_sec"],
+        min(int(shot.get("targetDurationSec", 5)),
+            _VIDEO_PROVIDER_CONSTRAINTS["runway"]["max_duration_sec"]),
+    )
 
     payload = {
         "promptText": prompt,
@@ -568,11 +658,15 @@ def _generate_reference_images(
         identity_block = "; ".join(locked_frags) if locked_frags else char_desc
 
         lib.characters[char_lid] = {}
+        anchor_bytes: bytes | None = None  # first view becomes reference for subsequent views
         for view_name, view_instruction in _CHARACTER_VIEWS:
             ref_path = refs_dir / f"{char_lid}.{view_name}.png"
 
             if ref_path.exists():
-                lib.characters[char_lid][view_name] = ref_path.read_bytes()
+                cached = ref_path.read_bytes()
+                lib.characters[char_lid][view_name] = cached
+                if anchor_bytes is None:
+                    anchor_bytes = cached
                 log.info("ref_cache_hit", file=ref_path.name)
                 continue
 
@@ -582,11 +676,15 @@ def _generate_reference_images(
                 f"{lighting_hint} "
                 f"Photorealistic, cinematic."
             )
+            if anchor_bytes:
+                prompt += " Maintain exact same character design, proportions, colors, and materials as the reference image."
 
             log.info("ref_generating", entity=char_name, view=view_name)
-            img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
+            img_bytes = generate_image(prompt, size="1024x1024", quality="hd", reference_image=anchor_bytes)
             ref_path.write_bytes(img_bytes)
             lib.characters[char_lid][view_name] = img_bytes
+            if anchor_bytes is None:
+                anchor_bytes = img_bytes
             log.info("ref_generated", entity=char_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
 
     # ── S13 Step 3: Environment plates (2 views, NO characters) ───────────
@@ -596,11 +694,15 @@ def _generate_reference_images(
         env_desc = env.get("description", "")
 
         lib.environments[env_lid] = {}
+        env_anchor: bytes | None = None
         for view_name, view_instruction in _ENVIRONMENT_VIEWS:
             ref_path = refs_dir / f"{env_lid}.{view_name}.png"
 
             if ref_path.exists():
-                lib.environments[env_lid][view_name] = ref_path.read_bytes()
+                cached = ref_path.read_bytes()
+                lib.environments[env_lid][view_name] = cached
+                if env_anchor is None:
+                    env_anchor = cached
                 log.info("ref_cache_hit", file=ref_path.name)
                 continue
 
@@ -609,11 +711,15 @@ def _generate_reference_images(
                 f"{view_instruction} "
                 f"Photorealistic, cinematic. Style: {preamble[:400]}"
             )
+            if env_anchor:
+                prompt += " Maintain exact same environment style, color palette, lighting, and atmosphere as the reference image."
 
             log.info("ref_generating", entity=env_name, view=view_name)
-            img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
+            img_bytes = generate_image(prompt, size="1024x1024", quality="hd", reference_image=env_anchor)
             ref_path.write_bytes(img_bytes)
             lib.environments[env_lid][view_name] = img_bytes
+            if env_anchor is None:
+                env_anchor = img_bytes
             log.info("ref_generated", entity=env_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
 
     # ── S13 Step 4: Prop sprite references (multi-angle, env lighting) ────
@@ -652,11 +758,15 @@ def _generate_reference_images(
             env_light = ""
 
         lib.props[prop_lid] = {}
+        prop_anchor: bytes | None = None
         for view_name, view_instruction in _PROP_VIEWS:
             ref_path = refs_dir / f"{prop_lid}.{view_name}.png"
 
             if ref_path.exists():
-                lib.props[prop_lid][view_name] = ref_path.read_bytes()
+                cached = ref_path.read_bytes()
+                lib.props[prop_lid][view_name] = cached
+                if prop_anchor is None:
+                    prop_anchor = cached
                 log.info("ref_cache_hit", file=ref_path.name)
                 continue
 
@@ -666,11 +776,15 @@ def _generate_reference_images(
                 f"{env_light}"
                 f"Photorealistic, cinematic."
             )
+            if prop_anchor:
+                prompt += " Maintain exact same prop design, proportions, colors, and materials as the reference image."
 
             log.info("ref_generating_prop", entity=prop_name, view=view_name)
-            img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
+            img_bytes = generate_image(prompt, size="1024x1024", quality="hd", reference_image=prop_anchor)
             ref_path.write_bytes(img_bytes)
             lib.props[prop_lid][view_name] = img_bytes
+            if prop_anchor is None:
+                prop_anchor = img_bytes
             log.info("ref_generated", entity=prop_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
 
     # ── S13 Step 3b: POV environment plates (per character × environment) ──
@@ -1090,24 +1204,38 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                             log.debug("temporal_bridge_extraction_failed", error=str(exc))
                     break
 
-        # Try Runway first
-        if runway_key:
+        # Route to the best provider based on shot constraints
+        providers = _pick_video_provider(
+            shot,
+            runway_key=runway_key,
+            gemini_key=gemini_key,
+            reference_images=ref_bytes,
+        )
+        for provider in providers:
             try:
-                _runway_generate_shot(shot, runway_key, out_path)
-                return sid, out_path
+                if provider == "runway":
+                    _runway_generate_shot(shot, runway_key, out_path, enriched_prompt=enriched_prompt)
+                    return sid, out_path
+                elif provider == "veo":
+                    _veo_generate_shot(
+                        shot, gemini_key, out_path,
+                        enriched_prompt=enriched_prompt,
+                        reference_images=ref_bytes,
+                    )
+                    return sid, out_path
+                elif provider == "stub":
+                    _stub_shot_video(shot, out_path)
+                    return sid, out_path
             except Exception as exc:
-                log.warning("runway_failed_veo_fallback", shot_id=sid, error=str(exc))
-        # Try Veo 3.1 with reference images
-        if gemini_key and "REPLACE_ME" not in gemini_key:
-            try:
-                _veo_generate_shot(
-                    shot, gemini_key, out_path,
-                    enriched_prompt=enriched_prompt,
-                    reference_images=ref_bytes,
+                remaining = providers[providers.index(provider) + 1:]
+                log.warning(
+                    "video_provider_failed",
+                    shot_id=sid,
+                    provider=provider,
+                    error=str(exc),
+                    fallback=remaining[0] if remaining else "none",
                 )
-                return sid, out_path
-            except Exception as exc:
-                log.warning("veo_failed_stub_fallback", shot_id=sid, error=str(exc))
+                continue
         _stub_shot_video(shot, out_path)
         return sid, out_path
 

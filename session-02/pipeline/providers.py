@@ -276,9 +276,14 @@ def generate_image(
     *,
     size: str = "1024x1024",
     quality: str = "standard",
+    reference_image: bytes | None = None,
 ) -> bytes:
     """
     Generate an image from a text prompt. Returns PNG bytes.
+
+    When ``reference_image`` is provided (PNG bytes), it is sent alongside
+    the prompt so the model maintains visual consistency with the reference
+    (e.g. same character from a different angle).
 
     Tries GPT-Image-1.5 → DALL-E 3 → Gemini Imagen 4 → Grok Aurora → stub PNG.
     """
@@ -288,27 +293,48 @@ def generate_image(
         # Try gpt-image-1.5 first (higher quality, better text rendering)
         for img_model in ("gpt-image-1.5", "dall-e-3"):
             try:
-                kw: dict[str, Any] = {
-                    "model": img_model,
-                    "prompt": prompt[:4000],
-                    "n": 1,
-                    "size": size,
-                }
-                if img_model.startswith("gpt-image"):
-                    kw["quality"] = "high"
-                    kw["output_format"] = "png"
+                if reference_image and img_model.startswith("gpt-image"):
+                    # Use images.edit with the reference as input for consistency
+                    import io
+                    kw_edit: dict[str, Any] = {
+                        "model": img_model,
+                        "prompt": prompt[:4000],
+                        "image": [io.BytesIO(reference_image)],
+                        "n": 1,
+                        "size": size,
+                        "quality": "high",
+                    }
+                    resp = client.images.edit(**kw_edit)
+                    img_bytes = (
+                        base64.b64decode(resp.data[0].b64_json)
+                        if hasattr(resp.data[0], "b64_json") and resp.data[0].b64_json
+                        else base64.b64decode(resp.data[0].b64_json or "")
+                    )
+                    if img_bytes:
+                        log.debug("generate_image_edit_success", model=img_model, bytes=len(img_bytes))
+                        return img_bytes
                 else:
-                    kw["quality"] = quality
-                    kw["response_format"] = "b64_json"
-                resp = client.images.generate(**kw)
-                img_bytes = (
-                    base64.b64decode(resp.data[0].b64_json)
-                    if hasattr(resp.data[0], "b64_json") and resp.data[0].b64_json
-                    else base64.b64decode(resp.data[0].b64_json or "")
-                )
-                if img_bytes:
-                    log.debug("generate_image_success", model=img_model, bytes=len(img_bytes))
-                    return img_bytes
+                    kw: dict[str, Any] = {
+                        "model": img_model,
+                        "prompt": prompt[:4000],
+                        "n": 1,
+                        "size": size,
+                    }
+                    if img_model.startswith("gpt-image"):
+                        kw["quality"] = "high"
+                        kw["output_format"] = "png"
+                    else:
+                        kw["quality"] = quality
+                        kw["response_format"] = "b64_json"
+                    resp = client.images.generate(**kw)
+                    img_bytes = (
+                        base64.b64decode(resp.data[0].b64_json)
+                        if hasattr(resp.data[0], "b64_json") and resp.data[0].b64_json
+                        else base64.b64decode(resp.data[0].b64_json or "")
+                    )
+                    if img_bytes:
+                        log.debug("generate_image_success", model=img_model, bytes=len(img_bytes))
+                        return img_bytes
             except Exception as exc:
                 log.debug("generate_image_provider_failed", model=img_model, error=str(exc))
                 continue

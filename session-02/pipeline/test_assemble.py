@@ -1494,7 +1494,7 @@ class TestSchemaCrfField(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        schema_path = Path(__file__).parent.parent / "schemas" / "claude-unified-video-project-v3.schema.json"
+        schema_path = Path(__file__).parent.parent / "schemas" / "active" / "gvpp-v3.schema.json"
         if not schema_path.exists():
             raise unittest.SkipTest("Schema file not found")
         cls.schema = json.loads(schema_path.read_text(encoding="utf-8"))

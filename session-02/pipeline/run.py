@@ -95,7 +95,7 @@ except ModuleNotFoundError:
 # Schema validation helper
 # ---------------------------------------------------------------------------
 
-_V3_SCHEMA = Path(__file__).parent.parent / "skills" / "schema.json"
+_V3_SCHEMA = Path(__file__).parent.parent / "schemas" / "active" / "gvpp-v3.schema.json"
 
 
 def _validate(instance: dict, schema_path: Path) -> list[str]:

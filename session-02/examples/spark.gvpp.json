@@ -2034,8 +2034,9 @@
           "id": "tl-master"
         },
         "changeList": [
-          "Initial assembly of all 8 shots with score and SFX"
-        ]
+          "Initial assembly of all 8 shots with full 11-layer audio mix"
+        ],
+        "approvedForRender": true
       }
     ],
     "renderPlans": [
@@ -2062,6 +2063,20 @@
           "ffmpeg"
         ],
         "operations": [
+          {
+            "opId": "op-concat",
+            "opType": "concat",
+            "clipRefs": [
+              { "id": "shot-0101" },
+              { "id": "shot-0102" },
+              { "id": "shot-0201" },
+              { "id": "shot-0202" },
+              { "id": "shot-0301" },
+              { "id": "shot-0302" },
+              { "id": "shot-0401" },
+              { "id": "shot-0402" }
+            ]
+          },
           {
             "opId": "op-audio-mix",
             "opType": "audioMix",
