@@ -561,21 +561,28 @@ _CHARACTER_VIEWS = [
         "SPRITE REFERENCE: Front-facing view of the character, neutral expression. "
         "Plain solid dark gray background (#222222). Character cleanly isolated like a game sprite. "
         "Head-to-waist framing. NO environment, NO scene elements behind the character. "
-        "This is the PRIMARY identity anchor — face and features must be pixel-clear.",
+        "Character is ALONE — NO other objects, NO flowers, NO plants, NO props near or on the character. "
+        "NO text, NO words, NO labels, NO writing on the character's body. "
+        "Only render what is described in the character spec — do NOT add extra features. "
+        "This is the PRIMARY identity anchor — body shape and features must be pixel-clear.",
     ),
     (
         "three_quarter",
-        "SPRITE REFERENCE: Three-quarter (3/4) view of the character, characteristic expression. "
+        "SPRITE REFERENCE: Three-quarter (3/4) view of THE EXACT SAME character. "
         "Plain solid dark gray background (#222222). Character cleanly isolated like a game sprite. "
-        "Slightly turned to show facial depth and jaw/cheekbone profile. "
-        "NO environment behind. Face must be IDENTICAL to the front-facing sprite.",
+        "Slightly turned to show depth and profile. "
+        "Character is ALONE — NO other objects, NO flowers, NO plants, NO props. "
+        "NO text, NO words, NO labels, NO writing on the character's body. "
+        "NO environment behind. Design IDENTICAL to the front-facing sprite.",
     ),
     (
         "full_body",
-        "SPRITE REFERENCE: Full body standing pose, head-to-toe framing. "
+        "SPRITE REFERENCE: Full body standing pose, head-to-toe framing of THE EXACT SAME character. "
         "Plain solid dark gray background (#222222). Character cleanly isolated like a game sprite. "
-        "Neutral T-pose or relaxed stand. Full wardrobe and proportions visible. "
-        "NO environment behind. Face and clothing IDENTICAL to the front-facing sprite.",
+        "Neutral relaxed stand. Full proportions visible from head to feet. "
+        "Character is ALONE — NO other objects, NO flowers, NO plants, NO props. "
+        "NO text, NO words, NO labels, NO writing on the character's body. "
+        "NO environment behind. Design IDENTICAL to the front-facing sprite.",
     ),
 ]
 
@@ -585,15 +592,18 @@ _ENVIRONMENT_VIEWS = [
     (
         "wide_plate",
         "BACKGROUND PLATE: Wide establishing shot of the EMPTY environment. "
-        "Absolutely NO people, NO characters, NO human figures. "
-        "Show the full spatial extent of the location — walls, ceiling, floor, lighting. "
-        "This is a compositing background plate.",
+        "Absolutely NO people, NO characters, NO robots, NO human figures. "
+        "NO vegetation, NO plants, NO flowers, NO organic matter — only the built/industrial environment. "
+        "Show the full spatial extent of the location — structure, ground, sky, lighting. "
+        "This is a compositing background plate for later character compositing.",
     ),
     (
         "detail_plate",
-        "BACKGROUND PLATE: Detail/atmosphere shot of the environment. "
-        "NO people, NO characters. Focus on textures, lighting quality, "
-        "architectural details, and mood. Close-up of the most distinctive element.",
+        "BACKGROUND PLATE: Detail/atmosphere shot of THE SAME environment as the wide plate. "
+        "NO people, NO characters, NO robots. "
+        "NO vegetation, NO plants, NO flowers, NO organic matter. "
+        "Focus on textures, lighting quality, material details, and mood. "
+        "Close-up of the most distinctive STRUCTURAL element (metal, stone, concrete — not organic).",
     ),
 ]
 
@@ -604,14 +614,19 @@ _PROP_VIEWS = [
         "front",
         "SPRITE REFERENCE: Front view of the object, cleanly isolated. "
         "Plain solid dark gray background (#222222). Object centered, fully visible. "
-        "NO hands, NO people. Sharp focus on every detail.",
+        "Object is ALONE — NO hands, NO people, NO characters, NO other objects nearby. "
+        "NO glowing lights, NO LEDs unless explicitly described in the prop spec. "
+        "NO text, NO labels on the object. "
+        "Sharp focus on every detail. Render ONLY what is described.",
     ),
     (
         "three_quarter",
-        "SPRITE REFERENCE: Three-quarter (3/4) angled view of the object. "
+        "SPRITE REFERENCE: Three-quarter (3/4) angled view of THE EXACT SAME object. "
         "Plain solid dark gray background (#222222). Object cleanly isolated. "
-        "Shows depth and dimensional detail. NO hands, NO people. "
-        "Object appearance IDENTICAL to front view.",
+        "Shows depth and dimensional detail. "
+        "Object is ALONE — NO hands, NO people, NO characters, NO environment behind. "
+        "NO glowing lights, NO LEDs unless explicitly described. "
+        "Object design, shape, color, and materials IDENTICAL to front view.",
     ),
 ]
 
@@ -755,13 +770,24 @@ def _generate_reference_images(
     # ── WAVE 1: All first/anchor views (fully parallel) ──────────────────
     wave1: list = []
 
-    for char in production.get("characters", []):
-        lid = char.get("logicalId") or char.get("id") or "unknown"
+    def _char_prompt(char: dict, view_instr: str) -> str:
+        """Build a character reference prompt with identity, banned traits, and negative guidance."""
         name = char.get("name", "character")
         locked_frags = [f.get("fragment", "") for f in char.get("canonicalPromptFragments", []) if f.get("locked")]
         identity = "; ".join(locked_frags) if locked_frags else char.get("description", "")
+        banned = char.get("bannedTraits", [])
+        neg = f" DO NOT add: {', '.join(banned)}." if banned else ""
+        return (
+            f"Character reference of {name}: {identity}. "
+            f"{view_instr} {lighting_hint} "
+            f"Photorealistic, cinematic.{neg}"
+        )
+
+    for char in production.get("characters", []):
+        lid = char.get("logicalId") or char.get("id") or "unknown"
+        name = char.get("name", "character")
         view_name, view_instr = _CHARACTER_VIEWS[0]
-        prompt = f"Character reference of {name}: {identity}. {view_instr} {lighting_hint} Photorealistic, cinematic."
+        prompt = _char_prompt(char, view_instr)
         wave1.append((_gen_one, ("character", lid, name, view_name, prompt, None), f"char:{lid}:{view_name}"))
 
     for env in production.get("environments", []):
@@ -797,11 +823,9 @@ def _generate_reference_images(
     for char in production.get("characters", []):
         lid = char.get("logicalId") or char.get("id") or "unknown"
         name = char.get("name", "character")
-        locked_frags = [f.get("fragment", "") for f in char.get("canonicalPromptFragments", []) if f.get("locked")]
-        identity = "; ".join(locked_frags) if locked_frags else char.get("description", "")
         if len(_CHARACTER_VIEWS) > 1:
             view_name, view_instr = _CHARACTER_VIEWS[1]
-            prompt = f"Character reference of {name}: {identity}. {view_instr} {lighting_hint} Photorealistic, cinematic."
+            prompt = _char_prompt(char, view_instr)
             wave2.append((_gen_one, ("character", lid, name, view_name, prompt, lid), f"char:{lid}:{view_name}"))
 
     for env in production.get("environments", []):
@@ -839,11 +863,9 @@ def _generate_reference_images(
     for char in production.get("characters", []):
         lid = char.get("logicalId") or char.get("id") or "unknown"
         name = char.get("name", "character")
-        locked_frags = [f.get("fragment", "") for f in char.get("canonicalPromptFragments", []) if f.get("locked")]
-        identity = "; ".join(locked_frags) if locked_frags else char.get("description", "")
         if len(_CHARACTER_VIEWS) > 2:
             view_name, view_instr = _CHARACTER_VIEWS[2]
-            prompt = f"Character reference of {name}: {identity}. {view_instr} {lighting_hint} Photorealistic, cinematic."
+            prompt = _char_prompt(char, view_instr)
             wave3.append((_gen_one, ("character", lid, name, view_name, prompt, lid), f"char:{lid}:{view_name}"))
 
     for char, env in char_env_pairs:
@@ -856,11 +878,14 @@ def _generate_reference_images(
         eye_height = round(height_m * 0.94, 2)
         pov_key = f"{char_lid}:{env_lid}"
         prompt = (
-            f"First-person POV shot from {char_name}'s perspective inside {env_name}: {env_desc}. "
-            f"Camera at eye-level height ({eye_height}m from floor). "
-            f"Subjective viewpoint — what {char_name} sees when looking around the space. "
-            f"NO people visible, NO characters, NO human figures — this is a pure first-person view. "
-            f"Show the environment's depth, lighting, and spatial relationships. "
+            f"FIRST-PERSON CAMERA inside {env_name}: {env_desc}. "
+            f"The camera IS at {eye_height}m height (the eye level of {char_name}). "
+            f"This is a SUBJECTIVE shot — the camera is the character's eye. "
+            f"Show ONLY what the character sees: the environment stretching out ahead. "
+            f"The character is NOT visible — no robot, no body, no hands, no eyes in frame. "
+            f"NO robot parts, NO mechanical elements in the foreground. "
+            f"NO people, NO characters, NO figures of any kind. "
+            f"Pure environment from a low vantage point. "
             f"Photorealistic, cinematic. Style: {preamble[:400]}"
         )
 
@@ -910,7 +935,45 @@ def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
     - Director must-avoid as negative guidance
     """
     gen_params = shot.get("genParams") or {}
-    base_prompt = gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+    shot_id = shot.get("id") or shot.get("logicalId") or ""
+
+    # ── Resolve the shot's narrative action from script segments ──────────
+    # This is the most important text for visual storytelling — it describes
+    # what HAPPENS in the shot, not just its technical framing.
+    action_description = ""
+    script = (instance.get("canonicalDocuments") or {}).get("script") or {}
+    for seg in script.get("segments", []):
+        seg_shot_ref = (seg.get("shotRef") or {}).get("id", "")
+        seg_scene_ref = (seg.get("sceneRef") or {}).get("id", "")
+        # Match by shotRef first, then by sceneRef for action segments
+        if seg_shot_ref == shot_id:
+            action_description = seg.get("actionDescription") or seg.get("text") or ""
+            break
+    if not action_description:
+        # Fall back: find script segments matching the shot's scene
+        scene_ref_id_for_script = (shot.get("sceneRef") or {}).get("id", "")
+        for seg in script.get("segments", []):
+            seg_scene_ref = (seg.get("sceneRef") or {}).get("id", "")
+            if (seg_scene_ref == scene_ref_id_for_script
+                    and seg.get("segmentType") == "action"
+                    and seg.get("actionDescription")):
+                action_description = seg["actionDescription"]
+                break
+
+    # Build the narrative prompt from best available source.
+    # When the script action covers the whole scene, prepend the shot's own
+    # description to focus the model on this specific moment within the scene.
+    shot_desc = shot.get("description") or ""
+    if gen_params.get("prompt"):
+        base_prompt = gen_params["prompt"]
+    elif action_description and shot_desc:
+        base_prompt = f"{shot_desc}\n\nFull scene action: {action_description}"
+    elif action_description:
+        base_prompt = action_description
+    elif shot_desc:
+        base_prompt = shot_desc
+    else:
+        base_prompt = shot.get("purpose") or "cinematic shot"
 
     # ── Scene context ─────────────────────────────────────────────────────
     scene_ref_id = (shot.get("sceneRef") or {}).get("id", "")
@@ -1075,7 +1138,37 @@ def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
             f"\n[DIALOGUE — character must be visibly speaking]\n" + "\n".join(dialogue_cues)
         )
 
-    enriched_parts.append(f"\n[GENERATION PROMPT]\n{base_prompt}")
+    # ── Character descriptions for characters in this shot ──────────────
+    char_descs: list[str] = []
+    for char_ref in shot.get("characterRefs", []):
+        char_id = (char_ref.get("id") or "")
+        for ch in (instance.get("production") or {}).get("characters", []):
+            if ch.get("id") == char_id or ch.get("logicalId") == char_id:
+                name = ch.get("name", "")
+                appearance = ch.get("appearance", "")
+                if name and appearance:
+                    char_descs.append(f"{name}: {appearance}")
+                elif name:
+                    char_descs.append(f"{name}: {ch.get('description', '')}")
+                break
+    if char_descs:
+        enriched_parts.append(f"\n[CHARACTERS IN SHOT]\n" + "\n".join(char_descs))
+
+    # ── Framing and composition notes from cinematicSpec ──────────────────
+    framing = spec.get("framing", "")
+    composition = spec.get("compositionNotes", "")
+    if framing:
+        enriched_parts.append(f"\n[FRAMING]\n{framing}")
+    if composition:
+        enriched_parts.append(f"\n[COMPOSITION]\n{composition}")
+
+    # ── Continuity notes ─────────────────────────────────────────────────
+    continuity = shot.get("continuityNotes", "")
+    if continuity:
+        enriched_parts.append(f"\n[CONTINUITY NOTES]\n{continuity}")
+
+    # ── The core narrative action — what happens in this shot ─────────────
+    enriched_parts.append(f"\n[WHAT HAPPENS — GENERATE THIS]\n{base_prompt}")
 
     # Director's must-avoid as negative guidance
     di = (instance.get("canonicalDocuments") or {}).get("directorInstructions") or {}

@@ -1823,31 +1823,87 @@ def stitch_scenes(
         .lower().replace(" ", "-")[:40]
     )
 
-    # ── Step 1: Concatenate scene segments with cross-scene transitions ───────
+    # ── Step 1: Concatenate scene segments preserving audio ─────────────────
     concat_path = inter / "01_stitch_concat.mp4"
 
     # Pad transitions to correct length
     while len(transitions) < len(scene_segments) - 1:
         transitions.append({"type": "cut", "durationSec": 0})
 
-    # Build pseudo-scenes for _concat_clips_ffmpeg transition support
-    pseudo_scenes: list[dict] = []
-    for i in range(len(scene_segments)):
-        scene_dict: dict = {"shotRefs": [{"id": f"seg-{i}"}]}
-        if i < len(transitions):
-            scene_dict["transitionOut"] = transitions[i]
-        if i > 0:
-            scene_dict["transitionIn"] = transitions[i - 1]
-        pseudo_scenes.append(scene_dict)
+    # Check if any transitions are non-cut (need xfade)
+    has_transitions = any(t.get("type", "cut") != "cut" for t in transitions)
 
-    # Get actual durations for each segment
-    segment_durations = [_get_clip_duration(p) for p in scene_segments]
+    if has_transitions:
+        # Use filter-based concat with xfade for transitions.
+        # We must handle audio separately since _concat_clips_ffmpeg strips it.
+        # First concat video with xfade, then merge audio streams.
+        segment_durations = [_get_clip_duration(p) for p in scene_segments]
 
-    _concat_clips_ffmpeg(
-        scene_segments, concat_path,
-        scenes=pseudo_scenes,
-        target_durations=segment_durations,
-    )
+        # Video concat with xfade (produces video-only)
+        video_only = inter / "01a_video.mp4"
+        pseudo_scenes: list[dict] = []
+        for i in range(len(scene_segments)):
+            scene_dict: dict = {"shotRefs": [{"id": f"seg-{i}"}]}
+            if i < len(transitions):
+                scene_dict["transitionOut"] = transitions[i]
+            if i > 0:
+                scene_dict["transitionIn"] = transitions[i - 1]
+            pseudo_scenes.append(scene_dict)
+
+        _concat_clips_ffmpeg(
+            scene_segments, video_only,
+            scenes=pseudo_scenes,
+            target_durations=segment_durations,
+        )
+
+        # Audio concat using concat demuxer (preserves audio streams)
+        audio_only = inter / "01b_audio.mp4"
+        concat_list = inter / "concat_audio.txt"
+        concat_list.write_text(
+            "\n".join(f"file '{p.resolve()}'" for p in scene_segments),
+            encoding="utf-8",
+        )
+        cmd_audio = [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", str(concat_list),
+            "-vn", "-c:a", "aac", "-b:a", "192k",
+            str(audio_only),
+        ]
+        subprocess.run(cmd_audio, capture_output=True, check=False)
+
+        # Merge video + audio
+        if audio_only.exists():
+            cmd_merge = [
+                "ffmpeg", "-y",
+                "-i", str(video_only),
+                "-i", str(audio_only),
+                "-c:v", "copy", "-c:a", "copy",
+                "-map", "0:v", "-map", "1:a",
+                str(concat_path),
+            ]
+            result = subprocess.run(cmd_merge, capture_output=True)
+            if result.returncode != 0:
+                # Fallback: video only
+                shutil.copy(video_only, concat_path)
+        else:
+            shutil.copy(video_only, concat_path)
+    else:
+        # No transitions: use concat demuxer (fast, preserves audio)
+        concat_list = inter / "concat.txt"
+        concat_list.write_text(
+            "\n".join(f"file '{p.resolve()}'" for p in scene_segments),
+            encoding="utf-8",
+        )
+        cmd = [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", str(concat_list),
+            "-c", "copy",
+            str(concat_path),
+        ]
+        result = subprocess.run(cmd, capture_output=True)
+        if result.returncode != 0:
+            log.error("stitch_concat_failed", stderr=result.stderr.decode()[:500])
+
     log.info("stitch_concat_done", segments=len(scene_segments))
 
     # ── Step 2: Final encode per qualityProfile ──────────────────────────────

@@ -294,12 +294,16 @@ def generate_image(
         for img_model in ("gpt-image-1.5", "dall-e-3"):
             try:
                 if reference_image and img_model.startswith("gpt-image"):
-                    # Use images.edit with the reference as input for consistency
+                    # Use images.edit with the reference as input for consistency.
+                    # The BytesIO needs a .name with a .png extension so the
+                    # OpenAI SDK sends the correct MIME type (image/png).
                     import io
+                    ref_buf = io.BytesIO(reference_image)
+                    ref_buf.name = "reference.png"
                     kw_edit: dict[str, Any] = {
                         "model": img_model,
                         "prompt": prompt[:4000],
-                        "image": [io.BytesIO(reference_image)],
+                        "image": [ref_buf],
                         "n": 1,
                         "size": size,
                         "quality": "high",

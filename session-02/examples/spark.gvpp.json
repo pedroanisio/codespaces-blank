@@ -420,6 +420,17 @@
             "locked": true
           }
         ],
+        "bannedTraits": [
+          "two eyes",
+          "human facial features",
+          "mouth or nose",
+          "text or writing on body",
+          "wind-up key",
+          "antennae or rabbit ears",
+          "flowers or plants attached to body",
+          "green glowing eyes",
+          "objects embedded in torso"
+        ],
         "referenceAssetRefs": [
           { "id": "va-spark-ref" }
         ],

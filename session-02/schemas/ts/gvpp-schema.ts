@@ -899,6 +899,21 @@ export const CustomOpSchema = OperationBaseObject.extend({
 }).strict();
 
 /**
+ * StitchOp — join pre-rendered scene segments into a final deliverable.
+ * Used by the scene-parallel render pipeline (see docs/specs/scene-parallel-render.md).
+ */
+export const StitchOpSchema = OperationBaseObject.extend({
+  opType: z.literal("stitch"),
+  sceneSegments: z.array(z.object({
+    sceneRef: EntityRefSchema,
+    filePath: z.string().optional(),
+    transitionIn: TransitionSpecSchema.optional(),
+    transitionOut: TransitionSpecSchema.optional(),
+  }).strict()),
+  method: z.enum(["concat", "xfade"]).default("xfade"),
+}).strict();
+
+/**
  * Discriminated union of all operation types, discriminated on `opType`.
  * JSON Schema: Operation → oneOf[ConcatOp, OverlayOp, ...].
  */
@@ -913,6 +928,7 @@ export const OperationSchema = z.discriminatedUnion("opType", [
   ManimOpSchema,
   RetimeOpSchema,
   CustomOpSchema,
+  StitchOpSchema,
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1328,6 +1344,29 @@ export const SceneEntitySchema = BaseEntityObject.extend({
   qaGate: QaGateSchema.optional(),
   sceneSpace: SceneSpaceSchema.optional(),
   spatialConsistency: SpatialConsistencySchema.optional(),
+  /** Optional per-scene render plan for scene-parallel rendering. */
+  sceneRenderPlan: z.object({
+    renderPlanId: IdentifierSchema,
+    timeRange: TimeRangeSchema,
+    audioSlices: z.array(z.object({
+      audioRef: EntityRefSchema,
+      sourceTimeRange: TimeRangeSchema,
+      localTimeRange: TimeRangeSchema,
+      gainDb: z.number().default(0),
+      pan: z.number().min(-1).max(1).default(0),
+    }).strict()).optional(),
+    operations: z.array(OperationSchema).optional(),
+    transitionHandles: z.object({
+      head: z.object({
+        durationSec: z.number().default(0),
+        type: z.string().default("cut"),
+      }).strict().optional(),
+      tail: z.object({
+        durationSec: z.number().default(0),
+        type: z.string().default("cut"),
+      }).strict().optional(),
+    }).strict().optional(),
+  }).strict().optional(),
 }).strict();
 
 export const ShotEntitySchema = BaseEntityObject.extend({

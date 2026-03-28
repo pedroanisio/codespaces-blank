@@ -39,6 +39,19 @@ from typing import Any
 
 import structlog
 
+# ── Load .env ────────────────────────────────────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    for _env_candidate in [
+        Path(__file__).parents[2] / ".env",   # repo root
+        Path(__file__).parents[1] / ".env",   # session-02/
+        Path(__file__).parent / ".env",        # pipeline/
+    ]:
+        if _env_candidate.exists():
+            load_dotenv(_env_candidate, override=True)
+except ImportError:
+    pass
+
 try:
     from pipeline.logging_config import configure_logging
     configure_logging()
@@ -159,8 +172,8 @@ def _extract_frame_at(video_path: Path, time_sec: float, out_path: Path) -> bool
     try:
         subprocess.run(
             ["ffmpeg", "-y", "-ss", str(time_sec), "-i", str(video_path),
-             "-frames:v", "1", "-q:v", "2", str(out_path)],
-            capture_output=True, timeout=10,
+             "-frames:v", "1", "-update", "1", str(out_path)],
+            capture_output=True, timeout=15,
         )
         return out_path.exists() and out_path.stat().st_size > 0
     except Exception:
@@ -316,14 +329,24 @@ def _build_shot_prompt_context(instance: dict, shot: dict) -> str:
 
     # Scene context
     scene_ref = (shot.get("sceneRef") or {}).get("id", "")
+    matched_scene: dict = {}
     for scene in instance.get("production", {}).get("scenes", []):
         if scene.get("id") == scene_ref or scene.get("logicalId") == scene_ref:
+            matched_scene = scene
             parts.append(f"Scene: {scene.get('name', '')} — {scene.get('description', '')}")
             if scene.get("mood"):
                 parts.append(f"Mood: {scene['mood']}")
             if scene.get("timeOfDay"):
                 parts.append(f"Time of day: {scene['timeOfDay']}")
             break
+
+    # Script action description for this scene
+    script = _pick(instance, "canonicalDocuments.script")
+    if script:
+        for seg in script.get("segments", []):
+            seg_scene = (seg.get("sceneRef") or {}).get("id", "")
+            if seg_scene == scene_ref and seg.get("actionDescription"):
+                parts.append(f"SCRIPT ACTION: {seg['actionDescription']}")
 
     # Shot description and purpose
     if shot.get("description"):
@@ -352,20 +375,46 @@ def _build_shot_prompt_context(instance: dict, shot: dict) -> str:
     for step in gen.get("steps", []):
         if step.get("prompt"):
             parts.append(f"Generation prompt: {step['prompt']}")
+        if step.get("negativePrompt"):
+            parts.append(f"NEGATIVE PROMPT (must NOT appear): {step['negativePrompt']}")
 
-    # Character descriptions
+    # Character descriptions — ONLY these characters should appear
     char_index = {c.get("id", ""): c for c in instance.get("production", {}).get("characters", [])}
+    expected_char_names: list[str] = []
     for cref in shot.get("characterRefs", []):
         char = char_index.get(cref.get("id", ""))
         if char:
-            parts.append(f"Character '{char.get('name', '')}': {char.get('description', '')}")
+            expected_char_names.append(char.get("name", ""))
+            parts.append(f"EXPECTED CHARACTER '{char.get('name', '')}': {char.get('description', '')}")
+    if expected_char_names:
+        parts.append(f"ONLY these characters should appear: {', '.join(expected_char_names)}")
 
-    # Environment
+    # Props — only these props
+    prop_index = {p.get("id", ""): p for p in instance.get("production", {}).get("props", [])}
+    expected_props: list[str] = []
+    scene_props = matched_scene.get("propRefs", []) if matched_scene else []
+    for pref in scene_props:
+        prop = prop_index.get(pref.get("id", ""))
+        if prop:
+            expected_props.append(prop.get("name", ""))
+            parts.append(f"EXPECTED PROP '{prop.get('name', '')}': {prop.get('description', '')}")
+
+    # Environment — ONLY this environment
     env_index = {e.get("id", ""): e for e in instance.get("production", {}).get("environments", [])}
     env_ref = (shot.get("environmentRef") or {}).get("id", "")
     env = env_index.get(env_ref)
     if env:
-        parts.append(f"Environment '{env.get('name', '')}': {env.get('description', '')}")
+        parts.append(f"EXPECTED ENVIRONMENT '{env.get('name', '')}': {env.get('description', '')}")
+
+    # Director constraints
+    di = _pick(instance, "canonicalDocuments.directorInstructions")
+    if di:
+        must_haves = di.get("mustHaves", [])
+        must_avoid = di.get("mustAvoid", [])
+        if must_haves:
+            parts.append(f"DIRECTOR MUST-HAVES: {'; '.join(must_haves)}")
+        if must_avoid:
+            parts.append(f"DIRECTOR MUST-AVOID (forbidden): {'; '.join(must_avoid)}")
 
     # Continuity notes
     if shot.get("continuityNotes"):
@@ -777,54 +826,22 @@ def layer_2_content(instance: dict, output_dir: Path, report: AssessmentReport) 
 #  LAYER 3: AI-AUGMENTED ASSESSMENT
 # ═════════════════════════════════════════════════════════════════════════════
 
-def _vision_describe_frame(frame_path: Path, context: str) -> dict:
-    """Use a vision model to describe a frame and score it against the spec context.
+def _vision_call(system: str, user_content: str, b64_data: str) -> dict:
+    """Call a vision model with an image. Falls through OpenAI → Claude → Gemini.
 
-    Returns {"description": str, "adherence_score": float, "issues": list[str]}
+    Returns parsed JSON dict, or {} if all providers fail.
     """
-    try:
-        from pipeline.providers import complete_json
-    except ImportError:
-        return {"description": "", "adherence_score": 0.0, "issues": ["providers not available"]}
+    import os
 
-    b64_data = base64.b64encode(frame_path.read_bytes()).decode()
-
-    system = (
-        "You are a visual quality assessor for AI-generated video production. "
-        "You will be given a frame from a generated video and the production spec "
-        "that describes what this frame should look like. "
-        "Assess how well the frame matches the spec."
-    )
-
-    user_content = (
-        f"## Production Spec\n{context}\n\n"
-        "## Task\n"
-        "Analyze the attached frame against the spec above. Return JSON:\n"
-        "```json\n"
-        "{\n"
-        '  "description": "what you see in the frame (2-3 sentences)",\n'
-        '  "adherence_score": 0.0-1.0,\n'
-        '  "matched_elements": ["list of spec elements visible in frame"],\n'
-        '  "missing_elements": ["list of spec elements NOT visible"],\n'
-        '  "issues": ["any visual quality issues"]\n'
-        "}\n"
-        "```"
-    )
-
-    # Try providers with vision support
     # OpenAI GPT-4.1 vision
     try:
-        import os
-        client = None
         key = os.getenv("OPENAI_API_KEY", "")
         if key and "REPLACE_ME" not in key:
             from openai import OpenAI
             client = OpenAI(api_key=key)
-
-        if client:
             resp = client.chat.completions.create(
                 model="gpt-4.1",
-                max_tokens=1024,
+                max_tokens=2048,
                 messages=[{
                     "role": "user",
                     "content": [
@@ -837,21 +854,17 @@ def _vision_describe_frame(frame_path: Path, context: str) -> dict:
             from pipeline.providers import _extract_json
             return _extract_json(resp.choices[0].message.content)
     except Exception as exc:
-        log.debug("vision_describe_openai_failed", error=str(exc))
+        log.debug("vision_call_openai_failed", error=str(exc))
 
     # Anthropic Claude vision fallback
     try:
-        import os
-        client = None
         key = os.getenv("ANTHROPIC_API_KEY", "")
         if key and "REPLACE_ME" not in key:
             import anthropic
             client = anthropic.Anthropic(api_key=key)
-
-        if client:
             resp = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=1024,
+                max_tokens=2048,
                 messages=[{
                     "role": "user",
                     "content": [
@@ -867,11 +880,10 @@ def _vision_describe_frame(frame_path: Path, context: str) -> dict:
             from pipeline.providers import _extract_json
             return _extract_json(resp.content[0].text)
     except Exception as exc:
-        log.debug("vision_describe_anthropic_failed", error=str(exc))
+        log.debug("vision_call_anthropic_failed", error=str(exc))
 
     # Gemini vision fallback
     try:
-        import os
         key = os.getenv("GEMINI_API_KEY", "")
         if key and "REPLACE_ME" not in key:
             import google.generativeai as genai
@@ -885,9 +897,82 @@ def _vision_describe_frame(frame_path: Path, context: str) -> dict:
             from pipeline.providers import _extract_json
             return _extract_json(resp.text)
     except Exception as exc:
-        log.debug("vision_describe_gemini_failed", error=str(exc))
+        log.debug("vision_call_gemini_failed", error=str(exc))
 
-    return {"description": "", "adherence_score": 0.0, "issues": ["no vision provider available"]}
+    return {}
+
+
+def _vision_describe_frame(frame_path: Path, context: str) -> dict:
+    """Use a vision model to describe a frame and score it against the spec context.
+
+    Returns:
+        {
+            "description": str,
+            "adherence_score": float 0-1,
+            "matched_elements": list[str],
+            "missing_elements": list[str],
+            "unexpected_elements": list[str],   # things visible that SHOULD NOT be there
+            "forbidden_violations": list[str],   # director mustAvoid / negativePrompt violations
+            "environment_match": bool,
+            "narrative_match": bool,
+            "issues": list[str],
+        }
+    """
+    b64_data = base64.b64encode(frame_path.read_bytes()).decode()
+
+    system = (
+        "You are a strict visual QA assessor for AI-generated video production. "
+        "You must verify that each frame matches its production spec EXACTLY. "
+        "Pay special attention to:\n"
+        "1. UNEXPECTED CONTENT — characters, creatures, objects, environments, or text "
+        "that appear in the frame but are NOT listed in the spec.\n"
+        "2. FORBIDDEN ELEMENTS — anything listed under MUST-AVOID or NEGATIVE PROMPT.\n"
+        "3. NARRATIVE MATCH — does the frame depict the SCRIPT ACTION described?\n"
+        "4. ENVIRONMENT MATCH — is the setting the correct one from the spec?\n"
+        "5. MISSING ELEMENTS — required characters, props, or visual elements not shown.\n\n"
+        "Be strict and specific. If you see people, animals, buildings, or objects "
+        "not described in the spec, report them as unexpected elements."
+    )
+
+    user_content = (
+        f"## Production Spec\n{context}\n\n"
+        "## Task\n"
+        "Analyze the attached frame against the production spec above.\n\n"
+        "For each category below, be specific and exhaustive:\n"
+        "- **unexpected_elements**: List EVERYTHING visible in the frame that is NOT "
+        "described in the spec (wrong characters, wrong environment, extra objects, text, "
+        "humans, animals, buildings, vehicles, etc.)\n"
+        "- **forbidden_violations**: List any MUST-AVOID or NEGATIVE PROMPT items you can see\n"
+        "- **narrative_match**: Does the frame depict what the SCRIPT ACTION describes?\n"
+        "- **environment_match**: Is the environment/setting correct per the spec?\n\n"
+        "Return JSON:\n"
+        "```json\n"
+        "{\n"
+        '  "description": "detailed description of what you actually see (3-4 sentences)",\n'
+        '  "adherence_score": 0.0-1.0,\n'
+        '  "matched_elements": ["spec elements correctly shown"],\n'
+        '  "missing_elements": ["spec elements NOT shown"],\n'
+        '  "unexpected_elements": ["things visible NOT in the spec — be exhaustive"],\n'
+        '  "forbidden_violations": ["MUST-AVOID or NEGATIVE PROMPT items detected"],\n'
+        '  "environment_match": true/false,\n'
+        '  "environment_detail": "what environment you see vs what was expected",\n'
+        '  "narrative_match": true/false,\n'
+        '  "narrative_detail": "what action you see vs what the script describes",\n'
+        '  "issues": ["any quality or consistency problems"]\n'
+        "}\n"
+        "```"
+    )
+
+    result = _vision_call(system, user_content, b64_data)
+    if not result:
+        return {
+            "description": "", "adherence_score": 0.0,
+            "matched_elements": [], "missing_elements": [],
+            "unexpected_elements": [], "forbidden_violations": [],
+            "environment_match": False, "narrative_match": False,
+            "issues": ["no vision provider available"],
+        }
+    return result
 
 
 def _vision_character_consistency(
@@ -899,21 +984,30 @@ def _vision_character_consistency(
 
     Returns {"similarity": float, "consistent_attributes": list, "drifted_attributes": list}
     """
+    # First try the lightweight vision_score for a numeric similarity
+    similarity = 0.0
     try:
         from pipeline.providers import vision_score
         b64_ref = base64.b64encode(ref_path.read_bytes()).decode()
         b64_frame = base64.b64encode(frame_path.read_bytes()).decode()
-        score = vision_score(b64_ref, b64_frame)
-        return {
-            "similarity": score,
-            "character": character_name,
-            "consistent_attributes": [],
-            "drifted_attributes": [],
-        }
+        similarity = vision_score(b64_ref, b64_frame)
     except Exception as exc:
-        log.debug("character_consistency_failed", error=str(exc))
-        return {"similarity": 0.0, "character": character_name,
-                "consistent_attributes": [], "drifted_attributes": []}
+        log.debug("character_consistency_score_failed", error=str(exc))
+
+    return {
+        "similarity": similarity,
+        "character": character_name,
+        "consistent_attributes": [],
+        "drifted_attributes": [],
+    }
+
+
+def _sample_timestamps(duration: float) -> list[float]:
+    """Return 3 frame sample points: near-start, mid, near-end."""
+    if duration <= 0.5:
+        return [duration / 2]
+    margin = min(0.3, duration * 0.1)
+    return [margin, duration / 2, duration - margin]
 
 
 def layer_3_ai(instance: dict, output_dir: Path, report: AssessmentReport) -> None:
@@ -924,47 +1018,134 @@ def layer_3_ai(instance: dict, output_dir: Path, report: AssessmentReport) -> No
     shots = _shots_in_order(instance)
     characters = instance.get("production", {}).get("characters", [])
 
-    # ── 3.1 Per-shot vision description and adherence scoring ──
+    # ── 3.1 Per-shot multi-frame analysis ──
+    # Checks: adherence, unexpected elements, forbidden violations,
+    #         environment match, narrative match
     for shot in shots:
         sid = shot.get("logicalId") or shot.get("id") or ""
         shot_path = shots_dir / f"{sid}.mp4"
         if not shot_path.exists():
             continue
 
-        # Extract a representative frame (midpoint)
         dur = _ffprobe_duration(shot_path) or 1.0
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            frame_path = Path(tmp.name)
+        sample_times = _sample_timestamps(dur)
+        context = _build_shot_prompt_context(instance, shot)
 
-        try:
-            if not _extract_frame_at(shot_path, dur / 2, frame_path):
-                continue
-
-            context = _build_shot_prompt_context(instance, shot)
-            result = _vision_describe_frame(frame_path, context)
-
-            adherence = result.get("adherence_score", 0.0)
+        # Collect results across sampled frames
+        frame_results: list[dict] = []
+        for t in sample_times:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                frame_path = Path(tmp.name)
             try:
-                adherence = float(adherence)
-            except (TypeError, ValueError):
-                adherence = 0.0
+                if not _extract_frame_at(shot_path, t, frame_path):
+                    continue
+                result = _vision_describe_frame(frame_path, context)
+                if result.get("description"):
+                    frame_results.append(result)
+            finally:
+                frame_path.unlink(missing_ok=True)
 
+        if not frame_results:
             report.add(CheckResult(
-                name=f"vision_adherence:{sid}",
-                layer=3,
-                passed=adherence >= 0.4,
-                expected="spec adherence ≥ 0.4",
-                actual=f"score={adherence:.2f}",
-                detail=json.dumps({
-                    "description": result.get("description", ""),
-                    "matched": result.get("matched_elements", []),
-                    "missing": result.get("missing_elements", []),
-                    "issues": result.get("issues", []),
-                }, ensure_ascii=False),
+                name=f"vision_analysis:{sid}",
+                layer=3, passed=False,
+                detail="no frames could be analyzed",
                 severity="warning",
             ))
-        finally:
-            frame_path.unlink(missing_ok=True)
+            continue
+
+        # Aggregate across frames: use worst-case for violations, average for scores
+        all_unexpected: list[str] = []
+        all_forbidden: list[str] = []
+        all_missing: list[str] = []
+        all_matched: list[str] = []
+        all_descriptions: list[str] = []
+        adherence_scores: list[float] = []
+        env_matches: list[bool] = []
+        narrative_matches: list[bool] = []
+
+        for r in frame_results:
+            all_unexpected.extend(r.get("unexpected_elements", []))
+            all_forbidden.extend(r.get("forbidden_violations", []))
+            all_missing.extend(r.get("missing_elements", []))
+            all_matched.extend(r.get("matched_elements", []))
+            if r.get("description"):
+                all_descriptions.append(r["description"])
+            try:
+                adherence_scores.append(float(r.get("adherence_score", 0.0)))
+            except (TypeError, ValueError):
+                pass
+            if "environment_match" in r:
+                env_matches.append(bool(r["environment_match"]))
+            if "narrative_match" in r:
+                narrative_matches.append(bool(r["narrative_match"]))
+
+        avg_adherence = sum(adherence_scores) / len(adherence_scores) if adherence_scores else 0.0
+        unique_unexpected = sorted(set(all_unexpected))
+        unique_forbidden = sorted(set(all_forbidden))
+
+        # 3.1a — Overall adherence
+        report.add(CheckResult(
+            name=f"vision_adherence:{sid}",
+            layer=3,
+            passed=avg_adherence >= 0.4,
+            expected="spec adherence ≥ 0.4",
+            actual=f"score={avg_adherence:.2f} ({len(frame_results)} frames)",
+            detail=json.dumps({
+                "descriptions": all_descriptions,
+                "matched": sorted(set(all_matched)),
+                "missing": sorted(set(all_missing)),
+            }, ensure_ascii=False),
+            severity="warning",
+        ))
+
+        # 3.1b — Unexpected elements (things NOT in the spec)
+        has_unexpected = len(unique_unexpected) > 0
+        report.add(CheckResult(
+            name=f"unexpected_elements:{sid}",
+            layer=3,
+            passed=not has_unexpected,
+            expected="no elements outside spec",
+            actual=f"{len(unique_unexpected)} unexpected: {unique_unexpected}" if has_unexpected else "clean",
+            severity="warning" if has_unexpected else "info",
+        ))
+
+        # 3.1c — Forbidden element violations (mustAvoid + negativePrompt)
+        has_forbidden = len(unique_forbidden) > 0
+        report.add(CheckResult(
+            name=f"forbidden_violations:{sid}",
+            layer=3,
+            passed=not has_forbidden,
+            expected="no forbidden elements",
+            actual=f"{len(unique_forbidden)} violations: {unique_forbidden}" if has_forbidden else "clean",
+            severity="error" if has_forbidden else "info",
+        ))
+
+        # 3.1d — Environment match
+        if env_matches:
+            env_ok = any(env_matches)  # at least one frame shows correct environment
+            env_details = [r.get("environment_detail", "") for r in frame_results if r.get("environment_detail")]
+            report.add(CheckResult(
+                name=f"environment_match:{sid}",
+                layer=3,
+                passed=env_ok,
+                expected="correct environment per spec",
+                actual=env_details[0] if env_details else ("matched" if env_ok else "mismatch"),
+                severity="warning",
+            ))
+
+        # 3.1e — Narrative match (does the shot depict the script action?)
+        if narrative_matches:
+            narr_ok = any(narrative_matches)
+            narr_details = [r.get("narrative_detail", "") for r in frame_results if r.get("narrative_detail")]
+            report.add(CheckResult(
+                name=f"narrative_match:{sid}",
+                layer=3,
+                passed=narr_ok,
+                expected="matches script action",
+                actual=narr_details[0] if narr_details else ("matched" if narr_ok else "mismatch"),
+                severity="warning",
+            ))
 
     # ── 3.2 Character consistency across shots ──
     for char in characters:
@@ -1161,18 +1342,28 @@ def _print_report(report: AssessmentReport) -> None:
             else:
                 print()
 
-        # Print detail for vision adherence (truncated)
+        # Print detail for vision checks (truncated)
         if check.name.startswith("vision_adherence:") and check.detail:
             try:
                 detail_data = json.loads(check.detail)
-                desc = detail_data.get("description", "")
-                if desc:
-                    print(DIM(f"      → {desc[:100]}"))
+                descs = detail_data.get("descriptions", [])
+                if descs:
+                    print(DIM(f"      → {descs[0][:120]}"))
                 missing = detail_data.get("missing", [])
                 if missing:
                     print(WARN(f"      → missing: {', '.join(missing[:5])}"))
             except json.JSONDecodeError:
                 pass
+
+        if check.name.startswith("unexpected_elements:") and not check.passed:
+            print(WARN(f"      → {check.actual[:150]}"))
+
+        if check.name.startswith("forbidden_violations:") and not check.passed:
+            print(FAIL(f"      → {check.actual[:150]}"))
+
+        if check.name.startswith(("environment_match:", "narrative_match:")) and not check.passed:
+            if check.actual:
+                print(WARN(f"      → {check.actual[:150]}"))
 
     print(f"\n{'═' * 70}")
     print(BOLD("  SUMMARY"))

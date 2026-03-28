@@ -22,6 +22,7 @@ from pipeline.assess import (
     _pick,
     _shots_in_order,
     _build_shot_prompt_context,
+    _sample_timestamps,
     layer_1_technical,
     layer_2_content,
     layer_3_ai,
@@ -268,6 +269,20 @@ class TestShotsInOrder:
         assert ordered[-1]["id"] == "shot-0402"
 
 
+class TestSampleTimestamps:
+    def test_short_clip(self):
+        ts = _sample_timestamps(0.3)
+        assert len(ts) == 1
+        assert ts[0] == pytest.approx(0.15, abs=0.01)
+
+    def test_normal_clip(self):
+        ts = _sample_timestamps(5.0)
+        assert len(ts) == 3
+        assert ts[0] < ts[1] < ts[2]
+        assert ts[0] > 0
+        assert ts[2] < 5.0
+
+
 class TestBuildShotPromptContext:
     def test_includes_scene_mood(self, minimal_instance):
         shots = _shots_in_order(minimal_instance)
@@ -283,6 +298,48 @@ class TestBuildShotPromptContext:
         shots = _shots_in_order(minimal_instance)
         ctx = _build_shot_prompt_context(minimal_instance, shots[0])
         assert "wide" in ctx.lower()
+
+    def test_includes_expected_character_label(self, minimal_instance):
+        shots = _shots_in_order(minimal_instance)
+        ctx = _build_shot_prompt_context(minimal_instance, shots[0])
+        assert "EXPECTED CHARACTER" in ctx
+
+    def test_includes_expected_environment_label(self, minimal_instance):
+        shots = _shots_in_order(minimal_instance)
+        ctx = _build_shot_prompt_context(minimal_instance, shots[0])
+        assert "EXPECTED ENVIRONMENT" in ctx
+
+    def test_spark_includes_must_avoid(self, spark_instance):
+        shots = _shots_in_order(spark_instance)
+        ctx = _build_shot_prompt_context(spark_instance, shots[0])
+        assert "MUST-AVOID" in ctx
+        assert "No dialogue" in ctx
+
+    def test_spark_includes_must_haves(self, spark_instance):
+        shots = _shots_in_order(spark_instance)
+        ctx = _build_shot_prompt_context(spark_instance, shots[0])
+        assert "MUST-HAVES" in ctx
+
+    def test_spark_includes_script_action(self, spark_instance):
+        shots = _shots_in_order(spark_instance)
+        ctx = _build_shot_prompt_context(spark_instance, shots[0])
+        assert "SCRIPT ACTION" in ctx
+        assert "junkyard" in ctx.lower()
+
+    def test_spark_includes_negative_prompt(self, spark_instance):
+        # Shot 0201 has a negativePrompt in its generation steps
+        shots = _shots_in_order(spark_instance)
+        shot_0201 = next(s for s in shots if s["id"] == "shot-0201")
+        ctx = _build_shot_prompt_context(spark_instance, shot_0201)
+        assert "NEGATIVE PROMPT" in ctx
+
+    def test_spark_includes_props(self, spark_instance):
+        shots = _shots_in_order(spark_instance)
+        # Scene 02 has prop-flower
+        shot_0201 = next(s for s in shots if s["id"] == "shot-0201")
+        ctx = _build_shot_prompt_context(spark_instance, shot_0201)
+        assert "EXPECTED PROP" in ctx
+        assert "Flower" in ctx
 
 
 class TestCheckResult:
@@ -413,10 +470,16 @@ class TestLayer3AI:
     def test_vision_adherence_runs(self, mock_consistency, mock_describe,
                                    minimal_instance, stub_output):
         mock_describe.return_value = {
-            "description": "A wide shot of a white lab",
+            "description": "A wide shot of a white lab with a red robot",
             "adherence_score": 0.8,
-            "matched_elements": ["white lab"],
+            "matched_elements": ["white lab", "red robot"],
             "missing_elements": [],
+            "unexpected_elements": [],
+            "forbidden_violations": [],
+            "environment_match": True,
+            "environment_detail": "white lab matches spec",
+            "narrative_match": True,
+            "narrative_detail": "shows test scene as described",
             "issues": [],
         }
         mock_consistency.return_value = {
@@ -433,6 +496,23 @@ class TestLayer3AI:
         assert len(adherence) == 2  # 2 shots
         assert all(c.passed for c in adherence)
 
+        # Should also have new check types
+        unexpected = [c for c in report.checks if c.name.startswith("unexpected_elements:")]
+        assert len(unexpected) == 2
+        assert all(c.passed for c in unexpected)
+
+        forbidden = [c for c in report.checks if c.name.startswith("forbidden_violations:")]
+        assert len(forbidden) == 2
+        assert all(c.passed for c in forbidden)
+
+        env = [c for c in report.checks if c.name.startswith("environment_match:")]
+        assert len(env) == 2
+        assert all(c.passed for c in env)
+
+        narr = [c for c in report.checks if c.name.startswith("narrative_match:")]
+        assert len(narr) == 2
+        assert all(c.passed for c in narr)
+
     @patch("pipeline.assess._vision_describe_frame")
     @patch("pipeline.assess._vision_character_consistency")
     def test_low_adherence_fails(self, mock_consistency, mock_describe,
@@ -442,6 +522,12 @@ class TestLayer3AI:
             "adherence_score": 0.1,
             "matched_elements": [],
             "missing_elements": ["everything"],
+            "unexpected_elements": ["forest", "river", "horse"],
+            "forbidden_violations": ["human features detected"],
+            "environment_match": False,
+            "environment_detail": "shows forest, expected white lab",
+            "narrative_match": False,
+            "narrative_detail": "shows nature scene, expected test scene",
             "issues": ["total mismatch"],
         }
         mock_consistency.return_value = {"similarity": 0.5, "character": "Alice",
@@ -452,6 +538,23 @@ class TestLayer3AI:
 
         adherence = [c for c in report.checks if c.name.startswith("vision_adherence:")]
         assert any(not c.passed for c in adherence)
+
+        # Unexpected elements should fail
+        unexpected = [c for c in report.checks if c.name.startswith("unexpected_elements:")]
+        assert any(not c.passed for c in unexpected)
+
+        # Forbidden violations should fail with error severity
+        forbidden = [c for c in report.checks if c.name.startswith("forbidden_violations:")]
+        assert any(not c.passed for c in forbidden)
+        assert any(c.severity == "error" for c in forbidden if not c.passed)
+
+        # Environment should fail
+        env = [c for c in report.checks if c.name.startswith("environment_match:")]
+        assert any(not c.passed for c in env)
+
+        # Narrative should fail
+        narr = [c for c in report.checks if c.name.startswith("narrative_match:")]
+        assert any(not c.passed for c in narr)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -475,7 +578,10 @@ class TestAssessIntegration:
                               minimal_instance, stub_output):
         mock_describe.return_value = {
             "description": "test", "adherence_score": 0.9,
-            "matched_elements": [], "missing_elements": [], "issues": [],
+            "matched_elements": [], "missing_elements": [],
+            "unexpected_elements": [], "forbidden_violations": [],
+            "environment_match": True, "narrative_match": True,
+            "issues": [],
         }
         mock_consistency.return_value = {"similarity": 0.95, "character": "Alice",
                                           "consistent_attributes": [], "drifted_attributes": []}
