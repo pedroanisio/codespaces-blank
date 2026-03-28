@@ -1108,6 +1108,41 @@ export const PackageInfoSchema = z.strictObject({
   extensions: ExtensionsSchema.optional(),
 });
 
+/**
+ * Ordered provider priority lists for AI generation.
+ * The pipeline tries providers left-to-right, falling back on failure.
+ */
+export const GenerationDefaultsSchema = z.strictObject({
+  imageProviders: z
+    .array(
+      z.enum([
+        "gpt-image-1.5",
+        "dall-e-3",
+        "gemini_imagen",
+        "grok_aurora",
+        "stable_diffusion",
+        "flux",
+        "stub",
+      ]),
+    )
+    .min(1)
+    .optional(),
+  videoProviders: z
+    .array(z.enum(["runway", "veo", "kling", "pika", "stub"]))
+    .min(1)
+    .optional(),
+  audioProviders: z
+    .array(z.enum(["elevenlabs", "suno", "stable_audio", "stub"]))
+    .min(1)
+    .optional(),
+  textProviders: z
+    .array(z.enum(["claude", "gpt", "gemini", "grok", "deepseek"]))
+    .min(1)
+    .optional(),
+});
+
+export type GenerationDefaults = z.infer<typeof GenerationDefaultsSchema>;
+
 export const ProjectEntitySchema = BaseEntityObject.extend({
   entityType: z.literal("project"),
   summary: z.string().optional(),
@@ -1120,6 +1155,7 @@ export const ProjectEntitySchema = BaseEntityObject.extend({
   globalEnvironmentRefs: z.array(EntityRefSchema).optional(),
   globalStyleRefs: z.array(EntityRefSchema).optional(),
   governance: GovernanceSchema.optional(),
+  generationDefaults: GenerationDefaultsSchema.optional(),
 }).strict();
 
 export const QualityProfileEntitySchema = BaseEntityObject.extend({

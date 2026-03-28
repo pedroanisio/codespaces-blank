@@ -116,8 +116,74 @@ def _gemini(model: str = "gemini-2.5-flash"):
 
 # ── JSON extraction ────────────────────────────────────────────────────────────
 
+def _repair_truncated_json(text: str) -> str:
+    """Attempt to repair JSON that was truncated by a token limit.
+
+    Closes unclosed strings, arrays, and objects so json.loads() can parse
+    the partial result. This recovers the fields that were fully written
+    before the truncation point.
+    """
+    # Strip trailing partial tokens (incomplete escape sequences, etc.)
+    text = text.rstrip()
+
+    # Close any unclosed string
+    in_string = False
+    escape = False
+    for ch in text:
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+    if in_string:
+        text += '"'
+
+    # Remove trailing comma (invalid before a closing bracket)
+    text = re.sub(r",\s*$", "", text)
+
+    # Count unclosed brackets and close them
+    opens = 0
+    arrays = 0
+    in_str = False
+    esc = False
+    for ch in text:
+        if esc:
+            esc = False
+            continue
+        if ch == "\\":
+            esc = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch == "{":
+            opens += 1
+        elif ch == "}":
+            opens -= 1
+        elif ch == "[":
+            arrays += 1
+        elif ch == "]":
+            arrays -= 1
+
+    text += "]" * arrays + "}" * opens
+    return text
+
+
 def _extract_json(text: str) -> dict:
-    """Extract the first JSON object from a model response text."""
+    """Extract the first JSON object from a model response text.
+
+    Falls back to truncated-JSON repair if the initial parse fails due to
+    an unterminated string or unexpected end of input (common when the
+    model hits its max_tokens limit).
+    """
+    if not text or not text.strip():
+        raise ValueError("Empty response — no JSON to extract")
+
     # ```json ... ``` block
     m = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
     if m:
@@ -137,6 +203,19 @@ def _extract_json(text: str) -> dict:
                 depth -= 1
                 if depth == 0:
                     return json.loads(text[start: i + 1])
+
+        # No balanced closing brace found — JSON is truncated.
+        # Attempt repair so we recover the fields that were fully written.
+        truncated = text[start:]
+        repaired = _repair_truncated_json(truncated)
+        try:
+            result = json.loads(repaired)
+            log.warning("json_truncated_repaired",
+                        original_len=len(truncated), repaired_len=len(repaired))
+            return result
+        except json.JSONDecodeError:
+            pass  # repair failed — fall through to final json.loads()
+
     return json.loads(text)
 
 
@@ -199,29 +278,60 @@ def _claude_json(system: str, user: str, max_tokens: int) -> dict | None:
     client = _anthropic()
     if not client:
         return None
-    resp = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    return _extract_json(resp.content[0].text)
+
+    for attempt_tokens in [max_tokens, min(max_tokens * 2, 16384)]:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=attempt_tokens,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        text = resp.content[0].text if resp.content else ""
+        if not text.strip():
+            log.debug("claude_empty_response", stop_reason=resp.stop_reason,
+                      max_tokens=attempt_tokens)
+            raise ValueError(f"Claude returned empty response (stop_reason={resp.stop_reason})")
+
+        # If truncated by token limit, try once more with higher limit
+        if resp.stop_reason == "max_tokens" and attempt_tokens < 16384:
+            log.warning("claude_response_truncated", stop_reason="max_tokens",
+                        max_tokens=attempt_tokens, text_len=len(text))
+            continue
+
+        return _extract_json(text)
+
+    # Final attempt was also truncated — try to parse what we have
+    return _extract_json(text)
 
 
 def _openai_json(system: str, user: str, max_tokens: int) -> dict | None:
     client = _openai()
     if not client:
         return None
-    resp = client.chat.completions.create(
-        model="gpt-4.1",
-        max_tokens=max_tokens,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-    )
-    return json.loads(resp.choices[0].message.content)
+
+    for attempt_tokens in [max_tokens, min(max_tokens * 2, 16384)]:
+        resp = client.chat.completions.create(
+            model="gpt-4.1",
+            max_tokens=attempt_tokens,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        )
+        text = resp.choices[0].message.content or ""
+        finish = resp.choices[0].finish_reason
+
+        # If truncated by token limit, retry with higher limit
+        if finish == "length" and attempt_tokens < 16384:
+            log.warning("openai_response_truncated", finish_reason="length",
+                        max_tokens=attempt_tokens, text_len=len(text))
+            continue
+
+        return _extract_json(text)
+
+    # Final attempt was also truncated — try to parse what we have
+    return _extract_json(text)
 
 
 def _gemini_json(system: str, user: str, max_tokens: int) -> dict | None:
@@ -271,12 +381,108 @@ def _deepseek_json(system: str, user: str, max_tokens: int) -> dict | None:
 
 # ── generate_image ─────────────────────────────────────────────────────────────
 
+
+def _generate_image_openai(
+    prompt: str,
+    model: str,
+    size: str,
+    quality: str,
+    reference_image: bytes | None,
+) -> bytes | None:
+    """Try OpenAI image generation with a specific model. Returns bytes or None."""
+    client = _openai()
+    if not client:
+        return None
+    if reference_image and model.startswith("gpt-image"):
+        import io
+        ref_buf = io.BytesIO(reference_image)
+        ref_buf.name = "reference.png"
+        resp = client.images.edit(
+            model=model, prompt=prompt[:4000], image=[ref_buf],
+            n=1, size=size, quality="high",
+        )
+    else:
+        kw: dict[str, Any] = {"model": model, "prompt": prompt[:4000], "n": 1, "size": size}
+        if model.startswith("gpt-image"):
+            kw["quality"] = "high"
+            kw["output_format"] = "png"
+        else:
+            kw["quality"] = quality
+            kw["response_format"] = "b64_json"
+        resp = client.images.generate(**kw)
+    img_bytes = (
+        base64.b64decode(resp.data[0].b64_json)
+        if hasattr(resp.data[0], "b64_json") and resp.data[0].b64_json
+        else base64.b64decode(resp.data[0].b64_json or "")
+    )
+    if img_bytes:
+        mode = "edit" if reference_image and model.startswith("gpt-image") else "gen"
+        log.debug(f"generate_image_{mode}_success", model=model, bytes=len(img_bytes))
+        return img_bytes
+    return None
+
+
+def _generate_image_gemini(prompt: str) -> bytes | None:
+    """Try Gemini Imagen. Returns bytes or None."""
+    key = os.getenv("GEMINI_API_KEY", "")
+    if not key or "REPLACE_ME" in key:
+        return None
+    try:
+        from google import genai as _genai  # noqa: PLC0415
+        from google.genai import types as _gtypes  # noqa: PLC0415
+        _img_client = _genai.Client(api_key=key)
+        result = _img_client.models.generate_images(
+            model="imagen-4.0-generate-001",
+            prompt=prompt[:1024],
+            config=_gtypes.GenerateImagesConfig(
+                number_of_images=1, output_mime_type="image/png",
+            ),
+        )
+        if result.generated_images:
+            log.debug("generate_image_success", model="gemini_imagen_4")
+            return result.generated_images[0].image.image_bytes
+    except ImportError:
+        try:
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                import google.generativeai as genai_legacy  # noqa: PLC0415
+            genai_legacy.configure(api_key=key)
+            imagen = genai_legacy.ImageGenerationModel("imagen-4.0-generate-001")
+            result = imagen.generate_images(prompt=prompt[:1024], number_of_images=1)
+            if result.images:
+                log.debug("generate_image_success", model="gemini_imagen_legacy")
+                return result.images[0]._image_bytes
+        except Exception as exc:
+            log.warning("generate_image_failed", model="gemini_imagen_legacy", error=str(exc))
+    except Exception as exc:
+        log.warning("generate_image_failed", model="gemini_imagen", error=str(exc))
+    return None
+
+
+def _generate_image_grok(prompt: str) -> bytes | None:
+    """Try Grok Aurora image generation. Returns bytes or None."""
+    grok_client = _grok()
+    if not grok_client:
+        return None
+    resp = grok_client.images.generate(
+        model="grok-2-image-1212", prompt=prompt[:4000],
+        n=1, response_format="b64_json",
+    )
+    data = resp.data[0].b64_json
+    if data:
+        log.debug("generate_image_success", model="grok_aurora", bytes=len(data) * 3 // 4)
+        return base64.b64decode(data)
+    return None
+
+
 def generate_image(
     prompt: str,
     *,
     size: str = "1024x1024",
     quality: str = "standard",
     reference_image: bytes | None = None,
+    provider_preference: list[str] | None = None,
 ) -> bytes:
     """
     Generate an image from a text prompt. Returns PNG bytes.
@@ -285,116 +491,51 @@ def generate_image(
     the prompt so the model maintains visual consistency with the reference
     (e.g. same character from a different angle).
 
-    Tries GPT-Image-1.5 → DALL-E 3 → Gemini Imagen 4 → Grok Aurora → stub PNG.
+    When ``provider_preference`` is set (e.g. ["grok_aurora", "gpt-image-1.5"]),
+    providers are tried in that order. Otherwise uses the default chain:
+    GPT-Image-1.5 → DALL-E 3 → Gemini Imagen 4 → Grok Aurora → stub PNG.
     """
-    # GPT Image 1.5 (OpenAI) — falls back to DALL-E 3 if unavailable
-    client = _openai()
-    if client:
-        # Try gpt-image-1.5 first (higher quality, better text rendering)
-        for img_model in ("gpt-image-1.5", "dall-e-3"):
+    # When a preference list is provided, dispatch in that order
+    if provider_preference:
+        for prov in provider_preference:
             try:
-                if reference_image and img_model.startswith("gpt-image"):
-                    # Use images.edit with the reference as input for consistency.
-                    # The BytesIO needs a .name with a .png extension so the
-                    # OpenAI SDK sends the correct MIME type (image/png).
-                    import io
-                    ref_buf = io.BytesIO(reference_image)
-                    ref_buf.name = "reference.png"
-                    kw_edit: dict[str, Any] = {
-                        "model": img_model,
-                        "prompt": prompt[:4000],
-                        "image": [ref_buf],
-                        "n": 1,
-                        "size": size,
-                        "quality": "high",
-                    }
-                    resp = client.images.edit(**kw_edit)
-                    img_bytes = (
-                        base64.b64decode(resp.data[0].b64_json)
-                        if hasattr(resp.data[0], "b64_json") and resp.data[0].b64_json
-                        else base64.b64decode(resp.data[0].b64_json or "")
-                    )
-                    if img_bytes:
-                        log.debug("generate_image_edit_success", model=img_model, bytes=len(img_bytes))
-                        return img_bytes
-                else:
-                    kw: dict[str, Any] = {
-                        "model": img_model,
-                        "prompt": prompt[:4000],
-                        "n": 1,
-                        "size": size,
-                    }
-                    if img_model.startswith("gpt-image"):
-                        kw["quality"] = "high"
-                        kw["output_format"] = "png"
-                    else:
-                        kw["quality"] = quality
-                        kw["response_format"] = "b64_json"
-                    resp = client.images.generate(**kw)
-                    img_bytes = (
-                        base64.b64decode(resp.data[0].b64_json)
-                        if hasattr(resp.data[0], "b64_json") and resp.data[0].b64_json
-                        else base64.b64decode(resp.data[0].b64_json or "")
-                    )
-                    if img_bytes:
-                        log.debug("generate_image_success", model=img_model, bytes=len(img_bytes))
-                        return img_bytes
+                if prov in ("gpt-image-1.5", "dall-e-3"):
+                    result = _generate_image_openai(prompt, prov, size, quality, reference_image)
+                    if result:
+                        return result
+                elif prov == "gemini_imagen":
+                    result = _generate_image_gemini(prompt)
+                    if result:
+                        return result
+                elif prov == "grok_aurora":
+                    result = _generate_image_grok(prompt)
+                    if result:
+                        return result
+                elif prov == "stub":
+                    return _stub_png(prompt)
             except Exception as exc:
-                log.debug("generate_image_provider_failed", model=img_model, error=str(exc))
+                log.debug("generate_image_provider_failed", model=prov, error=str(exc))
                 continue
+        # All preferred providers failed — fall through to stub
+        log.info("generate_image_stub_png")
+        return _stub_png(prompt)
 
-    # Gemini Imagen 3 (new google-genai SDK)
-    key = os.getenv("GEMINI_API_KEY", "")
-    if key and "REPLACE_ME" not in key:
+    # Default chain: GPT-Image-1.5 → DALL-E 3 → Gemini Imagen 4 → Grok Aurora → stub
+    for prov in ("gpt-image-1.5", "dall-e-3", "gemini_imagen", "grok_aurora"):
         try:
-            from google import genai as _genai  # noqa: PLC0415
-            from google.genai import types as _gtypes  # noqa: PLC0415
-            _img_client = _genai.Client(api_key=key)
-            result = _img_client.models.generate_images(
-                model="imagen-4.0-generate-001",
-                prompt=prompt[:1024],
-                config=_gtypes.GenerateImagesConfig(
-                    number_of_images=1,
-                    output_mime_type="image/png",
-                ),
-            )
-            if result.generated_images:
-                log.debug("generate_image_success", model="gemini_imagen_4")
-                return result.generated_images[0].image.image_bytes
-        except ImportError:
-            # Fallback to deprecated SDK
-            try:
-                import warnings
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", FutureWarning)
-                    import google.generativeai as genai_legacy  # noqa: PLC0415
-                genai_legacy.configure(api_key=key)
-                imagen = genai_legacy.ImageGenerationModel("imagen-4.0-generate-001")
-                result = imagen.generate_images(prompt=prompt[:1024], number_of_images=1)
-                if result.images:
-                    log.debug("generate_image_success", model="gemini_imagen_legacy")
-                    return result.images[0]._image_bytes
-            except Exception as exc:
-                log.warning("generate_image_failed", model="gemini_imagen_legacy", error=str(exc))
+            if prov in ("gpt-image-1.5", "dall-e-3"):
+                result = _generate_image_openai(prompt, prov, size, quality, reference_image)
+            elif prov == "gemini_imagen":
+                result = _generate_image_gemini(prompt)
+            elif prov == "grok_aurora":
+                result = _generate_image_grok(prompt)
+            else:
+                result = None
+            if result:
+                return result
         except Exception as exc:
-            log.warning("generate_image_failed", model="gemini_imagen", error=str(exc))
-
-    # Grok Aurora (xAI) — OpenAI-compatible image generation
-    grok_client = _grok()
-    if grok_client:
-        try:
-            resp = grok_client.images.generate(
-                model="grok-2-image-1212",
-                prompt=prompt[:4000],
-                n=1,
-                response_format="b64_json",
-            )
-            data = resp.data[0].b64_json
-            if data:
-                log.debug("generate_image_success", model="grok_aurora", bytes=len(data) * 3 // 4)
-                return base64.b64decode(data)
-        except Exception as exc:
-            log.warning("generate_image_failed", model="grok_aurora", error=str(exc))
+            log.debug("generate_image_provider_failed", model=prov, error=str(exc))
+            continue
 
     log.info("generate_image_stub_png")
     return _stub_png(prompt)

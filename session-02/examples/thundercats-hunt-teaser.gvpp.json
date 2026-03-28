@@ -63,7 +63,30 @@
       {
         "id": "sg-photocgi"
       }
-    ]
+    ],
+    "generationDefaults": {
+      "imageProviders": [
+        "grok_aurora",
+        "gpt-image-1.5",
+        "gemini_imagen",
+        "stub"
+      ],
+      "videoProviders": [
+        "runway",
+        "veo",
+        "stub"
+      ],
+      "audioProviders": [
+        "elevenlabs",
+        "suno",
+        "stub"
+      ],
+      "textProviders": [
+        "claude",
+        "gpt",
+        "gemini"
+      ]
+    }
   },
   "qualityProfiles": [
     {

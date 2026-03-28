@@ -2495,6 +2495,78 @@
             }
           },
           "additionalProperties": false
+        },
+        "generationDefaults": {
+          "type": "object",
+          "description": "Project-level default provider preferences for AI generation. Each list is an ordered priority chain — the pipeline tries providers left-to-right, falling back on failure.",
+          "properties": {
+            "imageProviders": {
+              "type": "array",
+              "description": "Ordered provider preference for reference image generation (e.g. character sheets, environment plates, prop renders).",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "gpt-image-1.5",
+                  "dall-e-3",
+                  "gemini_imagen",
+                  "grok_aurora",
+                  "stable_diffusion",
+                  "flux",
+                  "stub"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "videoProviders": {
+              "type": "array",
+              "description": "Ordered provider preference for video shot generation.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "runway",
+                  "veo",
+                  "kling",
+                  "pika",
+                  "stub"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "audioProviders": {
+              "type": "array",
+              "description": "Ordered provider preference for audio asset generation (SFX, music, dialogue).",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "elevenlabs",
+                  "suno",
+                  "stable_audio",
+                  "stub"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "textProviders": {
+              "type": "array",
+              "description": "Ordered provider preference for text/JSON generation (scripts, derive steps).",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "gpt",
+                  "gemini",
+                  "grok",
+                  "deepseek"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": [

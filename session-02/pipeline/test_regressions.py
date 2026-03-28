@@ -632,5 +632,243 @@ class TestSchemaPathResolution(unittest.TestCase):
         self.assertTrue(_V3_SCHEMA.exists(), f"Schema not found: {_V3_SCHEMA}")
 
 
+class TestIdeaFileAndInspiration(unittest.TestCase):
+    """Regression: --idea @file and --inspiration FILE must load content into the idea string."""
+
+    def test_idea_at_file_loads_content(self):
+        """--idea @path reads the file and uses its content as the idea."""
+        from pipeline.run import main
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("A tiny robot discovers a flower in a junkyard.")
+            f.flush()
+            # Dry-run so no APIs are called
+            rc = main(["--idea", f"@{f.name}", "--dry-run"])
+        Path(f.name).unlink(missing_ok=True)
+        self.assertEqual(rc, 0)
+
+    def test_idea_at_file_missing_returns_error(self):
+        """--idea @nonexistent.txt should return error code 1."""
+        from pipeline.run import main
+        rc = main(["--idea", "@/tmp/does_not_exist_29384.txt", "--dry-run"])
+        self.assertEqual(rc, 1)
+
+    def test_inspiration_appended_to_idea(self):
+        """--inspiration FILE appends content with framing text."""
+        from pipeline.run import main
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("INT. COFFEE SHOP\nTwo people sit in a booth.\n")
+            f.flush()
+            # Capture what the dry-run prints
+            rc = main([
+                "--idea", "Noir diner scene",
+                "--inspiration", f.name,
+                "--dry-run",
+            ])
+        Path(f.name).unlink(missing_ok=True)
+        self.assertEqual(rc, 0)
+
+    def test_inspiration_without_idea_creates_idea(self):
+        """--inspiration alone (no --idea) should create an idea from the file."""
+        from pipeline.run import main
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("A screenplay about two people in a diner.\n")
+            f.flush()
+            rc = main(["--inspiration", f.name, "--dry-run"])
+        Path(f.name).unlink(missing_ok=True)
+        self.assertEqual(rc, 0)
+
+    def test_inspiration_missing_returns_error(self):
+        """--inspiration with missing file should return error code 1."""
+        from pipeline.run import main
+        rc = main([
+            "--idea", "test",
+            "--inspiration", "/tmp/does_not_exist_92837.txt",
+            "--dry-run",
+        ])
+        self.assertEqual(rc, 1)
+
+    def test_idea_at_file_content_preserved(self):
+        """File content should be readable in the idea string."""
+        from pipeline.run import main
+        import tempfile, io, contextlib
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("UNIQUE_MARKER_XYZ_123 — a test idea from file.")
+            f.flush()
+            # Capture stdout to verify the idea appears in dry-run output
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = main(["--idea", f"@{f.name}", "--dry-run"])
+        Path(f.name).unlink(missing_ok=True)
+        self.assertEqual(rc, 0)
+        self.assertIn("UNIQUE_MARKER_XYZ_123", buf.getvalue())
+
+
+class TestExtractJsonTruncationRepair(unittest.TestCase):
+    """Regression: _extract_json must recover partial JSON from truncated responses."""
+
+    def test_complete_json_parses_normally(self):
+        from pipeline.providers import _extract_json
+        result = _extract_json('{"key": "value", "n": 42}')
+        self.assertEqual(result, {"key": "value", "n": 42})
+
+    def test_truncated_string_repaired(self):
+        from pipeline.providers import _extract_json
+        # Simulates a response truncated mid-string
+        truncated = '{"name": "Alice", "desc": "A tall wom'
+        result = _extract_json(truncated)
+        self.assertEqual(result["name"], "Alice")
+        self.assertIn("desc", result)
+
+    def test_truncated_object_repaired(self):
+        from pipeline.providers import _extract_json
+        truncated = '{"a": 1, "b": {"nested": "val"'
+        result = _extract_json(truncated)
+        self.assertEqual(result["a"], 1)
+
+    def test_truncated_array_repaired(self):
+        from pipeline.providers import _extract_json
+        truncated = '{"items": [1, 2, 3'
+        result = _extract_json(truncated)
+        self.assertEqual(result["items"], [1, 2, 3])
+
+    def test_truncated_with_trailing_comma(self):
+        from pipeline.providers import _extract_json
+        truncated = '{"a": 1, "b": 2,'
+        result = _extract_json(truncated)
+        self.assertEqual(result["a"], 1)
+        self.assertEqual(result["b"], 2)
+
+    def test_empty_response_raises(self):
+        from pipeline.providers import _extract_json
+        with self.assertRaises(ValueError):
+            _extract_json("")
+
+    def test_whitespace_only_raises(self):
+        from pipeline.providers import _extract_json
+        with self.assertRaises(ValueError):
+            _extract_json("   \n  ")
+
+    def test_json_in_markdown_block(self):
+        from pipeline.providers import _extract_json
+        text = 'Here is the result:\n```json\n{"key": "val"}\n```\nDone.'
+        result = _extract_json(text)
+        self.assertEqual(result, {"key": "val"})
+
+    def test_large_truncated_json_preserves_early_fields(self):
+        """Simulates a skill producing 30k+ chars that gets cut at token limit."""
+        from pipeline.providers import _extract_json
+        # Build a realistic truncated response
+        fields = ", ".join(f'"field_{i}": "value_{i}"' for i in range(200))
+        truncated = "{" + fields + ', "truncated_field": "this value is cut o'
+        result = _extract_json(truncated)
+        self.assertEqual(result["field_0"], "value_0")
+        self.assertEqual(result["field_199"], "value_199")
+
+
+class TestRepairTruncatedJson(unittest.TestCase):
+    """Unit tests for _repair_truncated_json."""
+
+    def test_closes_unclosed_string(self):
+        from pipeline.providers import _repair_truncated_json
+        result = _repair_truncated_json('{"key": "val')
+        self.assertTrue(result.endswith("}"))
+        self.assertIn('"val"', result)
+
+    def test_closes_unclosed_braces(self):
+        from pipeline.providers import _repair_truncated_json
+        result = _repair_truncated_json('{"a": {"b": 1')
+        self.assertEqual(result.count("}"), 2)
+
+    def test_closes_unclosed_array(self):
+        from pipeline.providers import _repair_truncated_json
+        result = _repair_truncated_json('{"x": [1, 2')
+        self.assertIn("]", result)
+        self.assertIn("}", result)
+
+    def test_removes_trailing_comma(self):
+        from pipeline.providers import _repair_truncated_json
+        result = _repair_truncated_json('{"a": 1,')
+        self.assertFalse(result.rstrip("}").rstrip().endswith(","))
+
+
+class TestClaudeJsonRetryOnTruncation(unittest.TestCase):
+    """Regression: Claude truncation (stop_reason=max_tokens) should auto-retry."""
+
+    def test_retries_with_higher_max_tokens(self):
+        from pipeline.providers import _claude_json
+
+        # First call: truncated. Second call: complete.
+        mock_resp_truncated = MagicMock()
+        mock_resp_truncated.content = [MagicMock(text='{"partial": "da')]
+        mock_resp_truncated.stop_reason = "max_tokens"
+
+        mock_resp_complete = MagicMock()
+        mock_resp_complete.content = [MagicMock(text='{"complete": "data", "n": 42}')]
+        mock_resp_complete.stop_reason = "end_turn"
+
+        mock_client = MagicMock()
+        mock_client.messages.create.side_effect = [mock_resp_truncated, mock_resp_complete]
+
+        with patch("pipeline.providers._anthropic", return_value=mock_client):
+            result = _claude_json("sys", "user", 8192)
+
+        self.assertEqual(result, {"complete": "data", "n": 42})
+        # Should have been called twice
+        calls = mock_client.messages.create.call_args_list
+        self.assertEqual(len(calls), 2)
+        # Second call should have doubled max_tokens
+        self.assertEqual(calls[1].kwargs["max_tokens"], 16384)
+
+    def test_empty_response_raises(self):
+        from pipeline.providers import _claude_json
+
+        mock_resp = MagicMock()
+        mock_resp.content = [MagicMock(text="")]
+        mock_resp.stop_reason = "end_turn"
+
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_resp
+
+        with patch("pipeline.providers._anthropic", return_value=mock_client):
+            with self.assertRaises(ValueError):
+                _claude_json("sys", "user", 8192)
+
+
+class TestOpenaiJsonRetryOnTruncation(unittest.TestCase):
+    """Regression: OpenAI truncation (finish_reason=length) should auto-retry."""
+
+    def test_retries_with_higher_max_tokens(self):
+        from pipeline.providers import _openai_json
+
+        mock_choice_trunc = MagicMock()
+        mock_choice_trunc.message.content = '{"partial": "da'
+        mock_choice_trunc.finish_reason = "length"
+
+        mock_choice_complete = MagicMock()
+        mock_choice_complete.message.content = '{"full": "data"}'
+        mock_choice_complete.finish_reason = "stop"
+
+        mock_resp_trunc = MagicMock()
+        mock_resp_trunc.choices = [mock_choice_trunc]
+
+        mock_resp_complete = MagicMock()
+        mock_resp_complete.choices = [mock_choice_complete]
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.side_effect = [mock_resp_trunc, mock_resp_complete]
+
+        with patch("pipeline.providers._openai", return_value=mock_client):
+            result = _openai_json("sys", "user", 8192)
+
+        self.assertEqual(result, {"full": "data"})
+        calls = mock_client.chat.completions.create.call_args_list
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[1].kwargs["max_tokens"], 16384)
+
+
 if __name__ == "__main__":
     unittest.main()

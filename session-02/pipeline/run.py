@@ -456,6 +456,8 @@ Examples:
   python -m pipeline.run --idea "A robot learning to paint"
   python -m pipeline.run --idea "A robot learning to paint" --creative-only
   python -m pipeline.run --idea "A robot learning to paint" --dry-run
+  python -m pipeline.run --idea @treatment.txt
+  python -m pipeline.run --idea "Noir detective short" --inspiration screenplay.txt
   python -m pipeline.run render demo-30s.json
   python -m pipeline.run render demo-30s.json --dry-run
   python -m pipeline.run render demo-30s.json --stub-only
@@ -482,7 +484,12 @@ Examples:
 
     # ── --idea (creative mode, top-level) ─────────────────────────────────
     parser.add_argument("--idea", metavar="TEXT",
-                        help="Run 24-skill AI pipeline from a one-sentence idea.")
+                        help="Run 24-skill AI pipeline from a one-sentence idea. "
+                             "Prefix with @ to read from a file (e.g. --idea @script.txt).")
+    parser.add_argument("--inspiration", metavar="FILE",
+                        help="Load a reference text file (screenplay, treatment, notes) "
+                             "as creative context. Content is appended to --idea as "
+                             "source material for the 24-skill pipeline.")
     parser.add_argument("--creative-only", action="store_true",
                         help="Stop after creative phase — output instance JSON, no render.")
 
@@ -508,6 +515,37 @@ Examples:
                         help="Enable DEBUG logging.")
 
     args = parser.parse_args(argv)
+
+    # ── Resolve --idea @file and --inspiration ──────────────────────────
+    if args.idea and args.idea.startswith("@"):
+        idea_path = Path(args.idea[1:])
+        if not idea_path.exists():
+            log.error("Idea file not found: %s", idea_path)
+            return 1
+        args.idea = idea_path.read_text(encoding="utf-8").strip()
+        log.info("Loaded idea from file: %s (%d chars)", idea_path, len(args.idea))
+
+    if getattr(args, "inspiration", None):
+        insp_path = Path(args.inspiration)
+        if not insp_path.exists():
+            log.error("Inspiration file not found: %s", insp_path)
+            return 1
+        insp_text = insp_path.read_text(encoding="utf-8").strip()
+        log.info("Loaded inspiration: %s (%d chars)", insp_path, len(insp_text))
+        if args.idea:
+            args.idea = (
+                f"{args.idea}\n\n"
+                f"--- INSPIRATION / SOURCE MATERIAL ---\n"
+                f"Use the following as creative reference. Adapt the tone, pacing, "
+                f"dialogue style, and narrative structure — do NOT copy verbatim.\n\n"
+                f"{insp_text}"
+            )
+        else:
+            args.idea = (
+                f"Create a short video inspired by the following source material. "
+                f"Adapt the tone, pacing, and narrative structure.\n\n"
+                f"--- SOURCE MATERIAL ---\n{insp_text}"
+            )
 
     # ── Require at least one mode ─────────────────────────────────────────
     if not args.command and not args.idea:
@@ -641,7 +679,12 @@ Examples:
             print("\n" + "=" * 60)
             print("  DRY RUN — Creative phase")
             print("=" * 60)
-            print(f"\n  Idea: {args.idea}")
+            idea_preview = args.idea[:200] + ("..." if len(args.idea) > 200 else "")
+            print(f"\n  Idea: {idea_preview}")
+            if len(args.idea) > 200:
+                print(f"  Idea length: {len(args.idea)} chars")
+            if "INSPIRATION" in args.idea or "SOURCE MATERIAL" in args.idea:
+                print(f"  Inspiration: loaded ({args.idea.count(chr(10))} lines)")
             print(f"  Mode: {'creative only' if args.creative_only else 'creative + render'}")
             print(f"  Output: {output_dir.resolve()}")
             print(f"  Skills: S01-S24 (24 skills, ~15-40 min)")

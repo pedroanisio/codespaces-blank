@@ -417,8 +417,8 @@ class TestVeoGenerator:
         first_call_config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
         assert len(first_call_config.reference_images) == 3
 
-    def test_reference_type_all_style(self, minimal_shot, tmp_path):
-        """All refs should use STYLE type (avoids Veo policy filter vs ASSET)."""
+    def test_reference_type_all_asset(self, minimal_shot, tmp_path):
+        """All refs must use ASSET type — only type Veo 3.1 supports."""
         from pipeline.generate import _veo_generate_shot
         from google.genai import types
         out = tmp_path / "shot.mp4"
@@ -432,7 +432,22 @@ class TestVeoGenerator:
 
         first_call_config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
         ref_types = [r.reference_type for r in first_call_config.reference_images]
-        assert all(t == types.VideoGenerationReferenceType.STYLE for t in ref_types)
+        assert all(t == types.VideoGenerationReferenceType.ASSET for t in ref_types)
+
+    def test_duration_8s_when_refs_attached(self, minimal_shot, tmp_path):
+        """Veo 3.1 requires duration=8 when reference images are used."""
+        from pipeline.generate import _veo_generate_shot
+        out = tmp_path / "shot.mp4"
+        mock_client = self._mock_veo(video_bytes=b"\x00" * 100)
+
+        refs = [b"\x89PNG" + b"\x00" * 200]
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            _veo_generate_shot(minimal_shot, "key", out, reference_images=refs)
+
+        first_call_config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        assert first_call_config.duration_seconds == 8
 
     def test_policy_rejection_retries_without_refs(self, minimal_shot, tmp_path):
         """On INVALID_ARGUMENT, should retry without reference images."""
@@ -1045,3 +1060,345 @@ class TestGenerateShotsRefCollection:
 
         # Both shots should have inherited the scene-level anchor → character ref
         assert all(c["refs"] >= 1 for c in veo_calls)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Regression tests — Veo + Runway provider fixes
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestSanitizePromptForVeo:
+    """Regression: Veo's content filter rejects hex codes, brackets, negative prompts."""
+
+    def test_strips_hex_colors(self):
+        from pipeline.generate import _sanitize_prompt_for_veo
+        result = _sanitize_prompt_for_veo("Use palette #1a1a2e and #FF0000 for contrast")
+        assert "#1a1a2e" not in result
+        assert "#FF0000" not in result
+        assert "palette" in result
+
+    def test_strips_bracketed_tags(self):
+        from pipeline.generate import _sanitize_prompt_for_veo
+        result = _sanitize_prompt_for_veo("[locked] character must appear [STYLE] cinematic")
+        assert "[locked]" not in result
+        assert "[STYLE]" not in result
+        assert "character must appear" in result
+
+    def test_strips_negative_prompt(self):
+        from pipeline.generate import _sanitize_prompt_for_veo
+        result = _sanitize_prompt_for_veo(
+            "A robot in a junkyard.\nNegative prompt: no humans, no text\nMore detail."
+        )
+        assert "no humans" not in result
+        assert "robot" in result
+
+    def test_strips_focal_length(self):
+        from pipeline.generate import _sanitize_prompt_for_veo
+        result = _sanitize_prompt_for_veo("Shot with 85mm lens, f/1.8 aperture")
+        assert "85mm" not in result
+        assert "f/1.8" not in result
+
+    def test_preserves_core_narrative(self):
+        from pipeline.generate import _sanitize_prompt_for_veo
+        prompt = "A tiny robot discovers a flower in a junkyard under overcast skies"
+        result = _sanitize_prompt_for_veo(prompt)
+        assert result == prompt  # nothing to strip
+
+
+class TestSanitizePromptForRunway:
+    """Regression: Runway moderation rejects hunting/violence language in fantasy contexts."""
+
+    def test_replaces_hunting_language(self):
+        from pipeline.generate import _sanitize_prompt_for_runway
+        result = _sanitize_prompt_for_runway("Lion-O hunts the beast through the jungle")
+        assert "hunt" not in result.lower()
+        assert "beast" not in result.lower()
+        assert "track" in result.lower()
+        assert "creature" in result.lower()
+
+    def test_replaces_combat_language(self):
+        from pipeline.generate import _sanitize_prompt_for_runway
+        result = _sanitize_prompt_for_runway("Warriors fight with swords in battle")
+        assert "fight" not in result.lower()
+        assert "sword" not in result.lower()
+        assert "battle" not in result.lower()
+
+    def test_replaces_stalking(self):
+        from pipeline.generate import _sanitize_prompt_for_runway
+        result = _sanitize_prompt_for_runway("The predator stalks its prey")
+        assert "predator" not in result.lower()
+        assert "stalk" not in result.lower()
+        assert "prey" not in result.lower()
+
+    def test_preserves_safe_content(self):
+        from pipeline.generate import _sanitize_prompt_for_runway
+        prompt = "A robot walks through a garden under golden sunlight"
+        assert _sanitize_prompt_for_runway(prompt) == prompt
+
+    def test_case_insensitive(self):
+        from pipeline.generate import _sanitize_prompt_for_runway
+        result = _sanitize_prompt_for_runway("The BEAST STALKS its PREY")
+        assert "beast" not in result.lower()
+        assert "stalk" not in result.lower()
+
+
+class TestDistillPromptFallback:
+    """Regression: _distill_prompt must never return empty string."""
+
+    def test_empty_sections_fallback(self):
+        """When no priority sections match, should hard-truncate original."""
+        from pipeline.generate import _distill_prompt
+        # A prompt with no recognizable section headers
+        prompt = "x" * 2000
+        result = _distill_prompt(prompt, 500, shot_id="test")
+        assert len(result) > 0
+        assert len(result) <= 500
+
+    def test_short_prompt_unchanged(self):
+        from pipeline.generate import _distill_prompt
+        result = _distill_prompt("short prompt", 500, shot_id="test")
+        assert result == "short prompt"
+
+    def test_with_priority_sections(self):
+        from pipeline.generate import _distill_prompt
+        prompt = (
+            "[WHAT HAPPENS]\nA robot finds a flower.\n\n"
+            "[CAMERA]\nWide angle, crane shot.\n\n"
+            "[EXTRA CONTEXT]\n" + "x" * 2000
+        )
+        result = _distill_prompt(prompt, 200, shot_id="test")
+        assert len(result) <= 200
+        assert len(result) > 0
+        # Priority sections should be preserved
+        assert "robot" in result or "Wide" in result
+
+
+class TestVeoParameterErrorNotRetried:
+    """Regression: duration/aspect_ratio errors must fail fast, not retry 3 times."""
+
+    def test_duration_error_raises_immediately(self):
+        from pipeline.generate import _veo_generate_shot
+        shot = {
+            "id": "s1", "logicalId": "s1", "entityType": "shot",
+            "targetDurationSec": 3, "genParams": {"prompt": "test"},
+            "cinematicSpec": {"colorPalette": ["#000000"]},
+        }
+        mock_client = MagicMock()
+        mock_client.models.generate_videos.side_effect = Exception(
+            "400 INVALID_ARGUMENT: durationSeconds is out of bound"
+        )
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            with pytest.raises(Exception, match="durationSeconds"):
+                _veo_generate_shot(shot, "key", Path("/tmp/out.mp4"))
+
+        # Should only be called ONCE — not retried
+        assert mock_client.models.generate_videos.call_count == 1
+
+    def test_aspect_ratio_error_raises_immediately(self):
+        from pipeline.generate import _veo_generate_shot
+        shot = {
+            "id": "s1", "logicalId": "s1", "entityType": "shot",
+            "targetDurationSec": 5, "genParams": {"prompt": "test"},
+            "cinematicSpec": {"colorPalette": ["#000000"]},
+        }
+        mock_client = MagicMock()
+        mock_client.models.generate_videos.side_effect = Exception(
+            "400 INVALID_ARGUMENT: aspect_ratio invalid"
+        )
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            with pytest.raises(Exception, match="aspect_ratio"):
+                _veo_generate_shot(shot, "key", Path("/tmp/out.mp4"))
+
+        assert mock_client.models.generate_videos.call_count == 1
+
+
+class TestVeoDuration8WithRefs:
+    """Regression: Veo 3.1 requires duration_seconds=8 when reference images are attached."""
+
+    def test_duration_forced_to_8_with_refs(self):
+        from pipeline.generate import _veo_generate_shot
+        shot = {
+            "id": "s1", "logicalId": "s1", "entityType": "shot",
+            "targetDurationSec": 2.5,  # much shorter than 8
+            "genParams": {"prompt": "test shot"},
+            "cinematicSpec": {"colorPalette": ["#000000"]},
+        }
+        mock_client = MagicMock()
+        mock_op = MagicMock()
+        mock_op.done = True
+        mock_video = MagicMock()
+        mock_video.video_bytes = b"\x00" * 100
+        mock_video.uri = None
+        mock_gen = MagicMock()
+        mock_gen.video = mock_video
+        mock_op.response = MagicMock()
+        mock_op.response.generated_videos = [mock_gen]
+        mock_client.models.generate_videos.return_value = mock_op
+        mock_client.operations.get.return_value = mock_op
+
+        refs = [b"\x89PNG" + b"\x00" * 200]
+        out = Path("/tmp/test_dur8.mp4")
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            _veo_generate_shot(shot, "key", out, reference_images=refs)
+
+        config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        assert config.duration_seconds == 8
+
+    def test_duration_clamped_without_refs(self):
+        from pipeline.generate import _veo_generate_shot
+        shot = {
+            "id": "s1", "logicalId": "s1", "entityType": "shot",
+            "targetDurationSec": 2.5,
+            "genParams": {"prompt": "test shot"},
+            "cinematicSpec": {"colorPalette": ["#000000"]},
+        }
+        mock_client = MagicMock()
+        mock_op = MagicMock()
+        mock_op.done = True
+        mock_video = MagicMock()
+        mock_video.video_bytes = b"\x00" * 100
+        mock_video.uri = None
+        mock_gen = MagicMock()
+        mock_gen.video = mock_video
+        mock_op.response = MagicMock()
+        mock_op.response.generated_videos = [mock_gen]
+        mock_client.models.generate_videos.return_value = mock_op
+        mock_client.operations.get.return_value = mock_op
+
+        out = Path("/tmp/test_dur_no_refs.mp4")
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            _veo_generate_shot(shot, "key", out)  # no reference_images
+
+        config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        # Should be clamped to min=4, not forced to 8
+        assert config.duration_seconds == 4
+
+
+class TestVeoReferenceTypeAsset:
+    """Regression: Veo 3.1 only supports reference_type='asset', not 'STYLE'."""
+
+    def test_uses_asset_not_style(self):
+        from pipeline.generate import _veo_generate_shot
+        from google.genai import types
+        shot = {
+            "id": "s1", "logicalId": "s1", "entityType": "shot",
+            "targetDurationSec": 5,
+            "genParams": {"prompt": "test"},
+            "cinematicSpec": {"colorPalette": ["#000000"]},
+        }
+        mock_client = MagicMock()
+        mock_op = MagicMock()
+        mock_op.done = True
+        mock_video = MagicMock()
+        mock_video.video_bytes = b"\x00" * 100
+        mock_video.uri = None
+        mock_gen = MagicMock()
+        mock_gen.video = mock_video
+        mock_op.response = MagicMock()
+        mock_op.response.generated_videos = [mock_gen]
+        mock_client.models.generate_videos.return_value = mock_op
+        mock_client.operations.get.return_value = mock_op
+
+        refs = [b"\x89PNG" + b"\x00" * 200, b"\x89PNG" + b"\x00" * 200]
+        out = Path("/tmp/test_asset.mp4")
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            _veo_generate_shot(shot, "key", out, reference_images=refs)
+
+        config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        for ref in config.reference_images:
+            assert ref.reference_type == types.VideoGenerationReferenceType.ASSET
+            assert ref.reference_type != getattr(
+                types.VideoGenerationReferenceType, "STYLE", None
+            )
+
+
+class TestRunwayModerationRetry:
+    """Regression: Runway moderation rejection should retry with sanitized prompt."""
+
+    def test_retries_on_moderation_failure(self):
+        from pipeline.generate import _runway_generate_shot
+        import requests as req
+        shot = {
+            "id": "s1", "logicalId": "s1", "entityType": "shot",
+            "targetDurationSec": 3,
+            "genParams": {"prompt": "Lion-O hunts the beast through the jungle"},
+            "cinematicSpec": {"colorPalette": ["#000000"]},
+        }
+
+        # First submit succeeds, first poll returns moderation failure,
+        # second submit succeeds, second poll returns success
+        submit_resp_1 = MagicMock()
+        submit_resp_1.ok = True
+        submit_resp_1.json.return_value = {"id": "task-1"}
+
+        submit_resp_2 = MagicMock()
+        submit_resp_2.ok = True
+        submit_resp_2.json.return_value = {"id": "task-2"}
+
+        poll_fail = MagicMock()
+        poll_fail.json.return_value = {
+            "status": "FAILED",
+            "failure": "Text prompt did not pass moderation",
+        }
+
+        poll_success = MagicMock()
+        poll_success.json.return_value = {
+            "status": "SUCCEEDED",
+            "artifacts": ["https://example.com/video.mp4"],
+        }
+
+        video_resp = MagicMock()
+        video_resp.content = b"\x00" * 5000
+
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            out = Path(f.name)
+
+        with patch("requests.post", side_effect=[submit_resp_1, submit_resp_2]), \
+             patch("requests.get", side_effect=[poll_fail, poll_success, video_resp]), \
+             patch("time.sleep"):
+            _runway_generate_shot(shot, "test-key", out)
+
+        assert out.exists()
+        assert out.stat().st_size == 5000
+        out.unlink(missing_ok=True)
+
+    def test_raises_after_both_attempts_fail_moderation(self):
+        from pipeline.generate import _runway_generate_shot
+        shot = {
+            "id": "s1", "logicalId": "s1", "entityType": "shot",
+            "targetDurationSec": 3,
+            "genParams": {"prompt": "violent fight scene with blood"},
+            "cinematicSpec": {"colorPalette": ["#000000"]},
+        }
+
+        submit_resp = MagicMock()
+        submit_resp.ok = True
+        submit_resp.json.return_value = {"id": "task-x"}
+
+        poll_fail = MagicMock()
+        poll_fail.json.return_value = {
+            "status": "FAILED",
+            "failure": "Text prompt did not pass moderation",
+        }
+
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            out = Path(f.name)
+
+        with patch("requests.post", return_value=submit_resp), \
+             patch("requests.get", return_value=poll_fail), \
+             patch("time.sleep"):
+            with pytest.raises(RuntimeError, match="moderation"):
+                _runway_generate_shot(shot, "test-key", out)
+
+        out.unlink(missing_ok=True)

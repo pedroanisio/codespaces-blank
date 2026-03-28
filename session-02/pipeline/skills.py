@@ -331,9 +331,18 @@ def run_skill(
     )
     user = "\n\n".join(user_parts)
 
+    # Skills that produce large structured output (full script, all shots with
+    # generation params, reference asset specs) need more output tokens.
+    _LARGE_SKILLS = {
+        "s02-story-architect", "s03-scriptwriter", "s07-director",
+        "s09-scene-composer", "s10-music-composer", "s11-sound-designer",
+        "s13-reference-asset-gen", "s15-prompt-composer",
+    }
+    skill_max_tokens = 16384 if skill_dir in _LARGE_SKILLS else 8192
+
     log.info("skill_calling_ai", skill=skill_dir)
     t0 = time.perf_counter()
-    update = providers.complete_json(system, user, max_tokens=8192)
+    update = providers.complete_json(system, user, max_tokens=skill_max_tokens)
     elapsed = time.perf_counter() - t0
     log.info("skill_complete", skill=skill_dir, elapsed_s=round(elapsed, 1), keys=len(update))
 
