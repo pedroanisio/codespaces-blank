@@ -1,0 +1,420 @@
+# Schema clustering hints for schema_tree.py
+# Edit categories, rename them, move members between them.
+# Set source: 'manual' for hand-curated categories.
+# Run with --update to incorporate new schema definitions.
+#
+# Generated: 2026-03-28T13:13:03Z
+# Updated:   2026-03-28T13:13:03Z
+#
+
+version: 1.0.0
+schema_dir: /home/admin/codebases/codespaces-blank/session-02/schemas
+generated_at: '2026-03-28T13:13:03Z'
+updated_at: '2026-03-28T13:13:03Z'
+schema_files:
+- chatgpt-generative_video_project_package.schema.json
+- claude-spatial-extension-patch.json
+- claude-unified-video-project-v3.schema.json
+- claude-video-production-schema-v1.0.json
+- grok-video-schema.json
+- screenplay-format-spec.schema.json
+- term-map.json
+- video-project-schema-v2.json
+definition_count: 346
+categories:
+- name: Entity Types
+  description: Definitions with suffix 'entity' — auto-detected structural pattern.
+  members:
+  - AudioAssetEntity
+  - BaseEntity
+  - CharacterEntity
+  - DirectorInstructionsEntity
+  - EditVersionEntity
+  - EnvironmentEntity
+  - FinalOutputEntity
+  - GenericAssetEntity
+  - MarketingAssetEntity
+  - ProjectEntity
+  - PropEntity
+  - QualityProfileEntity
+  - RenderPlanEntity
+  - SceneEntity
+  - ScriptEntity
+  - ShotEntity
+  - StoryEntity
+  - StyleGuideEntity
+  - TimelineEntity
+  - VisualAssetEntity
+  keywords:
+  - entity
+  source: auto
+- name: Specifications
+  description: Definitions with suffix 'spec' — auto-detected structural pattern.
+  members:
+  - AudioSpec
+  - AudioTechnicalSpec
+  - CameraSpec
+  - CinematicSpec
+  - ColorSpec
+  - LightingSpec
+  - QualitySpec
+  - RetimeSpec
+  - ShotTechnicalSpec
+  - TransitionSpec
+  - VisualAssetSpec
+  keywords:
+  - spec
+  source: auto
+- name: Configuration
+  description: Definitions with suffix 'config' — auto-detected structural pattern.
+  members:
+  - AccessibilityConfig
+  - AsyncConfig
+  - GenerationConfig
+  - LocalizationConfig
+  - ManimConfig
+  - RetryConfig
+  keywords:
+  - config
+  source: auto
+- name: Operations
+  description: Definitions with suffix 'op' — auto-detected structural pattern.
+  members:
+  - AudioMixOp
+  - ColorGradeOp
+  - ConcatOp
+  - CustomOp
+  - EncodeOp
+  - FilterOp
+  - ManimOp
+  - OverlayOp
+  - RetimeOp
+  - TransitionOp
+  keywords:
+  - op
+  source: auto
+- name: Workflow Nodes
+  description: Definitions with suffix 'node' — auto-detected structural pattern.
+  members:
+  - ApprovalNode
+  - CustomWorkflowNode
+  - GenerationNode
+  - NotificationNode
+  - RenderNode
+  - TransformNode
+  - ValidationNode
+  - WorkflowNode
+  keywords:
+  - node
+  source: auto
+- name: Controls
+  description: Definitions with suffix 'controls' — auto-detected structural pattern.
+  members:
+  - AudioQualityControls
+  - CompressionControls
+  - QualityControls
+  - VideoQualityControls
+  keywords:
+  - controls
+  source: auto
+- name: Records
+  description: Definitions with suffix 'record' — auto-detected structural pattern.
+  members:
+  - ApprovalRecord
+  - PromptRecord
+  - VersionRecord
+  keywords:
+  - record
+  source: auto
+- name: Consistency types
+  description: Definitions with suffix 'consistency' — auto-detected structural pattern.
+  members:
+  - SpatialConsistency
+  - TemporalConsistency
+  keywords:
+  - consistency
+  source: auto
+- name: Ver types
+  description: Definitions with suffix 'ver' — auto-detected structural pattern.
+  members:
+  - SemVer
+  keywords:
+  - ver
+  source: auto
+- name: References
+  description: Definitions with suffix 'ref' — auto-detected structural pattern.
+  members:
+  - AssetRef
+  - EntityRef
+  keywords:
+  - ref
+  source: auto
+- name: Info types
+  description: Definitions with suffix 'info' — auto-detected structural pattern.
+  members:
+  - PackageInfo
+  - VersionInfo
+  keywords:
+  - info
+  source: auto
+- name: Guidelines types
+  description: Definitions with suffix 'guidelines' — auto-detected structural pattern.
+  members:
+  - LightingGuidelines
+  - StyleGuidelines
+  keywords:
+  - guidelines
+  source: auto
+- name: Rules
+  description: Definitions with suffix 'rule' — auto-detected structural pattern.
+  members:
+  - SpatialRule
+  - ValidationRule
+  keywords:
+  - rule
+  source: auto
+- name: Profiles
+  description: Definitions with suffix 'profile' — auto-detected structural pattern.
+  members:
+  - QualityProfile
+  - VoiceProfile
+  keywords:
+  - profile
+  source: auto
+- name: Input types
+  description: Definitions with suffix 'input' — auto-detected structural pattern.
+  members:
+  - AdapterInput
+  - ReferenceInput
+  keywords:
+  - input
+  source: auto
+- name: Anchor types
+  description: Definitions with suffix 'anchor' — auto-detected structural pattern.
+  members:
+  - ConsistencyAnchor
+  - SpatialAnchor
+  keywords:
+  - anchor
+  source: auto
+- name: Edge types
+  description: Definitions with suffix 'edge' — auto-detected structural pattern.
+  members:
+  - DependencyEdge
+  - WorkflowEdge
+  keywords:
+  - edge
+  source: auto
+- name: Keyframe types
+  description: Definitions with suffix 'keyframe' — auto-detected structural pattern.
+  members:
+  - CameraKeyframe
+  - PlacementKeyframe
+  keywords:
+  - keyframe
+  source: auto
+- name: Assets
+  description: Definitions with suffix 'asset' — auto-detected structural pattern.
+  members:
+  - AudioAsset
+  - VisualAsset
+  keywords:
+  - asset
+  source: auto
+- name: Enum types
+  description: Definitions with suffix 'enum' — auto-detected structural pattern.
+  members:
+  - AnimationPlaybackModalityEnum
+  - AnimationProductionMethodEnum
+  - StatusEnum
+  - VideoStyleEnum
+  keywords:
+  - enum
+  source: auto
+- name: EntityRef-consumers
+  description: Definitions that reference 'EntityRef' — likely belong to the same domain.
+  members:
+  - AudioMixTrack
+  - CameraExtrinsics
+  - CharacterCoherence
+  - Comment
+  - GenerationStep
+  - ModelDescriptor
+  - NarrativeArc
+  - Operation
+  - QCResult
+  - QaCheck
+  - Relationship
+  - SceneSpace
+  - ScriptSegment
+  - SpatialPlacement
+  - StoryBeat
+  - SyncPoint
+  - TargetedNote
+  - TimelineClip
+  - Transform
+  - WorkflowNodeBase
+  keywords:
+  - entityref
+  source: auto
+- name: Identifier-consumers
+  description: Definitions that reference 'Identifier' — likely belong to the same domain.
+  members:
+  - Contributor
+  - Marker
+  - OperationBase
+  - SharedSpatialUniverse
+  - TeamMember
+  - TimelineTrack
+  - WorkflowGraph
+  keywords:
+  - identifier
+  source: auto
+- name: UUID-consumers
+  description: Definitions that reference 'UUID' — likely belong to the same domain.
+  members:
+  - AssemblyErrorHandling
+  - Character
+  - Environment
+  - GenerationAttempt
+  - MarketingMaterial
+  - PlatformDelivery
+  - Prop
+  - RenderOutput
+  - RenderPipelineStep
+  - Scene
+  - Script
+  - Shot
+  - StyleGuide
+  - ValidationResult
+  keywords:
+  - uuid
+  source: auto
+- name: ISOTimestamp-consumers
+  description: Definitions that reference 'ISOTimestamp' — likely belong to the same domain.
+  members:
+  - Approval
+  - Compliance
+  - FuzzyDate
+  - GenerationCost
+  - LogEntry
+  - ProjectMeta
+  - QaGate
+  - QualityMetrics
+  - Rights
+  keywords:
+  - isotimestamp
+  source: auto
+- name: Position3D-consumers
+  description: Definitions that reference 'Position3D' — likely belong to the same domain.
+  members:
+  - BoundingVolume
+  - Orientation3D
+  - Transform3D
+  keywords:
+  - position3d
+  source: auto
+- name: Extensions-consumers
+  description: Definitions that reference 'Extensions' — likely belong to the same domain.
+  members:
+  - ElementFormat
+  - FormatVariant
+  - GenerationManifest
+  - Governance
+  - NamingConventions
+  - Orchestration
+  - Team
+  keywords:
+  - extensions
+  source: auto
+- name: Measurement-consumers
+  description: Definitions that reference 'Measurement' — likely belong to the same domain.
+  members:
+  - Indentation
+  - Margins
+  - PageSetup
+  - PaperSize
+  keywords:
+  - measurement
+  source: auto
+- name: TransitionSpec-consumers
+  description: Definitions that reference 'TransitionSpec' — likely belong to the same domain.
+  members:
+  - AssemblyHints
+  keywords:
+  - transitionspec
+  source: auto
+- name: AssetRef-consumers
+  description: Definitions that reference 'AssetRef' — likely belong to the same domain.
+  members:
+  - AssemblyInstruction
+  - Dependency
+  - GenParams
+  - GenerativeParameters
+  keywords:
+  - assetref
+  source: auto
+- name: Timecode-consumers
+  description: Definitions that reference 'Timecode' — likely belong to the same domain.
+  members:
+  - TimeRange
+  keywords:
+  - timecode
+  source: auto
+uncategorized:
+- AspectRatio
+- Assembly
+- AssemblyInstructions
+- AssetRegistry
+- Budget
+- Capitalization
+- Checksum
+- ContinuationRules
+- CoordinateSystem
+- CopyPack
+- DirectorNotes
+- DirectorsInstructions
+- Duration
+- DurationSeconds
+- ElementSyntax
+- ElementType
+- EulerAnglesDeg
+- Extensions
+- FileLocator
+- FileObject
+- FinalOutput
+- Font
+- FrameRate
+- FullScript
+- GlobalSpecifications
+- GlobalSpecs
+- ISOTimestamp
+- Identifier
+- LineSpacing
+- Measurement
+- MotionBlurControl
+- NumericOrString
+- PaginationRules
+- Position3D
+- PromptFragment
+- Quaternion
+- RenderConstraints
+- RenderPipeline
+- Resolution
+- RevisionColor
+- RevisionTracking
+- Scale3D
+- SceneNumberingRules
+- Spacing
+- StorageLocation
+- Story
+- StreamBinding
+- StringMap
+- Timecode
+- TitlePageField
+- TitlePageLayout
+- Transition
+- ULID
+- UUID
+- VersionSelector
+- VersioningPolicy

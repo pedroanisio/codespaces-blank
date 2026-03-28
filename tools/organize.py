@@ -1,235 +1,531 @@
 #!/usr/bin/env python3
-"""
-organize.py — General-purpose directory organizer.
+r"""
+organize.py — General-purpose declarative directory organizer.
+═══════════════════════════════════════════════════════════════
 
-Reads a declarative YAML config that defines target folders and classification
-rules, inspects a directory, proposes moves, and optionally applies them.
+.. note:: This file follows the Embedded Self-Documentation (ESD) pattern.
+   See concepts/embedded-self-documentation.md for the structural contract.
 
-No domain knowledge is hardcoded. All classification logic lives in the config.
+A single-file, zero-dependency* tool that classifies loose files in a
+directory and moves them into subfolders based on declarative YAML/JSON rules.
 
-Usage:
-    python organize.py                        # dry run with ./organize.yaml
-    python organize.py -c my_rules.yaml       # use custom config
-    python organize.py --apply                 # execute moves
-    python organize.py --init                  # generate a starter config
-    python organize.py --json                  # JSON output
-    python organize.py -v                      # verbose reasoning
+(*) PyYAML is optional — JSON configs work without it.
+
+────────────────────────────────────────────────────────────────────────
+TABLE OF CONTENTS
+────────────────────────────────────────────────────────────────────────
+
+  1. Quick Start
+  2. CLI Reference
+  3. Config File Format
+     3.1 settings
+     3.2 folders (rules)
+  4. Rule Types (complete reference)
+  5. Rule Modes: "any" vs "all"
+  6. Rule Negation
+  7. Multiple Folder Entries & Priority
+  8. Confidence Levels
+  9. Config Discovery
+ 10. Starter Config (--init)
+ 11. JSON Output (--json)
+ 12. Running from Another Directory
+ 13. Examples
+     13.1 Minimal config
+     13.2 Real-world: session-02 video production
+     13.3 Content-based classification
+     13.4 Combining AND + OR groups
+ 14. Internals & Extension Points
+ 15. Limitations
+
+────────────────────────────────────────────────────────────────────────
+1. QUICK START
+────────────────────────────────────────────────────────────────────────
+
+  # Generate a starter config in the current directory:
+  python tools/organize.py --init
+
+  # Edit organize.yaml to define your folders and rules, then:
+  python tools/organize.py                    # dry run — preview moves
+  python tools/organize.py -v                 # dry run with rule reasoning
+  python tools/organize.py --apply            # execute the moves
+
+  # Use a config from a different location:
+  python tools/organize.py -c path/to/rules.yaml --dir path/to/target/
+
+────────────────────────────────────────────────────────────────────────
+2. CLI REFERENCE
+────────────────────────────────────────────────────────────────────────
+
+  python organize.py [OPTIONS]
+
+  Options:
+    -c, --config PATH   Path to YAML or JSON config file.
+                         Default: auto-discover organize.yaml / .yml / .json
+                         in the scan directory.
+
+    --dir PATH          Directory to organize.
+                         Default: current working directory.
+
+    --apply             Execute proposed moves (default is dry-run).
+                         Moves are never destructive — if the target file
+                         already exists, the move is skipped.
+
+    --json              Output proposals as machine-readable JSON to stdout.
+                         Suppresses all human-readable output.
+
+    --init              Generate a commented starter organize.yaml in --dir.
+                         Will not overwrite an existing file.
+
+    --defs-only         Print parsed folder definitions and exit — useful to
+                         verify a config without scanning files.
+
+    -v, --verbose       Show which rules matched for each file and which
+                         files were skipped (no rule matched).
+
+────────────────────────────────────────────────────────────────────────
+3. CONFIG FILE FORMAT
+────────────────────────────────────────────────────────────────────────
+
+  The config is YAML (preferred) or JSON with two top-level keys:
+
+    settings:   global knobs (optional)
+    folders:    list of target folder definitions (required)
+
+  3.1 settings
+  ─────────────
+
+    settings:
+      skip_dirs:
+        - node_modules       # directory names to ignore entirely
+        - __pycache__
+        - .git
+
+      root_keep:
+        - README.md          # filenames that must stay at root — never moved
+        - .env
+
+      recursive: false       # false = scan top-level only (default)
+                             # true  = scan all subdirectories (rglob)
+
+      head_bytes: 512        # how many bytes of each file to read for
+                             # content_contains / content_regex rules
+                             # (default: 1024)
+
+  All settings keys are optional. Defaults are sensible for most projects.
+
+  3.2 folders (rules)
+  ─────────────────────
+
+    folders:
+      - name: schemas              # target subfolder name (may contain /)
+        description: JSON Schemas   # human-readable (shown in dry-run output)
+        priority: 10               # higher wins when multiple folders match
+        mode: all                  # "all" = AND, "any" = OR (default)
+        rules:
+          - extension: .json       # each rule is a dict with ONE type key
+          - content_contains: '"$schema"'
+
+  Fields:
+    name          (required) Target subfolder path relative to scan root.
+                  May include slashes: "docs/specs", "docs/styles".
+
+    description   (optional) Shown in dry-run and --defs-only output.
+
+    priority      (optional, default: 0) Integer. When a file matches
+                  multiple folder definitions, the highest priority wins.
+                  Among equal priorities, definition order wins.
+
+    mode          (optional, default: "any")
+                  "any" = file matches if ANY rule in the list matches (OR).
+                  "all" = file matches only if ALL rules match (AND).
+
+    rules         (required) List of rule dicts. See section 4.
+
+────────────────────────────────────────────────────────────────────────
+4. RULE TYPES (complete reference)
+────────────────────────────────────────────────────────────────────────
+
+  Every rule is a single-key dict. The key is the rule type, the value
+  is the parameter(s). All string comparisons are case-insensitive.
+
+  ┌─────────────────────┬────────────────────────────────────────────────┐
+  │ Rule Type           │ Description                                    │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ extension           │ Match file extension (with or without dot).    │
+  │                     │   extension: .json                             │
+  │                     │   extension: [.json, .yaml, .yml]              │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ name_glob           │ Match filename with glob/fnmatch patterns.     │
+  │                     │   name_glob: "*.test.*"                        │
+  │                     │   name_glob: ["*.spec.*", "test_*"]            │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ name_regex          │ Match filename with regex (re.IGNORECASE).     │
+  │                     │   name_regex: "^draft-.*\\.md$"               │
+  │                     │   name_regex: ["report", "scorecard"]          │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ stem_contains       │ Match if stem (name minus extension) contains  │
+  │                     │ any substring.                                 │
+  │                     │   stem_contains: schema                        │
+  │                     │   stem_contains: [schema, spec, term-map]      │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ stem_startswith     │ Match if stem starts with any prefix.          │
+  │                     │   stem_startswith: prompt-                      │
+  │                     │   stem_startswith: [perplexity-, grok-, manus-]│
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ content_contains    │ Match if first N bytes contain any substring.  │
+  │                     │ N = settings.head_bytes (default 1024).        │
+  │                     │ Only reads text-like files (by extension).     │
+  │                     │   content_contains: '"$schema"'                │
+  │                     │   content_contains: ['"$schema"', '"$id"']     │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ content_regex       │ Match if first N bytes match any regex.        │
+  │                     │ Flags: IGNORECASE + MULTILINE.                 │
+  │                     │   content_regex: "^#!.*python"                 │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ size_gt             │ Match if file size > N bytes.                  │
+  │                     │   size_gt: 1048576   # > 1 MB                 │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ size_lt             │ Match if file size < N bytes.                  │
+  │                     │   size_lt: 100       # < 100 bytes             │
+  ├─────────────────────┼────────────────────────────────────────────────┤
+  │ path_contains       │ Match if relative path contains any substring. │
+  │                     │ Useful with recursive: true.                   │
+  │                     │   path_contains: test                          │
+  └─────────────────────┴────────────────────────────────────────────────┘
+
+  Text-like extensions recognized for content_* rules:
+    .json .md .txt .html .htm .py .ts .tsx .js .jsx .css .yaml .yml
+    .toml .csv .tsv .xml .svg .sh .bash .zsh .rs .go .rb .java .c .h
+    .cpp .hpp .sql .graphql .proto .env .ini .cfg .conf .tex .rst .adoc
+
+  Binary files (.png, .mp4, .pdf, etc.) are never read for content rules —
+  content_contains and content_regex silently return false for them.
+
+────────────────────────────────────────────────────────────────────────
+5. RULE MODES: "any" vs "all"
+────────────────────────────────────────────────────────────────────────
+
+  mode: any  (default, OR logic)
+    The folder matches a file if ANY single rule in its list matches.
+    Good for catch-all folders: "anything that is .html OR starts with
+    perplexity- goes to research/".
+
+  mode: all  (AND logic)
+    The folder matches only if EVERY rule in its list matches.
+    Good for narrow targeting: "must be .json AND must contain '$schema'
+    in its content".
+
+  You can define MULTIPLE entries for the same folder name with
+  different modes — see section 7.
+
+────────────────────────────────────────────────────────────────────────
+6. RULE NEGATION
+────────────────────────────────────────────────────────────────────────
+
+  Any rule can be negated by adding `negate: true`:
+
+    rules:
+      - extension: .md
+      - stem_contains: schema
+        negate: true            # match .md files that do NOT contain "schema"
+
+  This is useful in "all" mode to express: "must be X but NOT Y".
+
+────────────────────────────────────────────────────────────────────────
+7. MULTIPLE FOLDER ENTRIES & PRIORITY
+────────────────────────────────────────────────────────────────────────
+
+  The same folder name can appear multiple times in the folders list.
+  Each entry is evaluated independently. This lets you combine different
+  modes for the same target:
+
+    # Entry 1: AND — files that are .json AND contain "$schema"
+    - name: schemas
+      priority: 10
+      mode: all
+      rules:
+        - extension: .json
+        - content_contains: ['"$schema"', '"$id"']
+
+    # Entry 2: AND — files that are .json AND have "schema" in name
+    - name: schemas
+      priority: 10
+      mode: all
+      rules:
+        - extension: .json
+        - stem_contains: [schema, term-map]
+
+  A file matching either entry lands in schemas/.
+
+  When a file matches MULTIPLE different folders, the one with the
+  highest priority wins. Equal priorities are broken by definition order
+  (first defined wins).
+
+────────────────────────────────────────────────────────────────────────
+8. CONFIDENCE LEVELS
+────────────────────────────────────────────────────────────────────────
+
+  Each proposal is tagged with a confidence level:
+
+    high    — only one folder matched, or the winner has strictly higher
+              priority than all other matches.
+    medium  — multiple folders matched with equal top priority.
+    low     — (reserved for future heuristic scoring).
+
+  Confidence is informational only — it does not affect --apply behavior.
+
+────────────────────────────────────────────────────────────────────────
+9. CONFIG DISCOVERY
+────────────────────────────────────────────────────────────────────────
+
+  If -c/--config is not specified, the tool searches the scan directory
+  (--dir, default: cwd) for these filenames in order:
+
+    1. organize.yaml
+    2. organize.yml
+    3. organize.json
+
+  The first one found is used. If none exist, the tool exits with an
+  error and suggests --init.
+
+  This means you can drop a config next to the files you want to
+  organize and just run:
+
+    cd session-02 && python ../tools/organize.py
+
+────────────────────────────────────────────────────────────────────────
+10. STARTER CONFIG (--init)
+────────────────────────────────────────────────────────────────────────
+
+  python organize.py --init
+
+  Generates a fully commented organize.yaml in the scan directory with
+  example folder definitions for schemas, docs, tests, config, and
+  scripts. Edit it to match your project's needs.
+
+  Will NOT overwrite an existing organize.yaml.
+
+────────────────────────────────────────────────────────────────────────
+11. JSON OUTPUT (--json)
+────────────────────────────────────────────────────────────────────────
+
+  python organize.py --json
+
+  Outputs a single JSON object to stdout with three keys:
+
+    {
+      "config":      "/abs/path/to/organize.yaml",
+      "scan_dir":    "/abs/path/to/target",
+      "definitions": [ ... parsed folder defs ... ],
+      "proposals":   [
+        {
+          "source":      "my-file.json",
+          "target":      "schemas/my-file.json",
+          "folder_name": "schemas",
+          "reasons":     ["extension(.json)", "content_contains(...)"],
+          "confidence":  "high"
+        }
+      ]
+    }
+
+  Useful for piping into jq, CI validation, or integration with other tools.
+
+────────────────────────────────────────────────────────────────────────
+12. RUNNING FROM ANOTHER DIRECTORY
+────────────────────────────────────────────────────────────────────────
+
+  The tool separates "where the config is" from "where the files are":
+
+  # Config in session-02/, scan session-02/ :
+  python tools/organize.py -c session-02/session02_organize.yaml \
+                           --dir session-02/
+
+  # Config in tools/, scan a completely different directory:
+  python tools/organize.py -c tools/my-rules.yaml --dir ~/Downloads/
+
+  If --dir is omitted, the current working directory is scanned.
+
+────────────────────────────────────────────────────────────────────────
+13. EXAMPLES
+────────────────────────────────────────────────────────────────────────
+
+  13.1 Minimal config
+  ─────────────────────
+
+    folders:
+      - name: images
+        rules:
+          - extension: [.png, .jpg, .jpeg, .gif, .svg, .webp]
+
+  13.2 Real-world: session-02 video production
+  ──────────────────────────────────────────────
+
+    settings:
+      skip_dirs: [skills, pipeline, tests, output, .pytest_cache]
+      root_keep: [README.md, CHANGELOG.md, .env, validate.py]
+      head_bytes: 512
+
+    folders:
+      - name: schemas
+        priority: 10
+        mode: all
+        rules:
+          - extension: .json
+          - content_contains: ['"$schema"', '"$id"']
+
+      - name: schemas
+        priority: 10
+        mode: all
+        rules:
+          - extension: .json
+          - stem_contains: [schema, term-map]
+
+      - name: research
+        priority: 8
+        mode: any
+        rules:
+          - stem_startswith: [perplexity-, grok-, manus-]
+          - extension: [.html, .htm, .xlsx, .xls, .csv]
+
+      - name: docs/reports
+        priority: 5
+        rules:
+          - name_regex: "(?i)(report|scorecard).*\\.md$"
+
+      - name: docs/specs
+        priority: 4
+        rules:
+          - name_regex: "(?i)(schema|spec|extension|unified).*\\.md$"
+
+      - name: docs/styles
+        priority: 4
+        rules:
+          - name_regex: "(?i)(style|taxonomy|camera|scene).*\\.md$"
+
+      - name: examples
+        priority: 3
+        rules:
+          - name_regex: "(?i)(demo|example|instance).*\\.json$"
+
+  13.3 Content-based classification
+  ──────────────────────────────────
+
+    folders:
+      - name: shebang-scripts
+        description: Files with a shebang line, regardless of extension.
+        mode: any
+        rules:
+          - content_regex: "^#!"
+
+  13.4 Combining AND + OR via multiple entries
+  ──────────────────────────────────────────────
+
+    # Must be .md AND contain "API" in name (AND group)
+    - name: api-docs
+      priority: 10
+      mode: all
+      rules:
+        - extension: .md
+        - stem_contains: api
+
+    # OR: anything with "openapi" in content (OR group, same folder)
+    - name: api-docs
+      priority: 10
+      mode: any
+      rules:
+        - content_contains: '"openapi"'
+
+────────────────────────────────────────────────────────────────────────
+14. INTERNALS & EXTENSION POINTS
+────────────────────────────────────────────────────────────────────────
+
+  The code has 7 numbered sections:
+
+    1. RULE ENGINE      — FileInfo dataclass + 10 rule evaluators
+    2. FOLDER DEFS      — FolderDef/RuleGroup parsing from config
+    3. CONFIG LOADING   — YAML/JSON detection, Config.from_dict()
+    4. INSPECTION        — Walk directory, match rules, build proposals
+    5. DISPLAY & APPLY  — Pretty-print + shutil.move()
+    6. STARTER CONFIG   — Embedded YAML template for --init
+    7. CLI              — argparse + main()
+
+  To add a new rule type:
+    1. Write a function: def _eval_mytype(info: FileInfo, params: Any) -> bool
+    2. Register it:      RULE_EVALUATORS["mytype"] = _eval_mytype
+    3. Use it in YAML:   - mytype: <params>
+
+  No other changes needed — the engine is fully data-driven.
+
+────────────────────────────────────────────────────────────────────────
+15. LIMITATIONS
+────────────────────────────────────────────────────────────────────────
+
+  - Flat moves only: files are moved into target folders, never renamed.
+  - No destructive overwrites: if the target path already exists, the
+    move is silently skipped (logged in --apply output).
+  - Content rules only read text-like files (by extension allowlist).
+    Binary files are never opened.
+  - No undo: there is no built-in rollback. Use --json to save the plan
+    before --apply, or rely on git to revert.
+  - Non-recursive by default. Set recursive: true for deep scans, but
+    note that files already inside a defined target folder are skipped
+    to prevent re-moves.
+
+────────────────────────────────────────────────────────────────────────
+
+Dependencies:
+  - Python 3.10+  (for X | Y type unions; 3.8+ works with __future__)
+  - PyYAML        (optional — only needed for .yaml/.yml configs)
+
+License: same as the parent repository.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import re
 import shutil
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
-try:
-    import yaml
-except ImportError:
-    yaml = None  # type: ignore[assignment]
+# ── Shared lib imports ────────────────────────────────────────────────────
+# Ensure the project root is on sys.path so `lib` is importable
+# whether invoked as `python tools/organize.py` or `python -m tools.organize`.
+_project_root = Path(__file__).resolve().parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
+from lib.file_info import FileInfo, load_file_info  # noqa: E402
+from lib.file_meta import FileMeta, FileRule, FileStatus, Severity  # noqa: E402
+from lib.rules import Rule, RuleGroup, RULE_EVALUATORS, parse_rule  # noqa: E402
 
-# ═══════════════════════════════════════════════════════════════════════════
-# 1. RULE ENGINE — declarative matchers
-# ═══════════════════════════════════════════════════════════════════════════
+# ── File metadata (machine-readable, for AI agents) ──────────────────────
+__file_meta__ = FileMeta(
+    role="Declarative directory organizer CLI",
+    domain="developer-tooling",
+    status=FileStatus.STABLE,
+    owner="tools",
+    tags=["cli", "organizer", "rule-engine", "yaml", "json"],
+    rules=[
+        FileRule(
+            rule="Test coverage must remain above 90%",
+            severity=Severity.ERROR,
+            rationale="This tool moves files on disk — under-tested rule logic "
+                      "can silently misclassify and relocate user data.",
+        ),
+    ],
+    schema_ref="",
+    test_ref="tools/test_organize.py",
+    forbidden_patterns=[r"shutil\.rmtree", r"os\.remove\("],
+)
+from lib.config import load_config, find_config as _lib_find_config  # noqa: E402
 
-@dataclass
-class FileInfo:
-    """Pre-computed metadata about a file, used by rule evaluation."""
-    path: Path
-    name: str
-    stem: str
-    suffix: str          # lowercase, includes dot
-    size: int
-    head: str            # first N bytes as text (empty if binary/unreadable)
-    rel: str             # path relative to scan root
-
-
-def load_file_info(path: Path, root: Path, *, head_bytes: int = 1024) -> FileInfo:
-    """Build FileInfo for a single file."""
-    suffix = path.suffix.lower()
-    try:
-        size = path.stat().st_size
-    except OSError:
-        size = 0
-
-    head = ""
-    # Only read head for text-like extensions
-    TEXT_SUFFIXES = {
-        '.json', '.md', '.txt', '.html', '.htm', '.py', '.ts', '.tsx',
-        '.js', '.jsx', '.css', '.yaml', '.yml', '.toml', '.csv', '.tsv',
-        '.xml', '.svg', '.sh', '.bash', '.zsh', '.rs', '.go', '.rb',
-        '.java', '.c', '.h', '.cpp', '.hpp', '.sql', '.graphql', '.proto',
-        '.env', '.ini', '.cfg', '.conf', '.tex', '.rst', '.adoc',
-    }
-    if suffix in TEXT_SUFFIXES or path.name.startswith('.'):
-        try:
-            head = path.read_text(encoding="utf-8", errors="replace")[:head_bytes]
-        except OSError:
-            pass
-
-    try:
-        rel = str(path.relative_to(root))
-    except ValueError:
-        rel = path.name
-
-    return FileInfo(
-        path=path,
-        name=path.name,
-        stem=path.stem,
-        suffix=suffix,
-        size=size,
-        head=head,
-        rel=rel,
-    )
-
-
-# ── Individual rule evaluators ────────────────────────────────────────────
-#
-# Each rule type is a pure function:  (file_info, rule_params) → bool
-# Rule params come directly from the YAML config.
-
-def _eval_extension(info: FileInfo, params: Any) -> bool:
-    """Match file extension(s). Params: str or list[str], with or without dot."""
-    if isinstance(params, str):
-        params = [params]
-    normalized = [e if e.startswith('.') else f'.{e}' for e in params]
-    return info.suffix in normalized
-
-
-def _eval_name_glob(info: FileInfo, params: Any) -> bool:
-    """Match filename against glob pattern(s). Uses fnmatch semantics."""
-    import fnmatch
-    if isinstance(params, str):
-        params = [params]
-    return any(fnmatch.fnmatch(info.name, pat) for pat in params)
-
-
-def _eval_name_regex(info: FileInfo, params: Any) -> bool:
-    """Match filename against regex pattern(s)."""
-    if isinstance(params, str):
-        params = [params]
-    return any(re.search(pat, info.name, re.IGNORECASE) for pat in params)
-
-
-def _eval_stem_contains(info: FileInfo, params: Any) -> bool:
-    """Match if stem (name without extension) contains any of the given substrings."""
-    if isinstance(params, str):
-        params = [params]
-    stem_lower = info.stem.lower()
-    return any(kw.lower() in stem_lower for kw in params)
-
-
-def _eval_stem_startswith(info: FileInfo, params: Any) -> bool:
-    """Match if stem starts with any of the given prefixes."""
-    if isinstance(params, str):
-        params = [params]
-    stem_lower = info.stem.lower()
-    return any(stem_lower.startswith(px.lower()) for px in params)
-
-
-def _eval_content_contains(info: FileInfo, params: Any) -> bool:
-    """Match if file head contains any of the given substrings (case-insensitive)."""
-    if not info.head:
-        return False
-    if isinstance(params, str):
-        params = [params]
-    head_lower = info.head.lower()
-    return any(kw.lower() in head_lower for kw in params)
-
-
-def _eval_content_regex(info: FileInfo, params: Any) -> bool:
-    """Match if file head matches any of the given regex patterns."""
-    if not info.head:
-        return False
-    if isinstance(params, str):
-        params = [params]
-    return any(re.search(pat, info.head, re.IGNORECASE | re.MULTILINE) for pat in params)
-
-
-def _eval_size_gt(info: FileInfo, params: Any) -> bool:
-    """Match if file size > N bytes."""
-    return info.size > int(params)
-
-
-def _eval_size_lt(info: FileInfo, params: Any) -> bool:
-    """Match if file size < N bytes."""
-    return info.size < int(params)
-
-
-def _eval_path_contains(info: FileInfo, params: Any) -> bool:
-    """Match if the relative path contains any substring."""
-    if isinstance(params, str):
-        params = [params]
-    rel_lower = info.rel.lower()
-    return any(kw.lower() in rel_lower for kw in params)
-
-
-# ── Rule evaluator registry ──────────────────────────────────────────────
-
-RULE_EVALUATORS: dict[str, Any] = {
-    "extension":        _eval_extension,
-    "name_glob":        _eval_name_glob,
-    "name_regex":       _eval_name_regex,
-    "stem_contains":    _eval_stem_contains,
-    "stem_startswith":  _eval_stem_startswith,
-    "content_contains": _eval_content_contains,
-    "content_regex":    _eval_content_regex,
-    "size_gt":          _eval_size_gt,
-    "size_lt":          _eval_size_lt,
-    "path_contains":    _eval_path_contains,
-}
-
-
-# ── Composite rule evaluation ────────────────────────────────────────────
-
-@dataclass(frozen=True)
-class Rule:
-    """A single atomic rule parsed from config."""
-    type: str
-    params: Any
-    negate: bool = False
-
-    def evaluate(self, info: FileInfo) -> bool:
-        evaluator = RULE_EVALUATORS.get(self.type)
-        if evaluator is None:
-            raise ValueError(f"Unknown rule type: '{self.type}'. "
-                             f"Available: {sorted(RULE_EVALUATORS)}")
-        result = evaluator(info, self.params)
-        return (not result) if self.negate else result
-
-    def explain(self) -> str:
-        neg = "NOT " if self.negate else ""
-        return f"{neg}{self.type}({self.params})"
-
-
-@dataclass(frozen=True)
-class RuleGroup:
-    """
-    A group of rules combined with a logical operator.
-
-    mode="any"  → OR  (file matches if ANY rule matches)  — default
-    mode="all"  → AND (file matches if ALL rules match)
-    """
-    rules: tuple[Rule, ...]
-    mode: str = "any"  # "any" | "all"
-
-    def evaluate(self, info: FileInfo) -> bool:
-        if self.mode == "all":
-            return all(r.evaluate(info) for r in self.rules)
-        return any(r.evaluate(info) for r in self.rules)
-
-    def explain_match(self, info: FileInfo) -> list[str]:
-        """Return human-readable reasons for matched rules."""
-        return [r.explain() for r in self.rules if r.evaluate(info)]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 2. FOLDER DEFINITIONS — parsed from config
+# 1. FOLDER DEFINITIONS — parsed from config
 # ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True)
@@ -239,21 +535,6 @@ class FolderDef:
     description: str
     rules: RuleGroup
     priority: int = 0
-
-
-def parse_rule(raw: dict[str, Any]) -> Rule:
-    """Parse a single rule dict from config."""
-    negate = raw.pop("negate", False) if isinstance(raw, dict) else False
-
-    # The dict should have exactly one key (the rule type) after removing 'negate'
-    rule_keys = [k for k in raw if k != "negate"]
-    if len(rule_keys) != 1:
-        raise ValueError(
-            f"Each rule must have exactly one type key, got: {rule_keys}. "
-            f"Full rule: {raw}"
-        )
-    rule_type = rule_keys[0]
-    return Rule(type=rule_type, params=raw[rule_type], negate=negate)
 
 
 def parse_folder_def(raw: dict[str, Any]) -> FolderDef:
@@ -302,28 +583,8 @@ class Config:
 
     @staticmethod
     def load(path: Path) -> Config:
-        """Load config from YAML or JSON file."""
-        text = path.read_text(encoding="utf-8")
-        suffix = path.suffix.lower()
-
-        if suffix in ('.yaml', '.yml'):
-            if yaml is None:
-                print("ERROR: PyYAML is required for YAML configs. "
-                      "Install with: pip install pyyaml", file=sys.stderr)
-                sys.exit(1)
-            data = yaml.safe_load(text)
-        elif suffix == '.json':
-            data = json.loads(text)
-        else:
-            # Try YAML first, fall back to JSON
-            try:
-                if yaml:
-                    data = yaml.safe_load(text)
-                else:
-                    data = json.loads(text)
-            except Exception:
-                data = json.loads(text)
-
+        """Load config from YAML or JSON file (delegates to lib.config)."""
+        data = load_config(path)
         return Config.from_dict(data)
 
 
@@ -653,12 +914,8 @@ DEFAULT_CONFIG_NAMES = ["organize.yaml", "organize.yml", "organize.json"]
 
 
 def find_config(scan_dir: Path) -> Path | None:
-    """Look for a config file in the scan directory."""
-    for name in DEFAULT_CONFIG_NAMES:
-        candidate = scan_dir / name
-        if candidate.is_file():
-            return candidate
-    return None
+    """Look for a config file in the scan directory (delegates to lib.config)."""
+    return _lib_find_config(scan_dir, DEFAULT_CONFIG_NAMES)
 
 
 def main() -> int:
