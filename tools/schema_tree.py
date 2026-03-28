@@ -11,9 +11,11 @@ Usage:
     python schema_tree.py <schema_dir> --mermaid        # Mermaid flowchart
     python schema_tree.py <schema_dir> --json           # JSON graph
     python schema_tree.py <schema_dir> --dot            # Graphviz DOT
-    python schema_tree.py <schema_dir> --html           # Self-contained HTML
-    python schema_tree.py <schema_dir> -v               # Verbose: show edge reasons
+    python schema_tree.py <schema_dir> --html           # D3 force-directed graph
+    python schema_tree.py <schema_dir> --tree           # Phylogenetic lineage tree
     python schema_tree.py <schema_dir> --report         # Markdown analysis report
+    python schema_tree.py <schema_dir> --report --usage # Report with code usage stats
+    python schema_tree.py <schema_dir> -v               # Verbose: show edge reasons
 """
 from __future__ import annotations
 
@@ -73,6 +75,7 @@ class SchemaGraph:
     """The full genealogy graph."""
     nodes: dict[str, SchemaNode] = field(default_factory=dict)
     edges: list[SchemaEdge] = field(default_factory=list)
+    _schema_dir: str = ""  # set by caller for description-based lineage
 
     def add_node(self, node: SchemaNode) -> None:
         self.nodes[node.id] = node
@@ -112,6 +115,14 @@ def _extract_version(data: dict) -> str:
                 return str(p["const"])
             if isinstance(p, dict) and "default" in p:
                 return str(p["default"])
+    # Fallback: extract version from description or title
+    for text_field in ("description", "title"):
+        text = data.get(text_field, "")
+        if text:
+            # Match patterns like "v3.0.0", "version 3.1.0", "Version: 1.0.0"
+            m = re.search(r'(?:version[:\s]+|v)(\d+\.\d+\.\d+)', text, re.IGNORECASE)
+            if m:
+                return m.group(1)
     return ""
 
 
@@ -236,12 +247,12 @@ def parse_schema_file(filepath: Path, graph: SchemaGraph) -> str | None:
             # Check if def uses allOf (inheritance pattern)
             def_prop_keys = []
             if isinstance(def_props, dict):
-                def_prop_keys = list(def_props.keys())[:10]
-            # allOf often wraps properties
+                def_prop_keys = list(def_props.keys())
+            # allOf often wraps properties — collect ALL for accurate counts
             if "allOf" in def_body and isinstance(def_body["allOf"], list):
                 for item in def_body["allOf"]:
                     if isinstance(item, dict) and "properties" in item:
-                        def_prop_keys.extend(list(item["properties"].keys())[:10])
+                        def_prop_keys.extend(list(item["properties"].keys()))
 
             def_node = SchemaNode(
                 id=def_id,
@@ -312,6 +323,22 @@ def parse_schema_file(filepath: Path, graph: SchemaGraph) -> str | None:
                         relation="references",
                         detail=f"property → {ref_str}",
                     ))
+
+    # ── Root-level property $refs → $defs edges ──────────────────────────
+    # Bug fix: root properties often $ref into $defs (e.g. "story": {"$ref": "#/$defs/Story"})
+    # These edges are needed for orphan detection accuracy.
+    if isinstance(props, dict):
+        root_prop_refs: list[str] = []
+        _collect_refs(props, root_prop_refs)
+        for ref_str in set(root_prop_refs):
+            target_id = _resolve_ref(ref_str, file_key)
+            if target_id and target_id != root_id:
+                graph.add_edge(SchemaEdge(
+                    source=root_id,
+                    target=target_id,
+                    relation="references",
+                    detail=f"root property → {ref_str}",
+                ))
 
     return root_id
 
@@ -407,6 +434,73 @@ def detect_lineage(graph: SchemaGraph) -> None:
                         detail=f"Patch → {schema.label} (name similarity)",
                     ))
                     break
+
+    # ── Description-based lineage: parse description/title for file references ──
+    # Schemas often declare lineage in their description field, e.g.:
+    #   "Merges video-project-schema-v2.json and generative_video_project_package_schema.json"
+    #   "See video-project-schema-v2.json for the full enhanced schema"
+    file_stems = {n.id: n for n in file_nodes}
+    file_names = {n.file: n for n in file_nodes}
+
+    for node in file_nodes:
+        # Search in description, title, and full raw description
+        search_text = f"{node.title} {node.description}"
+        # Also check the raw data for longer description
+        for fpath in [Path(graph._schema_dir) / node.file] if hasattr(graph, '_schema_dir') else []:
+            if fpath.exists():
+                try:
+                    raw = json.loads(fpath.read_text())
+                    search_text += " " + raw.get("description", "")
+                except Exception:
+                    pass
+
+        # Find references to other schema files by name
+        for other in file_nodes:
+            if other.id == node.id:
+                continue
+            # Check for filename mention (exact or partial stem match)
+            other_stem = Path(other.file).stem
+            # Normalize to a canonical form for fuzzy matching
+            def _norm(s: str) -> str:
+                return s.lower().replace("-", "_").replace(".", "_")
+            other_norm = _norm(other_stem)
+            text_norm = _norm(search_text)
+            # Match full filename OR a substantial substring of the normalized stem (>15 chars)
+            # Also try dropping common prefixes (chatgpt-, claude-, grok-, manus-, perplexity-)
+            other_variants = [other_norm]
+            for prefix in ("chatgpt_", "claude_", "grok_", "manus_", "perplexity_"):
+                if other_norm.startswith(prefix):
+                    other_variants.append(other_norm[len(prefix):])
+            name_match = (
+                other.file in search_text
+                or any(len(v) > 15 and v in text_norm for v in other_variants)
+            )
+            if name_match:
+                # Determine relation type from context
+                text_lower = search_text.lower()
+                if "merge" in text_lower or "combines" in text_lower:
+                    rel = "evolves"
+                    detail = f"description: merges {other.file}"
+                elif "see " in text_lower or "successor" in text_lower or "enhanced" in text_lower:
+                    rel = "evolves"
+                    detail = f"description: references successor {other.file}"
+                else:
+                    rel = "evolves"
+                    detail = f"description: references {other.file}"
+
+                # Avoid duplicate edges
+                exists = any(
+                    e.source in (node.id, other.id) and e.target in (node.id, other.id)
+                    and e.relation in ("evolves", "patches")
+                    for e in graph.edges
+                )
+                if not exists:
+                    graph.add_edge(SchemaEdge(
+                        source=other.id,  # referenced file is the source/ancestor
+                        target=node.id,   # file containing the reference is the successor
+                        relation=rel,
+                        detail=detail,
+                    ))
 
     # Detect shared $defs names across files (convergent definitions)
     defs_by_name: dict[str, list[SchemaNode]] = defaultdict(list)
@@ -1417,9 +1511,64 @@ def render_json(graph: SchemaGraph) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 
+# ── Usage scanning ───────────────────────────────────────────────────────
+
+def scan_usage(graph: SchemaGraph, schema_dir: Path) -> dict[str, dict]:
+    """
+    Grep the parent directory tree for code references to each schema file.
+
+    Returns {filename: {"code_refs": int, "files": [str], "lifecycle": str}}.
+    Lifecycle: "active" (>0 code refs), "superseded" (only in docs/changelogs),
+               "orphaned" (0 refs anywhere).
+    """
+    search_root = schema_dir.parent
+    file_nodes = [n for n in graph.nodes.values() if n.kind in ("schema", "patch", "vocabulary")]
+    results: dict[str, dict] = {}
+
+    for node in file_nodes:
+        fname = node.file
+        code_refs = 0
+        ref_files: list[str] = []
+
+        # Search for filename mentions in code files
+        for ext in ("*.py", "*.ts", "*.js", "*.json", "*.md", "*.yaml", "*.yml"):
+            for match_file in search_root.rglob(ext):
+                if match_file.name == fname:
+                    continue  # skip the schema file itself
+                if "__pycache__" in str(match_file) or "node_modules" in str(match_file):
+                    continue
+                try:
+                    content = match_file.read_text(errors="ignore")
+                    if fname in content:
+                        rel = str(match_file.relative_to(search_root))
+                        ref_files.append(rel)
+                        # Code vs docs distinction
+                        if match_file.suffix in (".py", ".ts", ".js"):
+                            code_refs += 1
+                except Exception:
+                    continue
+
+        # Classify lifecycle
+        if code_refs > 0:
+            lifecycle = "active"
+        elif ref_files:
+            lifecycle = "superseded"
+        else:
+            lifecycle = "orphaned"
+
+        results[fname] = {
+            "code_refs": code_refs,
+            "total_refs": len(ref_files),
+            "files": ref_files[:10],
+            "lifecycle": lifecycle,
+        }
+
+    return results
+
+
 # ── Markdown Report ──────────────────────────────────────────────────────
 
-def render_report(graph: SchemaGraph, schema_dir: Path, *, hints_path: Path | None = None) -> str:
+def render_report(graph: SchemaGraph, schema_dir: Path, *, hints_path: Path | None = None, usage: dict | None = None) -> str:
     """Render a comprehensive Markdown analysis report."""
     stats = compute_stats(graph)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -1540,12 +1689,24 @@ def render_report(graph: SchemaGraph, schema_dir: Path, *, hints_path: Path | No
 
     h2("2. Schema File Census")
 
-    row("File", "Kind", "Version", "$defs", "Properties", "% of total defs")
-    sep(6)
-    for n in file_nodes:
-        pct = f"{n.def_count / total_defs * 100:.1f}%" if total_defs else "0%"
-        props = str(n.property_count) if n.property_count else "-"
-        row(f"`{n.file}`", n.kind, n.version or "-", str(n.def_count), props, pct)
+    if usage:
+        row("File", "Kind", "Version", "$defs", "Props", "% defs", "Code refs", "Lifecycle")
+        sep(8)
+        for n in file_nodes:
+            pct = f"{n.def_count / total_defs * 100:.1f}%" if total_defs else "0%"
+            props = str(n.property_count) if n.property_count else "-"
+            u = usage.get(n.file, {})
+            code = str(u.get("code_refs", 0))
+            lc = u.get("lifecycle", "?")
+            lc_badge = {"active": "**active**", "superseded": "superseded", "orphaned": "~~orphaned~~"}.get(lc, lc)
+            row(f"`{n.file}`", n.kind, n.version or "-", str(n.def_count), props, pct, code, lc_badge)
+    else:
+        row("File", "Kind", "Version", "$defs", "Properties", "% of total defs")
+        sep(6)
+        for n in file_nodes:
+            pct = f"{n.def_count / total_defs * 100:.1f}%" if total_defs else "0%"
+            props = str(n.property_count) if n.property_count else "-"
+            row(f"`{n.file}`", n.kind, n.version or "-", str(n.def_count), props, pct)
 
     p("")
     p("**Observation:** " + _census_observation(file_nodes, total_defs))
@@ -2101,6 +2262,379 @@ sim.on("tick", () => {{
 """
 
 
+# ── Lineage Tree (phylogenetic cladogram) ────────────────────────────────
+
+def render_lineage_tree(graph: SchemaGraph, *, usage: dict | None = None) -> str:
+    """
+    Render a self-contained HTML phylogenetic lineage tree.
+
+    Layout: horizontal cladogram (left-to-right).
+    - Root schemas on the left, derived schemas/defs branch right
+    - Branch thickness = number of descendants
+    - Node size = property count
+    - Color = file of origin
+    - Tooltip with full metadata
+    - Collapsible subtrees
+    """
+
+    # ── Build hierarchical tree data ──────────────────────────────────────
+    # Strategy: find root schemas (no incoming evolves/patches),
+    # then attach children via evolves/inherits/patches/defines edges.
+
+    file_nodes = {n.id: n for n in graph.nodes.values() if n.kind in ("schema", "patch", "vocabulary")}
+    def_nodes = {n.id: n for n in graph.nodes.values() if n.kind == "definition"}
+
+    # Find which nodes have incoming lineage edges
+    has_incoming = set()
+    lineage_map: dict[str, list[str]] = defaultdict(list)  # parent → [children]
+    for e in graph.edges:
+        if e.relation in ("evolves", "patches"):
+            has_incoming.add(e.target)
+            lineage_map[e.source].append(e.target)
+
+    # Inheritance tree: base → subtypes
+    inherit_map: dict[str, list[str]] = defaultdict(list)
+    for e in graph.edges:
+        if e.relation == "inherits":
+            inherit_map[e.target].append(e.source)
+
+    # Defines: schema → defs
+    defines_map: dict[str, list[str]] = defaultdict(list)
+    for e in graph.edges:
+        if e.relation == "defines":
+            defines_map[e.source].append(e.target)
+
+    def _build_node(nid: str, depth: int = 0) -> dict | None:
+        n = graph.nodes.get(nid)
+        if not n or depth > 6:
+            return None
+
+        # Get usage info
+        u = (usage or {}).get(n.file, {})
+        lifecycle = u.get("lifecycle", "")
+
+        children = []
+
+        # File-level lineage children (evolves, patches)
+        for child_id in lineage_map.get(nid, []):
+            child = _build_node(child_id, depth + 1)
+            if child:
+                children.append(child)
+
+        # For schemas: show top-level base types as branches
+        if n.kind in ("schema", "patch") and depth < 3:
+            # Find base types defined in this file (definitions with >2 subtypes)
+            for def_id in defines_map.get(nid, []):
+                subtypes = inherit_map.get(def_id, [])
+                if len(subtypes) >= 2:
+                    def_node = graph.nodes.get(def_id)
+                    if def_node:
+                        sub_children = []
+                        for st_id in sorted(subtypes, key=lambda x: graph.nodes.get(x, SchemaNode(id=x, label=x, file="")).label):
+                            st_node = graph.nodes.get(st_id)
+                            if st_node:
+                                sub_children.append({
+                                    "name": st_node.label,
+                                    "id": st_id,
+                                    "kind": st_node.kind,
+                                    "file": st_node.file,
+                                    "props": st_node.property_count,
+                                    "version": st_node.version,
+                                    "lifecycle": "",
+                                })
+                        children.append({
+                            "name": def_node.label,
+                            "id": def_id,
+                            "kind": "base_type",
+                            "file": def_node.file,
+                            "props": def_node.property_count,
+                            "version": "",
+                            "lifecycle": "",
+                            "children": sub_children,
+                        })
+
+        result = {
+            "name": n.label + (f" v{n.version}" if n.version else ""),
+            "id": nid,
+            "kind": n.kind,
+            "file": n.file,
+            "props": n.property_count,
+            "version": n.version,
+            "lifecycle": lifecycle,
+        }
+        if children:
+            result["children"] = children
+        return result
+
+    # Find roots: file nodes with no incoming lineage
+    roots = [nid for nid in file_nodes if nid not in has_incoming]
+    if not roots:
+        roots = list(file_nodes.keys())[:1]
+
+    tree_data: dict
+    if len(roots) == 1:
+        tree_data = _build_node(roots[0]) or {"name": "root", "children": []}
+    else:
+        # Multiple roots — create a virtual root
+        children = []
+        for rid in sorted(roots, key=lambda x: file_nodes.get(x, SchemaNode(id=x, label=x, file="")).version or "0"):
+            child = _build_node(rid)
+            if child:
+                children.append(child)
+        tree_data = {"name": "Schema Ecosystem", "id": "_root", "kind": "root",
+                     "file": "", "props": 0, "version": "", "lifecycle": "",
+                     "children": children}
+
+    tree_json = json.dumps(tree_data, indent=2)
+
+    # ── Collect unique files for color mapping ────────────────────────────
+    all_files = sorted(set(n.file for n in graph.nodes.values()))
+    file_colors = {}
+    palette = ["#4a90d9", "#e94560", "#7ed321", "#f5a623", "#9b59b6",
+               "#00bcd4", "#ff7043", "#ab47bc", "#26a69a", "#ef5350"]
+    for i, f in enumerate(all_files):
+        file_colors[f] = palette[i % len(palette)]
+    colors_json = json.dumps(file_colors)
+
+    return f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Schema Lineage Tree</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #0d1117; color: #c9d1d9; }}
+  h1 {{ text-align: center; padding: 16px; font-size: 1.3em; color: #58a6ff;
+       border-bottom: 1px solid #21262d; }}
+  #tree-container {{ width: 100%; height: calc(100vh - 56px); overflow: hidden; }}
+  .node circle {{ cursor: pointer; stroke-width: 2px; }}
+  .node text {{ font-size: 11px; fill: #c9d1d9; }}
+  .node--internal text {{ font-weight: 600; }}
+  .node--collapsed circle {{ fill-opacity: 0.4; }}
+  .link {{ fill: none; stroke-opacity: 0.35; }}
+  .tooltip {{
+    position: absolute; background: #161b22; border: 1px solid #30363d;
+    padding: 10px 14px; border-radius: 8px; font-size: 12px; line-height: 1.5;
+    pointer-events: none; display: none; max-width: 320px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }}
+  .tooltip b {{ color: #58a6ff; }}
+  .tooltip .badge {{
+    display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 10px; margin-left: 4px;
+  }}
+  .badge-active {{ background: #238636; color: #fff; }}
+  .badge-superseded {{ background: #6e4600; color: #ffa657; }}
+  .badge-orphaned {{ background: #6e1b1b; color: #f85149; }}
+  .legend {{
+    position: fixed; bottom: 12px; left: 12px; background: #161b22;
+    padding: 12px 16px; border-radius: 8px; border: 1px solid #30363d;
+    font-size: 11px;
+  }}
+  .legend div {{ margin: 4px 0; display: flex; align-items: center; gap: 8px; }}
+  .legend .swatch {{ width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }}
+  .controls {{
+    position: fixed; top: 60px; right: 16px; background: #161b22;
+    padding: 8px 12px; border-radius: 8px; border: 1px solid #30363d;
+    font-size: 11px;
+  }}
+  .controls button {{
+    background: #21262d; color: #c9d1d9; border: 1px solid #30363d;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; margin: 2px;
+  }}
+  .controls button:hover {{ background: #30363d; }}
+</style>
+</head>
+<body>
+<h1>Schema Lineage Tree</h1>
+<div class="tooltip" id="tooltip"></div>
+<div class="controls">
+  <button onclick="expandAll()">Expand All</button>
+  <button onclick="collapseAll()">Collapse All</button>
+  <button onclick="resetZoom()">Reset Zoom</button>
+</div>
+<div class="legend" id="legend"></div>
+<div id="tree-container"></div>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const treeData = {tree_json};
+const fileColors = {colors_json};
+
+const container = document.getElementById("tree-container");
+const width = container.clientWidth;
+const height = container.clientHeight;
+const margin = {{ top: 20, right: 220, bottom: 20, left: 160 }};
+
+const svg = d3.select("#tree-container").append("svg")
+  .attr("width", width).attr("height", height);
+
+const g = svg.append("g").attr("transform", `translate(${{margin.left}}, ${{margin.top}})`);
+
+// Zoom
+const zoom = d3.zoom().scaleExtent([0.2, 4]).on("zoom", (e) => g.attr("transform", e.transform));
+svg.call(zoom);
+svg.call(zoom.transform, d3.zoomIdentity.translate(margin.left, height / 4).scale(0.85));
+
+const tooltip = document.getElementById("tooltip");
+
+// Build legend
+const legendEl = document.getElementById("legend");
+Object.entries(fileColors).forEach(([file, color]) => {{
+  const div = document.createElement("div");
+  div.innerHTML = `<span class="swatch" style="background:${{color}}"></span>${{file.replace('.json','').substring(0,30)}}`;
+  legendEl.appendChild(div);
+}});
+
+// Tree layout
+const treemap = d3.tree().nodeSize([28, 280]);
+
+let root = d3.hierarchy(treeData, d => d.children);
+root.x0 = height / 2;
+root.y0 = 0;
+
+function update(source) {{
+  const treeNodes = treemap(root);
+  const nodes = treeNodes.descendants();
+  const links = treeNodes.links();
+
+  // Normalize y-depth
+  nodes.forEach(d => {{ d.y = d.depth * 260; }});
+
+  // ── Nodes ──────────────────────────────────────────────────────────
+  const node = g.selectAll("g.node").data(nodes, d => d.data.id || d.data.name);
+
+  const nodeEnter = node.enter().append("g")
+    .attr("class", d => "node" + (d.children ? " node--internal" : "") + (d._children ? " node--collapsed" : ""))
+    .attr("transform", d => `translate(${{source.y0 || 0}},${{source.x0 || 0}})`)
+    .on("click", (e, d) => {{
+      if (d.children) {{ d._children = d.children; d.children = null; }}
+      else if (d._children) {{ d.children = d._children; d._children = null; }}
+      update(d);
+    }})
+    .on("mouseover", (e, d) => {{
+      const data = d.data;
+      let html = `<b>${{data.name}}</b>`;
+      if (data.file) html += `<br>File: ${{data.file}}`;
+      if (data.kind) html += `<br>Kind: ${{data.kind}}`;
+      if (data.props) html += `<br>Properties: ${{data.props}}`;
+      if (data.version) html += `<br>Version: ${{data.version}}`;
+      if (data.lifecycle) {{
+        const cls = {{"active":"badge-active","superseded":"badge-superseded","orphaned":"badge-orphaned"}}[data.lifecycle] || "";
+        html += `<br>Status: <span class="badge ${{cls}}">${{data.lifecycle}}</span>`;
+      }}
+      if (d.children || d._children) {{
+        const count = (d.children || d._children).length;
+        html += `<br>Subtypes: ${{count}}`;
+      }}
+      tooltip.innerHTML = html;
+      tooltip.style.display = "block";
+    }})
+    .on("mousemove", (e) => {{
+      tooltip.style.left = (e.pageX + 14) + "px";
+      tooltip.style.top = (e.pageY - 10) + "px";
+    }})
+    .on("mouseout", () => {{ tooltip.style.display = "none"; }});
+
+  // Circle
+  nodeEnter.append("circle")
+    .attr("r", d => {{
+      if (d.data.kind === "root") return 12;
+      if (d.data.kind === "schema" || d.data.kind === "patch" || d.data.kind === "vocabulary") return 10;
+      if (d.data.kind === "base_type") return 8;
+      return Math.max(4, Math.min(7, (d.data.props || 0) / 3));
+    }})
+    .attr("fill", d => {{
+      if (d.data.kind === "root") return "#30363d";
+      if (d._children) return "#6e7681";
+      return fileColors[d.data.file] || "#555";
+    }})
+    .attr("stroke", d => d._children ? "#f5a623" : (fileColors[d.data.file] || "#555"))
+    .attr("stroke-width", d => d.data.kind === "root" ? 3 : 2);
+
+  // Label
+  nodeEnter.append("text")
+    .attr("dy", ".35em")
+    .attr("x", d => (d.children || d._children) ? -14 : 14)
+    .attr("text-anchor", d => (d.children || d._children) ? "end" : "start")
+    .text(d => d.data.name);
+
+  // Update positions
+  const nodeUpdate = nodeEnter.merge(node);
+  nodeUpdate.transition().duration(500)
+    .attr("transform", d => `translate(${{d.y}},${{d.x}})`);
+
+  nodeUpdate.select("circle")
+    .attr("fill", d => {{
+      if (d.data.kind === "root") return "#30363d";
+      if (d._children) return "#6e7681";
+      return fileColors[d.data.file] || "#555";
+    }});
+
+  // Remove old
+  node.exit().transition().duration(300)
+    .attr("transform", d => `translate(${{source.y}},${{source.x}})`)
+    .remove();
+
+  // ── Links (curved) ─────────────────────────────────────────────────
+  const link = g.selectAll("path.link").data(links, d => d.target.data.id || d.target.data.name);
+
+  const linkEnter = link.enter().insert("path", "g")
+    .attr("class", "link")
+    .attr("d", () => {{
+      const o = {{ x: source.x0 || 0, y: source.y0 || 0 }};
+      return diagonal(o, o);
+    }})
+    .attr("stroke", d => fileColors[d.target.data.file] || "#444")
+    .attr("stroke-width", d => {{
+      const count = (d.target.children || d.target._children || []).length;
+      return Math.max(1, Math.min(4, 1 + count * 0.3));
+    }});
+
+  linkEnter.merge(link).transition().duration(500)
+    .attr("d", d => diagonal(d.source, d.target));
+
+  link.exit().transition().duration(300)
+    .attr("d", () => {{
+      const o = {{ x: source.x, y: source.y }};
+      return diagonal(o, o);
+    }}).remove();
+
+  // Save positions for transitions
+  nodes.forEach(d => {{ d.x0 = d.x; d.y0 = d.y; }});
+}}
+
+function diagonal(s, d) {{
+  return `M ${{s.y}} ${{s.x}}
+          C ${{(s.y + d.y) / 2}} ${{s.x}},
+            ${{(s.y + d.y) / 2}} ${{d.x}},
+            ${{d.y}} ${{d.x}}`;
+}}
+
+function expandAll() {{
+  function expand(d) {{ if (d._children) {{ d.children = d._children; d._children = null; }} if (d.children) d.children.forEach(expand); }}
+  expand(root);
+  update(root);
+}}
+
+function collapseAll() {{
+  function collapse(d) {{ if (d.children && d.depth > 0) {{ d._children = d.children; d.children = null; }} if (d._children) d._children.forEach(collapse); }}
+  root.children.forEach(collapse);
+  update(root);
+}}
+
+function resetZoom() {{
+  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(margin.left, height / 4).scale(0.85));
+}}
+
+// Initial render
+update(root);
+</script>
+</body>
+</html>
+"""
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # 6. CLI
 # ═══════════════════════════════════════════════════════════════════════════
@@ -2128,7 +2662,9 @@ examples:
     parser.add_argument("--dot", action="store_true",
                         help="Output as Graphviz DOT.")
     parser.add_argument("--html", action="store_true",
-                        help="Output as self-contained HTML with D3 graph.")
+                        help="Output as self-contained HTML with D3 force graph.")
+    parser.add_argument("--tree", action="store_true",
+                        help="Output as self-contained HTML lineage tree (phylogenetic cladogram).")
     parser.add_argument("--json", action="store_true",
                         help="Output as JSON graph.")
     parser.add_argument("--report", action="store_true",
@@ -2137,6 +2673,8 @@ examples:
                         help="Show extra detail (properties, edge reasons).")
     parser.add_argument("--detail", choices=["files", "defs", "full"], default="defs",
                         help="Detail level for Mermaid/DOT (default: defs).")
+    parser.add_argument("--usage", action="store_true",
+                        help="Grep parent directory for code references to each schema file.")
     parser.add_argument("-o", "--output", type=Path, default=None,
                         help="Write output to file instead of stdout.")
 
@@ -2155,6 +2693,7 @@ examples:
 
     # Build graph
     graph = SchemaGraph()
+    graph._schema_dir = str(schema_dir)
     for jf in json_files:
         parse_schema_file(jf, graph)
 
@@ -2172,15 +2711,22 @@ examples:
         if not args.json:
             print(f"  Using hints: {hints_path}")
 
+    # Optional: scan usage in parent directory
+    usage_data = None
+    if args.usage or args.report:
+        usage_data = scan_usage(graph, schema_dir)
+
     # Render
     if args.report:
-        output = render_report(graph, schema_dir, hints_path=hints_path)
+        output = render_report(graph, schema_dir, hints_path=hints_path, usage=usage_data)
     elif args.mermaid:
         output = render_mermaid(graph, detail=args.detail)
     elif args.dot:
         output = render_dot(graph, detail=args.detail)
     elif args.html:
         output = render_html(graph)
+    elif args.tree:
+        output = render_lineage_tree(graph, usage=usage_data)
     elif args.json:
         output = render_json(graph)
     else:
