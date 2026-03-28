@@ -21,3 +21,5 @@ Thumbs.db
 session-02/output*
 session-02/evidence/*
 session-02/.coverage
+node_modules/
+*.log
