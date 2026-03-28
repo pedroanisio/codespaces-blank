@@ -167,11 +167,11 @@ Cross-cutting flags: `--dry-run` (simulate without API calls), `--stub-only` (FF
 
 ## Schema (v3.1.0)
 
-**Canonical schema**: [claude-unified-video-project-v3.schema.json](./claude-unified-video-project-v3.schema.json)
+**Canonical schema**: [claude-unified-video-project-v3.schema.json](./schemas/claude-unified-video-project-v3.schema.json)
 
-**Demo instance**: [demo-30s.json](./demo-30s.json) — 30-second sci-fi short, 2 scenes, 6 shots, 4 audio tracks
+**Demo instance**: [demo-30s.json](./examples/demo-30s.json) — 30-second sci-fi short, 2 scenes, 6 shots, 4 audio tracks
 
-**Full example**: [example-project.json](./example-project.json) — 90-second "The Last Signal", 3 acts, 9 shots
+**Full example**: [example-project.json](./examples/example-project.json) — 90-second "The Last Signal", 3 acts, 9 shots
 
 ### Top-Level Structure
 
@@ -282,10 +282,10 @@ Configuration lives in [pipeline/logging_config.py](./pipeline/logging_config.py
 
 | File | Description |
 |------|-------------|
-| [claude-unified-video-project-v3.schema.json](./claude-unified-video-project-v3.schema.json) | **v3.1.0 canonical schema** — JSON Schema Draft 2020-12 |
-| [demo-30s.json](./demo-30s.json) | 30-second demo instance — 2 scenes, 6 shots, 4 audio tracks |
-| [example-project.json](./example-project.json) | 90-second "The Last Signal" — 3 acts, 9 shots, full production |
-| [video-project-schema-v2.json](./video-project-schema-v2.json) | Legacy v2 schema (superseded by v3) |
+| [claude-unified-video-project-v3.schema.json](./schemas/claude-unified-video-project-v3.schema.json) | **v3.1.0 canonical schema** — JSON Schema Draft 2020-12 |
+| [demo-30s.json](./examples/demo-30s.json) | 30-second demo instance — 2 scenes, 6 shots, 4 audio tracks |
+| [example-project.json](./examples/example-project.json) | 90-second "The Last Signal" — 3 acts, 9 shots, full production |
+| [video-project-schema-v2.json](./schemas/video-project-schema-v2.json) | Legacy v2 schema (superseded by v3) |
 
 ### Skills
 
@@ -305,11 +305,11 @@ Configuration lives in [pipeline/logging_config.py](./pipeline/logging_config.py
 
 | File | Description |
 |------|-------------|
-| [term-map.json](./term-map.json) | Machine-readable production vocabulary (10 terms, 4 axes) |
-| [claude-20-styles-video-v1.1.md](./claude-20-styles-video-v1.1.md) | 20 video styles as formal biconditional predicates |
-| [claude-20-styles-camera-v1.0.md](./claude-20-styles-camera-v1.0.md) | Camera angles, movements, optics with 3D coordinates |
-| [claude-20-styles-scene-v1.0.md](./claude-20-styles-scene-v1.0.md) | Scene ontology: diegetic location/time, editing grammar |
-| [claude-animation-taxonomy-v1.0.md](./claude-animation-taxonomy-v1.0.md) | Animation as artifact class — production methods, playback modalities |
+| [term-map.json](./schemas/term-map.json) | Machine-readable production vocabulary (10 terms, 4 axes) |
+| [claude-20-styles-video-v1.1.md](./docs/styles/claude-20-styles-video-v1.1.md) | 20 video styles as formal biconditional predicates |
+| [claude-20-styles-camera-v1.0.md](./docs/styles/claude-20-styles-camera-v1.0.md) | Camera angles, movements, optics with 3D coordinates |
+| [claude-20-styles-scene-v1.0.md](./docs/styles/claude-20-styles-scene-v1.0.md) | Scene ontology: diegetic location/time, editing grammar |
+| [claude-animation-taxonomy-v1.0.md](./docs/styles/claude-animation-taxonomy-v1.0.md) | Animation as artifact class — production methods, playback modalities |
 
 ---
 

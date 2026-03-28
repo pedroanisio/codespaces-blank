@@ -662,9 +662,9 @@ class TestExampleProjectCompliance(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        example_path = Path(__file__).parent.parent / "example-project.json"
+        example_path = Path(__file__).parent.parent / "examples" / "example-project.json"
         if not example_path.exists():
-            raise unittest.SkipTest("example-project.json not found")
+            raise unittest.SkipTest("examples/example-project.json not found")
         cls.instance = json.loads(example_path.read_text(encoding="utf-8"))
 
     def test_approval_gate_passes(self):
@@ -1494,7 +1494,7 @@ class TestSchemaCrfField(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        schema_path = Path(__file__).parent.parent / "claude-unified-video-project-v3.schema.json"
+        schema_path = Path(__file__).parent.parent / "schemas" / "claude-unified-video-project-v3.schema.json"
         if not schema_path.exists():
             raise unittest.SkipTest("Schema file not found")
         cls.schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -1515,9 +1515,9 @@ class TestSchemaCrfField(unittest.TestCase):
         except ImportError:
             self.skipTest("jsonschema not installed")
 
-        example_path = Path(__file__).parent.parent / "example-project.json"
+        example_path = Path(__file__).parent.parent / "examples" / "example-project.json"
         if not example_path.exists():
-            self.skipTest("example-project.json not found")
+            self.skipTest("examples/example-project.json not found")
 
         instance = json.loads(example_path.read_text(encoding="utf-8"))
         validator = jsonschema.validators.validator_for(self.schema)(self.schema)

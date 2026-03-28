@@ -27,8 +27,8 @@ except ImportError:
 
 
 SCRIPT_DIR = Path(__file__).parent
-DEFAULT_SCHEMA = SCRIPT_DIR / "video-project-schema-v2.json"
-DEFAULT_INSTANCE = SCRIPT_DIR / "example-project.json"
+DEFAULT_SCHEMA = SCRIPT_DIR / "schemas" / "video-project-schema-v2.json"
+DEFAULT_INSTANCE = SCRIPT_DIR / "examples" / "example-project.json"
 
 
 def load_json(path: Path) -> dict:

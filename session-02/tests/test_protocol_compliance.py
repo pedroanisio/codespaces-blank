@@ -18,7 +18,7 @@ import pytest
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
-DEMO_PATH = Path(__file__).parent.parent / "demo-30s.json"
+DEMO_PATH = Path(__file__).parent.parent / "examples" / "demo-30s.json"
 
 
 @pytest.fixture
