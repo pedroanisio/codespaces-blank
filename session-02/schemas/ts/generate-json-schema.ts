@@ -1,7 +1,7 @@
 /**
  * generate-json-schema.ts — Export the Zod v4 GVPP schema as JSON Schema (draft 2020-12).
  *
- * Usage:  npx tsx generate-json-schema.ts > ../generated-v3.schema.json
+ * Usage:  npx tsx generate-json-schema.ts > ../active/gvpp-v3.schema.json
  */
 
 import { z } from "zod";

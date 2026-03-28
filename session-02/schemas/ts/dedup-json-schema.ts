@@ -3,7 +3,7 @@
  * JSON Schema output into a compact, $defs/$ref form matching the structure
  * of the hand-written JSON Schema.
  *
- * Usage: npx tsx dedup-json-schema.ts > ../gvpp-v3.schema.json
+ * Usage: npx tsx dedup-json-schema.ts > ../active/gvpp-v3.schema.json
  *
  * Improvements over raw Zod toJSONSchema():
  *   1. Extracts shared types into $defs and replaces with $ref
@@ -30,10 +30,6 @@ const SKIP_EXPORTS = new Set([
 
 // Schemas that map to abstract base types in the original — these become
 // allOf bases, not standalone defs resolved by fingerprint.
-const ABSTRACT_BASES: Record<string, string> = {
-  // Zod export name → $def name
-  "BaseEntityObject": "BaseEntity",
-};
 
 // The base property keys for each abstract base (derived from the original schema)
 const BASE_ENTITY_PROPS = [
@@ -423,7 +419,7 @@ for (let pass = 0; pass < 5; pass++) {
 }
 
 // Also replace inside allOf extension branches
-for (const [defName, defSchema] of Object.entries(defs)) {
+for (const [, defSchema] of Object.entries(defs)) {
   if (defSchema.allOf) {
     defSchema.allOf = defSchema.allOf.map((branch: any) => {
       if (branch.$ref) return branch;

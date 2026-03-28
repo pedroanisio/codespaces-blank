@@ -1,0 +1,59 @@
+# organize.yaml — Schema directory reorganization
+#
+# Zod source (src/) is the authoritative schema definition.
+# gvpp-v3.schema.json is generated FROM Zod — the only schema the pipeline reads.
+# Everything else is archived for genealogy reference.
+#
+# Dry run:
+#   python tools/organize.py -c session-02/schemas/organize.yaml --dir session-02/schemas/
+#
+# Apply:
+#   python tools/organize.py -c session-02/schemas/organize.yaml --dir session-02/schemas/ --apply
+
+settings:
+  dry_run: true
+  create_dirs: true
+  ignore:
+    - .schema-hints.yaml
+    - organize.yaml
+
+folders:
+  # ── ACTIVE: current authoritative schemas (generated from Zod) ─────────
+  - name: active
+    description: "Authoritative schemas — generated from Zod, used by pipeline"
+    priority: 100
+    rules:
+      - name_glob: "gvpp-v3.schema.json"
+      - name_glob: "term-map.json"
+
+  # ── SRC: Zod v4 TypeScript source of truth ─────────────────────────────
+  - name: src
+    description: "Zod v4 TypeScript source — edit HERE, regenerate JSON Schema"
+    priority: 90
+    rules:
+      - path_contains: "ts/"
+
+  # ── ARCHIVE: v1 drafts (original AI-generated schemas) ─────────────────
+  - name: archive/v1-drafts
+    description: "Original AI-generated drafts (v1) — superseded by v2 merge"
+    priority: 10
+    rules:
+      - name_glob: "claude-video-production-schema-v1.0.json"
+      - name_glob: "chatgpt-generative_video_project_package.schema.json"
+      - name_glob: "grok-video-schema.json"
+      - name_glob: "screenplay-format-spec.schema.json"
+
+  # ── ARCHIVE: v2 merged schema ──────────────────────────────────────────
+  - name: archive/v2
+    description: "Merged v2 schema — superseded by v3"
+    priority: 10
+    rules:
+      - name_glob: "video-project-schema-v2.json"
+
+  # ── ARCHIVE: v3 hand-written (replaced by Zod-generated) ──────────────
+  - name: archive/v3-hand-written
+    description: "Hand-written v3 JSON Schema — superseded by Zod-generated gvpp-v3"
+    priority: 10
+    rules:
+      - name_glob: "claude-unified-video-project-v3.schema.json"
+      - name_glob: "claude-spatial-extension-patch.json"
