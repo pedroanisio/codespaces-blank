@@ -1,0 +1,68 @@
+settings:
+  skip_dirs: [skills, pipeline, tests, output, .pytest_cache, __pycache__]
+  root_keep: [README.md, CHANGELOG.md, .env, validate.py, check_env.py, organize.py, organize.yaml]
+  recursive: false
+  head_bytes: 512
+
+folders:
+  # schemas: two OR-groups, both requiring .json
+  - name: schemas
+    description: JSON files with JSON Schema markers in content.
+    priority: 10
+    mode: all
+    rules:
+      - extension: .json
+      - content_contains: ['"$schema"', '"$id"']
+
+  - name: schemas
+    description: JSON files with 'schema' or 'term-map' in filename.
+    priority: 10
+    mode: all
+    rules:
+      - extension: .json
+      - stem_contains: [schema, term-map]
+
+  - name: research
+    description: External tool artifacts and scraped content.
+    priority: 8
+    mode: any
+    rules:
+      - stem_startswith: [perplexity-, grok-, manus-]
+      - extension: [.html, .htm]
+      - extension: [.xlsx, .xls, .csv]
+
+  - name: prompts
+    description: Prompt templates for LLM generation.
+    priority: 6
+    mode: any
+    rules:
+      - stem_startswith: prompt-
+
+  # Reports at priority 5 — ABOVE specs at 4 — so "scorecard-report" goes to reports
+  - name: docs/reports
+    description: Analysis reports and scorecards.
+    priority: 5
+    mode: any
+    rules:
+      - name_regex: "(?i)(report|scorecard).*\\.md$"
+
+  - name: docs/specs
+    description: Schema specs and documentation (markdown).
+    priority: 4
+    mode: any
+    rules:
+      - name_regex: "(?i)(schema|spec|extension|unified|orchestration).*\\.md$"
+
+  - name: docs/styles
+    description: Style guides and creative taxonomies.
+    priority: 4
+    mode: any
+    rules:
+      - name_regex: "(?i)(style|taxonomy|20-styles|camera|scene|video-v).*\\.md$"
+
+  - name: examples
+    description: Instance JSON files — demos and test fixtures.
+    priority: 3
+    mode: any
+    rules:
+      - name_regex: "(?i)(demo|example|instance|spec-instance).*\\.json$"
