@@ -907,3 +907,86 @@ class TestGenerateShotsRefCollection:
 
         # Shot 2 has no anchors → fallback D uses all character fronts + env wide plate
         assert refs_passed[0] >= 1
+
+    def test_scene_continuity_block_injected_in_prompt(self, tmp_path):
+        """Shots sharing a scene should get a [SCENE CONTINUITY] block in the prompt."""
+        from pipeline.generate import _enrich_prompt
+        instance = self._make_rich_instance()
+        shot1 = instance["production"]["shots"][0]
+        prompt = _enrich_prompt(shot1, instance, "test preamble")
+        assert "[SCENE CONTINUITY — CRITICAL]" in prompt
+        assert "IDENTICAL" in prompt
+        # Should reference the sibling shot
+        assert "sh.2" in prompt or "Shot 2" in prompt
+
+    def test_scene_continuity_absent_for_single_shot_scene(self, tmp_path):
+        """Single-shot scene should NOT get continuity block."""
+        from pipeline.generate import _enrich_prompt
+        instance = self._make_rich_instance()
+        # Remove shot 2 so scene has only 1 shot
+        instance["production"]["shots"] = [instance["production"]["shots"][0]]
+        instance["production"]["scenes"][0]["shotRefs"] = [{"id": "sh.1.v1"}]
+        shot1 = instance["production"]["shots"][0]
+        prompt = _enrich_prompt(shot1, instance, "test preamble")
+        assert "[SCENE CONTINUITY" not in prompt
+
+    def test_auto_temporal_bridge_for_second_shot(self, tmp_path):
+        """Second shot in a scene should auto-infer temporal bridge from first."""
+        from pipeline.generate import generate_shots
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        instance = self._make_rich_instance()
+        # Remove explicit temporal bridge to test auto-inference
+        instance["production"]["shots"][1]["cinematicSpec"].pop("temporalBridgeAnchorRef", None)
+
+        # Pre-create shot 1 so temporal bridge can extract from it
+        shots_dir = tmp_path / "shots"
+        shots_dir.mkdir(parents=True)
+        subprocess.run([
+            "ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=blue:s=64x64:d=1",
+            "-c:v", "libx264", "-preset", "ultrafast", str(shots_dir / "sh.1.mp4"),
+        ], capture_output=True, check=True)
+
+        refs_for_shot2 = []
+
+        def mock_veo(shot, key, out, *, enriched_prompt=None, reference_images=None):
+            if shot.get("logicalId") == "sh.2":
+                refs_for_shot2.append(len(reference_images or []))
+            out.write_bytes(b"\x00" * 100)
+
+        with patch.dict(os.environ, {"RUNWAY_API_KEY": "", "GEMINI_API_KEY": "k"}, clear=False), \
+             patch("pipeline.providers.generate_image", return_value=fake_img), \
+             patch("pipeline.generate._veo_generate_shot", side_effect=mock_veo):
+            generate_shots(instance, tmp_path)
+
+        # Auto-inferred bridge → should have temporal bridge frame
+        assert len(refs_for_shot2) >= 1
+        assert refs_for_shot2[0] >= 2
+
+    def test_scene_level_anchors_inherited_by_shots(self, tmp_path):
+        """Scene-level generation.consistencyAnchors should be inherited by shots."""
+        from pipeline.generate import generate_shots
+        fake_img = b"\x89PNG" + b"\x00" * 500
+        instance = self._make_rich_instance()
+        # Remove shot-level anchors, add scene-level ones
+        for s in instance["production"]["shots"]:
+            s.get("genParams", {}).pop("consistencyAnchors", None)
+        instance["production"]["scenes"][0]["generation"] = {
+            "consistencyAnchors": [
+                {"anchorType": "character", "name": "Scene char lock",
+                 "ref": {"id": "c.v1"}, "lockLevel": "hard"},
+            ]
+        }
+
+        veo_calls = []
+
+        def mock_veo(shot, key, out, *, enriched_prompt=None, reference_images=None):
+            veo_calls.append({"shot": shot.get("logicalId"), "refs": len(reference_images or [])})
+            out.write_bytes(b"\x00" * 100)
+
+        with patch.dict(os.environ, {"RUNWAY_API_KEY": "", "GEMINI_API_KEY": "k"}, clear=False), \
+             patch("pipeline.providers.generate_image", return_value=fake_img), \
+             patch("pipeline.generate._veo_generate_shot", side_effect=mock_veo):
+            generate_shots(instance, tmp_path)
+
+        # Both shots should have inherited the scene-level anchor → character ref
+        assert all(c["refs"] >= 1 for c in veo_calls)

@@ -1060,6 +1060,38 @@ def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
     if scene_ctx:
         enriched_parts.append(f"\n[SCENE CONTEXT]\n{', '.join(scene_ctx)}")
 
+    # ── Scene continuity enforcement ─────────────────────────────────────
+    # When multiple shots share the same scene, inject a hard constraint block
+    # so the video model preserves identical lighting, environment, and objects.
+    if scene_ref_id:
+        sibling_shots: list[dict] = []
+        for prod_shot in (instance.get("production") or {}).get("shots", []):
+            sib_scene = (prod_shot.get("sceneRef") or {}).get("id", "")
+            if sib_scene == scene_ref_id:
+                sibling_shots.append(prod_shot)
+        if len(sibling_shots) > 1:
+            sib_descs = []
+            for sib in sibling_shots:
+                sib_id = sib.get("id") or sib.get("logicalId") or ""
+                if sib_id == shot_id:
+                    continue
+                sib_desc = sib.get("description") or sib.get("name") or sib_id
+                sib_type = (sib.get("cinematicSpec") or {}).get("shotType", "")
+                sib_descs.append(f"  - {sib_id}: {sib_type} — {sib_desc}")
+            continuity_block = (
+                f"\n[SCENE CONTINUITY — CRITICAL]\n"
+                f"This shot is one of {len(sibling_shots)} angles covering the SAME scene ({scene_ref_id}).\n"
+                f"ALL shots in this scene MUST share IDENTICAL:\n"
+                f"  - Lighting direction, intensity, and color temperature\n"
+                f"  - Environment layout, set dressing, and background elements\n"
+                f"  - Character costumes, positioning, and props present\n"
+                f"  - Weather conditions and atmospheric effects\n"
+                f"  - Color grading and overall tonal quality\n"
+                f"Other shots in this scene:\n" + "\n".join(sib_descs) + "\n"
+                f"Only the CAMERA ANGLE and FRAMING should differ between shots."
+            )
+            enriched_parts.append(continuity_block)
+
     # Camera specification
     cam_parts = [f"Shot type: {shot_type}"]
     if angle:
@@ -1245,6 +1277,26 @@ def generate_shots(
             entity_index[e.get("id", "")] = e
             entity_index[e.get("logicalId", "")] = e
 
+    # ── Scene-level consistency: build previous-shot map for auto bridges ─
+    # Maps each shot ID to the previous shot ID in the same scene (by shotRefs order).
+    # Also collects scene-level generation.consistencyAnchors for inheritance.
+    _prev_shot_in_scene: dict[str, str] = {}  # shot_id → prev_shot_id
+    _scene_anchors: dict[str, list] = {}       # scene_id → anchors list
+    for scene in production.get("scenes", []):
+        scene_id = scene.get("id") or scene.get("logicalId") or ""
+        refs = scene.get("shotRefs", [])
+        for i, ref in enumerate(refs):
+            ref_id = ref.get("id") or ref.get("logicalId") or ""
+            if i > 0:
+                prev_id = refs[i - 1].get("id") or refs[i - 1].get("logicalId") or ""
+                if ref_id and prev_id:
+                    _prev_shot_in_scene[ref_id] = prev_id
+        # Collect scene-level generation.consistencyAnchors
+        scene_gen = scene.get("generation") or {}
+        scene_cas = scene_gen.get("consistencyAnchors", [])
+        if scene_cas and scene_id:
+            _scene_anchors[scene_id] = scene_cas
+
     results: dict[str, Path] = {}
     errors: list[str] = []
 
@@ -1264,8 +1316,20 @@ def generate_shots(
         ref_candidates: list[tuple[int, bytes]] = []  # (priority, bytes)
         lock_priority = {"hard": 0, "medium": 1, "soft": 2}
 
-        # A) From explicit consistency anchors on the shot
-        anchors = (shot.get("genParams") or {}).get("consistencyAnchors", [])
+        # A) From explicit consistency anchors on the shot,
+        #    merged with scene-level anchors (shot-level takes precedence).
+        anchors = list((shot.get("genParams") or {}).get("consistencyAnchors", []))
+        shot_scene_ref = (shot.get("sceneRef") or {}).get("id", "")
+        if shot_scene_ref and shot_scene_ref in _scene_anchors:
+            # Inherit scene-level anchors unless the shot already anchors that entity
+            shot_anchor_refs = {
+                (a.get("ref") or {}).get("id", "") for a in anchors
+            }
+            for sa in _scene_anchors[shot_scene_ref]:
+                sa_ref = (sa.get("ref") or {}).get("id", "")
+                if sa_ref not in shot_anchor_refs:
+                    anchors.append(sa)
+                    log.debug("scene_anchor_inherited", shot=sid, ref=sa_ref)
         for anchor in anchors:
             ref_id = (anchor.get("ref") or {}).get("id", "")
             level = anchor.get("lockLevel", "medium")
@@ -1346,9 +1410,15 @@ def generate_shots(
             if len(ref_bytes) >= 3:
                 break
 
-        # E) Temporal bridge: extract last frame from previous shot
+        # E) Temporal bridge: extract last frame from previous shot.
+        #    Auto-infer bridge from scene order when not explicitly declared.
         bridge_ref = ((shot.get("cinematicSpec") or {})
                       .get("temporalBridgeAnchorRef") or {}).get("id", "")
+        if not bridge_ref:
+            shot_id_str = shot.get("id") or shot.get("logicalId") or ""
+            bridge_ref = _prev_shot_in_scene.get(shot_id_str, "")
+            if bridge_ref:
+                log.debug("temporal_bridge_auto_inferred", shot=sid, from_shot=bridge_ref)
         if bridge_ref and len(ref_bytes) < 3:
             for prev_shot in all_shots:
                 if prev_shot.get("id") == bridge_ref or prev_shot.get("logicalId") == bridge_ref:
@@ -1399,15 +1469,19 @@ def generate_shots(
         _stub_shot_video(shot, out_path)
         return sid, out_path
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        futures = {pool.submit(_process, s): _shot_id(s) for s in all_shots}
-        for fut in as_completed(futures):
-            try:
-                sid, path = fut.result()
-                results[sid] = path
-                log.info("shot_generated", shot_id=sid, file=path.name)
-            except Exception as exc:
-                errors.append(f"{futures[fut]}: {exc}")
+    # ── Generate shots SEQUENTIALLY in scene order ─────────────────────────
+    # Each shot must complete before the next starts so that:
+    #   1. The temporal bridge can extract the previous shot's last frame
+    #   2. Visual continuity chains across cuts (same character, same lighting)
+    # This is slower than parallel but produces coherent video.
+    for shot in all_shots:
+        try:
+            sid, path = _process(shot)
+            results[sid] = path
+            log.info("shot_generated", shot_id=sid, file=path.name)
+        except Exception as exc:
+            errors.append(f"{_shot_id(shot)}: {exc}")
+            log.warning("shot_generation_failed", shot_id=_shot_id(shot), error=str(exc))
 
     if errors:
         log.warning("shot_generation_errors", count=len(errors), details=errors)
