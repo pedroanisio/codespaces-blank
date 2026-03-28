@@ -78,7 +78,7 @@ export const EntityRefSchema = z
   });
 
 export const ChecksumSchema = z.strictObject({
-  algorithm: z.string(),
+  algorithm: z.enum(["sha256", "sha512", "md5", "blake3"]),
   value: z.string(),
 });
 
@@ -93,7 +93,7 @@ export const ApprovalSchema = z.strictObject({
 
 export const ApprovalRecordSchema = z.strictObject({
   role: z.string(),
-  status: z.string(),
+  status: z.enum(["pending", "approved", "rejected", "waived"]),
   approvedBy: ContributorSchema.optional(),
   approvedAt: ISOTimestampSchema.optional(),
   deadline: ISOTimestampSchema.optional(),
@@ -144,12 +144,12 @@ export const CommentSchema = z.strictObject({
 });
 
 export const FuzzyDateSchema = z.strictObject({
-  kind: z.string(),
+  kind: z.enum(["exact", "approximate", "range", "unknown"]),
   exact: ISOTimestampSchema.optional(),
   label: z.string().optional(),
   rangeStart: ISOTimestampSchema.optional(),
   rangeEnd: ISOTimestampSchema.optional(),
-  confidence: z.number().optional(),
+  confidence: z.number().gte(0).lte(1).optional(),
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -164,14 +164,14 @@ export const FrameRateSchema = z.strictObject({
 });
 
 export const ResolutionSchema = z.strictObject({
-  preset: z.string().optional(),
-  width: z.number().int().gte(1),
-  height: z.number().int().gte(1),
+  preset: z.enum(["4K_UHD", "2K_DCI", "1080p", "720p", "480p", "custom"]).optional(),
+  widthPx: z.number().int().gte(1),
+  heightPx: z.number().int().gte(1),
   pixelAspectRatio: z.number().gt(0).optional(),
 });
 
 export const AspectRatioSchema = z.strictObject({
-  preset: z.string().optional(),
+  preset: z.enum(["16:9", "9:16", "4:3", "1:1", "2.35:1", "2.39:1", "custom"]).optional(),
   expression: z.string(),
   numerator: z.number().int().gte(1).optional(),
   denominator: z.number().int().gte(1).optional(),
@@ -296,18 +296,18 @@ export const Transform3DSchema = z.strictObject({
 });
 
 export const BoundingVolumeSchema = z.strictObject({
-  volumeType: z.string(),
+  volumeType: z.enum(["aabb", "sphere"]),
   aabbMin: Position3DSchema.optional(),
   aabbMax: Position3DSchema.optional(),
   sphereCenter: Position3DSchema.optional(),
-  sphereRadiusM: z.number().optional(),
+  sphereRadiusM: z.number().gt(0).optional(),
 });
 
 export const CoordinateSystemSchema = z.strictObject({
-  handedness: z.string(),
-  upAxis: z.string(),
-  unitM: z.number(),
-  forwardAxis: z.string().optional(),
+  handedness: z.enum(["right", "left"]),
+  upAxis: z.enum(["+Y", "-Y", "+Z", "-Z"]),
+  unitM: z.number().gt(0),
+  forwardAxis: z.enum(["+X", "-X", "+Y", "-Y", "+Z", "-Z"]).optional(),
   notes: z.string().optional(),
 });
 
@@ -317,7 +317,7 @@ export const SpatialAnchorSchema = z.strictObject({
   position: Position3DSchema,
   orientation: Orientation3DSchema.optional(),
   radiusM: z.number().optional(),
-  anchorType: z.string().optional(),
+  anchorType: z.enum(["landmark", "action_line", "staging_mark", "entry_point", "sightline", "eyeline", "pov", "custom"]).optional(),
   linkedAnchorId: IdentifierSchema.optional(),
   persistAcrossShots: z.boolean().optional(),
 });

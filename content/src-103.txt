@@ -1,7 +1,0 @@
-SOURCE ID : src-103
-TITLE     : IPCC First Assessment Report - UN Digital Library
-URL       : https://digitallibrary.un.org/record/218515?ln=en
-PUBLISHER : United Nations Digital Library
-RETRIEVED : 2026-03-26T14:05:32.404161+00:00
-────────────────────────────────────────────────────────────
-
