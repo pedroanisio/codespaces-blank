@@ -264,7 +264,9 @@ function extractBase(
   const extPropsObj: Record<string, unknown> = {};
 
   for (const [key, val] of Object.entries(props)) {
-    if (baseProps.includes(key)) {
+    const valObj = val as Record<string, unknown>;
+    // Properties with const values are discriminators — keep in extension
+    if (baseProps.includes(key) && valObj.const === undefined) {
       basePropsObj[key] = val;
     } else {
       extPropsObj[key] = val;
@@ -285,15 +287,13 @@ function extractBase(
   if (extRequired.length > 0) {
     extension.required = extRequired;
   }
-  if (defSchema.additionalProperties !== undefined) {
-    extension.additionalProperties = defSchema.additionalProperties;
-  }
 
   return {
     allOf: [
       { $ref: `#/$defs/${baseName}` },
       extension,
     ],
+    unevaluatedProperties: false,
   };
 }
 
@@ -310,12 +310,18 @@ function buildBaseDef(
     type: "object",
     properties: {} as Record<string, unknown>,
     required: baseRequired,
-    additionalProperties: false,
   };
 
   for (const prop of baseProps) {
     if (sample.properties[prop] !== undefined) {
-      baseDef.properties[prop] = sample.properties[prop];
+      const propSchema = JSON.parse(JSON.stringify(sample.properties[prop]));
+      // Don't copy const values into the base — they belong in extensions
+      if (propSchema.const !== undefined) {
+        delete propSchema.const;
+        // Keep just the type
+        if (!propSchema.type) propSchema.type = "string";
+      }
+      baseDef.properties[prop] = propSchema;
     }
   }
 

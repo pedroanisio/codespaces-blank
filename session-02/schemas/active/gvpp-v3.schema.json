@@ -271,6 +271,10 @@
         {
           "type": "object",
           "properties": {
+            "nodeType": {
+              "type": "string",
+              "const": "approval"
+            },
             "role": {
               "type": "string"
             },
@@ -293,10 +297,10 @@
           "required": [
             "role",
             "approvalStatus"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "ApprovalRecord": {
       "type": "object",
@@ -465,6 +469,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "audioAsset"
+            },
             "audioType": {
               "type": "string",
               "enum": [
@@ -523,10 +531,10 @@
           },
           "required": [
             "audioType"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "AudioMixOp": {
       "allOf": [
@@ -536,6 +544,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "audioMix"
+            },
             "tracks": {
               "type": "array",
               "items": {
@@ -548,10 +560,10 @@
           },
           "required": [
             "tracks"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "AudioMixTrack": {
       "type": "object",
@@ -650,8 +662,7 @@
           "$ref": "#/$defs/Identifier"
         },
         "entityType": {
-          "type": "string",
-          "const": "project"
+          "type": "string"
         },
         "name": {
           "type": "string"
@@ -755,8 +766,7 @@
         "entityType",
         "name",
         "version"
-      ],
-      "additionalProperties": false
+      ]
     },
     "BoundingVolume": {
       "type": "object",
@@ -932,6 +942,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "character"
+            },
             "appearance": {
               "type": "string"
             },
@@ -978,10 +992,10 @@
               "type": "number",
               "exclusiveMinimum": 0
             }
-          },
-          "additionalProperties": false
+          }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "Checksum": {
       "type": "object",
@@ -1137,6 +1151,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "colorGrade"
+            },
             "inputRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -1155,10 +1173,10 @@
           },
           "required": [
             "inputRef"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "Comment": {
       "type": "object",
@@ -1261,6 +1279,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "concat"
+            },
             "clipRefs": {
               "type": "array",
               "items": {
@@ -1276,10 +1298,10 @@
           },
           "required": [
             "clipRefs"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "ConsistencyAnchor": {
       "type": "object",
@@ -1430,6 +1452,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "custom"
+            },
             "executor": {
               "type": "string"
             },
@@ -1451,10 +1477,10 @@
           },
           "required": [
             "executor"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "CustomWorkflowNode": {
       "type": "object",
@@ -1551,6 +1577,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "directorInstructions"
+            },
             "visionStatement": {
               "type": "string"
             },
@@ -1596,10 +1626,10 @@
           },
           "required": [
             "visionStatement"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "EditVersionEntity": {
       "allOf": [
@@ -1609,6 +1639,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "editVersion"
+            },
             "timelineRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -1624,10 +1658,10 @@
           },
           "required": [
             "timelineRef"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "EncodeOp": {
       "allOf": [
@@ -1637,6 +1671,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "encode"
+            },
             "inputRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -1653,10 +1691,10 @@
           "required": [
             "inputRef",
             "compression"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "EntityRef": {
       "type": "object",
@@ -1699,6 +1737,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "environment"
+            },
             "locationType": {
               "type": "string",
               "enum": [
@@ -1745,10 +1787,10 @@
             "spatialExtent": {
               "$ref": "#/$defs/BoundingVolume"
             }
-          },
-          "additionalProperties": false
+          }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "EulerAnglesDeg": {
       "type": "object",
@@ -1855,6 +1897,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "filter"
+            },
             "inputRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -1871,10 +1917,10 @@
           "required": [
             "inputRef",
             "filterType"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "FinalOutputEntity": {
       "allOf": [
@@ -1884,6 +1930,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "finalOutput"
+            },
             "outputType": {
               "type": "string"
             },
@@ -1940,10 +1990,10 @@
             "runtimeSec",
             "sourceTimelineRef",
             "renderPlanRef"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "FrameRate": {
       "type": "object",
@@ -2097,6 +2147,10 @@
         {
           "type": "object",
           "properties": {
+            "nodeType": {
+              "type": "string",
+              "const": "generation"
+            },
             "generationStep": {
               "$ref": "#/$defs/GenerationStep"
             },
@@ -2106,10 +2160,10 @@
           },
           "required": [
             "generationStep"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "GenerationStep": {
       "type": "object",
@@ -2280,6 +2334,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "genericAsset"
+            },
             "assetClass": {
               "type": "string"
             },
@@ -2292,10 +2350,10 @@
           },
           "required": [
             "assetClass"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "Governance": {
       "type": "object",
@@ -2452,6 +2510,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "manim"
+            },
             "sceneClass": {
               "type": "string"
             },
@@ -2465,10 +2527,10 @@
           "required": [
             "sceneClass",
             "manimConfig"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "MarketingAssetEntity": {
       "allOf": [
@@ -2478,6 +2540,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "marketingAsset"
+            },
             "marketingType": {
               "type": "string",
               "enum": [
@@ -2542,10 +2608,10 @@
           "required": [
             "marketingType",
             "targetPlatforms"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "ModelDescriptor": {
       "type": "object",
@@ -2676,6 +2742,10 @@
         {
           "type": "object",
           "properties": {
+            "nodeType": {
+              "type": "string",
+              "const": "notification"
+            },
             "channel": {
               "type": "string"
             },
@@ -2694,10 +2764,10 @@
           },
           "required": [
             "channel"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "Operation": {
       "oneOf": [
@@ -2740,8 +2810,7 @@
           "$ref": "#/$defs/Identifier"
         },
         "opType": {
-          "type": "string",
-          "const": "concat"
+          "type": "string"
         },
         "compatibleRuntimes": {
           "type": "array",
@@ -2756,8 +2825,7 @@
       "required": [
         "opId",
         "opType"
-      ],
-      "additionalProperties": false
+      ]
     },
     "Orchestration": {
       "type": "object",
@@ -2803,6 +2871,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "overlay"
+            },
             "backgroundRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -2822,10 +2894,10 @@
           "required": [
             "backgroundRef",
             "foregroundRef"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "PackageInfo": {
       "type": "object",
@@ -2977,6 +3049,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "project"
+            },
             "summary": {
               "type": "string"
             },
@@ -3031,10 +3107,10 @@
           "required": [
             "targetRuntimeSec",
             "defaultQualityProfileRef"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "PromptFragment": {
       "type": "object",
@@ -3107,6 +3183,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "prop"
+            },
             "category": {
               "type": "string"
             },
@@ -3128,10 +3208,10 @@
             "defaultBounds": {
               "$ref": "#/$defs/BoundingVolume"
             }
-          },
-          "additionalProperties": false
+          }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "QCResult": {
       "type": "object",
@@ -3333,16 +3413,20 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "qualityProfile"
+            },
             "profile": {
               "$ref": "#/$defs/QualityProfile"
             }
           },
           "required": [
             "profile"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "Quaternion": {
       "type": "object",
@@ -3434,6 +3518,10 @@
         {
           "type": "object",
           "properties": {
+            "nodeType": {
+              "type": "string",
+              "const": "render"
+            },
             "renderPlanRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -3443,10 +3531,10 @@
           },
           "required": [
             "renderPlanRef"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "RenderPlanEntity": {
       "allOf": [
@@ -3456,6 +3544,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "renderPlan"
+            },
             "sourceTimelineRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -3496,10 +3588,10 @@
           "required": [
             "sourceTimelineRef",
             "operations"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "Resolution": {
       "type": "object",
@@ -3542,6 +3634,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "retime"
+            },
             "inputRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -3555,10 +3651,10 @@
           "required": [
             "inputRef",
             "retime"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "RetimeSpec": {
       "type": "object",
@@ -3680,6 +3776,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "scene"
+            },
             "sceneNumber": {
               "type": "integer",
               "minimum": 1
@@ -3762,10 +3862,10 @@
             "sceneNumber",
             "targetDurationSec",
             "shotRefs"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "SceneSpace": {
       "type": "object",
@@ -3817,6 +3917,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "script"
+            },
             "format": {
               "type": "string",
               "enum": [
@@ -3845,10 +3949,10 @@
           },
           "required": [
             "segments"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "ScriptSegment": {
       "type": "object",
@@ -3968,6 +4072,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "shot"
+            },
             "sceneRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -4048,10 +4156,10 @@
             "shotNumber",
             "targetDurationSec",
             "cinematicSpec"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "SpatialAnchor": {
       "type": "object",
@@ -4279,6 +4387,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "story"
+            },
             "logline": {
               "type": "string"
             },
@@ -4328,10 +4440,10 @@
           "required": [
             "logline",
             "beats"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "StreamBinding": {
       "type": "object",
@@ -4386,6 +4498,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "styleGuide"
+            },
             "scope": {
               "type": "string",
               "enum": [
@@ -4408,10 +4524,10 @@
                 "$ref": "#/$defs/EntityRef"
               }
             }
-          },
-          "additionalProperties": false
+          }
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "StyleGuidelines": {
       "type": "object",
@@ -4722,6 +4838,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "timeline"
+            },
             "durationSec": {
               "type": "number",
               "minimum": 0,
@@ -4772,10 +4892,10 @@
           },
           "required": [
             "durationSec"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "Transform": {
       "type": "object",
@@ -4870,6 +4990,10 @@
         {
           "type": "object",
           "properties": {
+            "nodeType": {
+              "type": "string",
+              "const": "transform"
+            },
             "operation": {
               "$ref": "#/$defs/Operation"
             },
@@ -4879,10 +5003,10 @@
           },
           "required": [
             "operation"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "TransitionOp": {
       "allOf": [
@@ -4892,6 +5016,10 @@
         {
           "type": "object",
           "properties": {
+            "opType": {
+              "type": "string",
+              "const": "transition"
+            },
             "fromRef": {
               "$ref": "#/$defs/EntityRef"
             },
@@ -4909,10 +5037,10 @@
             "fromRef",
             "toRef",
             "spec"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "TransitionSpec": {
       "type": "object",
@@ -4947,6 +5075,10 @@
         {
           "type": "object",
           "properties": {
+            "nodeType": {
+              "type": "string",
+              "const": "validation"
+            },
             "validationRules": {
               "type": "array",
               "items": {
@@ -4965,10 +5097,10 @@
           },
           "required": [
             "validationRules"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "ValidationRule": {
       "type": "object",
@@ -5192,6 +5324,10 @@
         {
           "type": "object",
           "properties": {
+            "entityType": {
+              "type": "string",
+              "const": "visualAsset"
+            },
             "visualType": {
               "type": "string"
             },
@@ -5256,10 +5392,10 @@
           "required": [
             "visualType",
             "modality"
-          ],
-          "additionalProperties": false
+          ]
         }
-      ]
+      ],
+      "unevaluatedProperties": false
     },
     "VisualAssetSpec": {
       "type": "object",
@@ -5416,8 +5552,7 @@
           "type": "string"
         },
         "nodeType": {
-          "type": "string",
-          "const": "generation"
+          "type": "string"
         },
         "inputs": {
           "type": "array",
@@ -5444,8 +5579,7 @@
       "required": [
         "nodeId",
         "nodeType"
-      ],
-      "additionalProperties": false
+      ]
     }
   }
 }

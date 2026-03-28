@@ -1,0 +1,1834 @@
+{
+  "schemaVersion": "3.0.0",
+  "package": {
+    "packageId": "pkg-spark-001",
+    "createdAt": "2026-03-28T15:12:54Z",
+    "updatedAt": "2026-03-28T15:12:54Z",
+    "schemaUri": "https://example.org/schemas/unified-video-project-v3.schema.json",
+    "versioningPolicy": {
+      "immutablePublishedVersions": true,
+      "defaultReferenceMode": "exact",
+      "requireContentHashForPublished": false,
+      "allowParallelBranches": false,
+      "approvalRequiredForDeliverables": true
+    },
+    "createdBy": [
+      {
+        "name": "Studio Pipeline",
+        "role": "system"
+      }
+    ]
+  },
+  "project": {
+    "id": "prj-spark",
+    "logicalId": "prj-spark",
+    "entityType": "project",
+    "name": "Spark",
+    "version": {
+      "number": "1.0.0",
+      "state": "approved"
+    },
+    "createdAt": "2026-03-28T15:12:54Z",
+    "updatedAt": "2026-03-28T15:12:54Z",
+    "description": "A tiny scrap-metal robot discovers the last living flower in a junkyard. 15-second Pixar-style animated short.",
+    "targetRuntimeSec": 15,
+    "defaultQualityProfileRef": {
+      "id": "qp-master"
+    },
+    "languages": [
+      "en"
+    ],
+    "genres": [
+      "animation",
+      "drama",
+      "family"
+    ],
+    "audiences": [
+      "all_ages"
+    ],
+    "globalCharacterRefs": [
+      {
+        "id": "char-spark"
+      }
+    ],
+    "globalEnvironmentRefs": [
+      {
+        "id": "env-junkyard"
+      }
+    ],
+    "globalStyleRefs": [
+      {
+        "id": "sg-pixar"
+      }
+    ]
+  },
+  "qualityProfiles": [
+    {
+      "id": "qp-master",
+      "logicalId": "qp-master",
+      "entityType": "qualityProfile",
+      "name": "Master Output Profile",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "createdAt": "2026-03-28T15:12:54Z",
+      "updatedAt": "2026-03-28T15:12:54Z",
+      "profile": {
+        "name": "4K Pixar Master",
+        "video": {
+          "resolution": {
+            "preset": "4K_UHD",
+            "widthPx": 3840,
+            "heightPx": 2160
+          },
+          "aspectRatio": {
+            "expression": "16:9",
+            "numerator": 16,
+            "denominator": 9
+          },
+          "frameRate": {
+            "fps": 24,
+            "mode": "constant"
+          },
+          "bitDepth": 10,
+          "colorSpace": "ACEScg",
+          "dynamicRange": "HDR10",
+          "runtimeTargetSec": 15,
+          "runtimeToleranceSec": 0.5,
+          "qualityControls": {
+            "denoiseLevel": 0.15,
+            "sharpenLevel": 0.3,
+            "antiFlicker": true,
+            "compression": {
+              "codec": "H.265",
+              "profile": "Main 10",
+              "crf": 18
+            }
+          }
+        },
+        "audio": {
+          "sampleRateHz": 48000,
+          "bitDepth": 24,
+          "channelLayout": "5.1",
+          "loudnessIntegratedLUFS": -14,
+          "truePeakDbTP": -1
+        }
+      }
+    }
+  ],
+  "canonicalDocuments": {
+    "story": {
+      "id": "story-spark",
+      "logicalId": "story-spark",
+      "entityType": "story",
+      "name": "Spark \u2014 Story Document",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "createdAt": "2026-03-28T15:12:54Z",
+      "updatedAt": "2026-03-28T15:12:54Z",
+      "description": "Narrative structure for the 15-second animated short.",
+      "logline": "A tiny robot made of scrap metal discovers the last living flower in a vast junkyard \u2014 and chooses to protect it.",
+      "synopsis": "In a sprawling junkyard under a grey sky, SPARK \u2014 a palm-sized robot assembled from discarded parts \u2014 stumbles upon a single green sprout pushing through the rust. Spark shields the flower from falling debris, sacrificing a piece of its own body to build a shelter, then sits beside it as a shaft of sunlight breaks through the clouds.",
+      "themes": [
+        "hope",
+        "sacrifice",
+        "resilience",
+        "nature"
+      ],
+      "tone": [
+        "warm",
+        "bittersweet",
+        "wonder"
+      ],
+      "beats": [
+        {
+          "beatId": "beat-01",
+          "name": "Desolation",
+          "order": 1,
+          "description": "Establish the bleak junkyard. Spark wanders aimlessly.",
+          "purpose": "world_building",
+          "targetRange": {
+            "startSec": 0,
+            "endSec": 4,
+            "durationSec": 4
+          },
+          "sceneRefs": [
+            {
+              "id": "scene-01"
+            }
+          ],
+          "emotionalObjective": "melancholy"
+        },
+        {
+          "beatId": "beat-02",
+          "name": "Discovery",
+          "order": 2,
+          "description": "Spark finds the flower. Its eye-light flickers with curiosity.",
+          "purpose": "inciting_incident",
+          "targetRange": {
+            "startSec": 4,
+            "endSec": 8,
+            "durationSec": 4
+          },
+          "sceneRefs": [
+            {
+              "id": "scene-02"
+            }
+          ],
+          "emotionalObjective": "wonder"
+        },
+        {
+          "beatId": "beat-03",
+          "name": "Sacrifice",
+          "order": 3,
+          "description": "Debris falls toward the flower. Spark detaches its own panel to shield it.",
+          "purpose": "climax",
+          "targetRange": {
+            "startSec": 8,
+            "endSec": 12,
+            "durationSec": 4
+          },
+          "sceneRefs": [
+            {
+              "id": "scene-03"
+            }
+          ],
+          "emotionalObjective": "tension_and_sacrifice"
+        },
+        {
+          "beatId": "beat-04",
+          "name": "Light",
+          "order": 4,
+          "description": "Sunlight breaks through clouds. Spark sits beside the sheltered flower.",
+          "purpose": "resolution",
+          "targetRange": {
+            "startSec": 12,
+            "endSec": 15,
+            "durationSec": 3
+          },
+          "sceneRefs": [
+            {
+              "id": "scene-04"
+            }
+          ],
+          "emotionalObjective": "hope"
+        }
+      ],
+      "arcs": [
+        {
+          "arcId": "arc-spark",
+          "name": "Spark's Arc",
+          "description": "From aimless wandering to purposeful self-sacrifice.",
+          "characterRefs": [
+            {
+              "id": "char-spark"
+            }
+          ],
+          "startBeatRef": {
+            "id": "beat-01"
+          },
+          "endBeatRef": {
+            "id": "beat-04"
+          },
+          "trajectory": [
+            "aimless",
+            "curious",
+            "determined",
+            "peaceful"
+          ]
+        }
+      ],
+      "sceneRefs": [
+        {
+          "id": "scene-01"
+        },
+        {
+          "id": "scene-02"
+        },
+        {
+          "id": "scene-03"
+        },
+        {
+          "id": "scene-04"
+        }
+      ]
+    },
+    "script": {
+      "id": "script-spark",
+      "logicalId": "script-spark",
+      "entityType": "script",
+      "name": "Spark \u2014 Script",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "createdAt": "2026-03-28T15:12:54Z",
+      "updatedAt": "2026-03-28T15:12:54Z",
+      "description": "Full script with action lines and sound cues.",
+      "format": "custom",
+      "language": "en",
+      "segments": [
+        {
+          "segmentId": "seg-01",
+          "order": 1,
+          "segmentType": "scene_heading",
+          "sceneRef": {
+            "id": "scene-01"
+          },
+          "text": "EXT. JUNKYARD \u2014 DAY (OVERCAST)"
+        },
+        {
+          "segmentId": "seg-02",
+          "order": 2,
+          "segmentType": "action",
+          "sceneRef": {
+            "id": "scene-01"
+          },
+          "actionDescription": "Wide shot of a desolate junkyard stretching to the horizon under a leaden sky. Rusted cars, twisted metal, shattered appliances. A tiny glint of light moves among the debris \u2014 SPARK, a palm-sized robot cobbled from scrap, picks its way across the terrain on spindly legs.",
+          "timing": {
+            "startSec": 0,
+            "endSec": 4,
+            "durationSec": 4
+          }
+        },
+        {
+          "segmentId": "seg-03",
+          "order": 3,
+          "segmentType": "action",
+          "sceneRef": {
+            "id": "scene-02"
+          },
+          "actionDescription": "Spark halts. Its single camera-lens eye pivots downward. Between two rusted gears, a tiny green sprout \u2014 impossibly alive \u2014 pushes through the dirt. Spark's eye-light shifts from dim amber to warm gold. It leans closer, head tilting.",
+          "timing": {
+            "startSec": 4,
+            "endSec": 8,
+            "durationSec": 4
+          }
+        },
+        {
+          "segmentId": "seg-04",
+          "order": 4,
+          "segmentType": "action",
+          "sceneRef": {
+            "id": "scene-03"
+          },
+          "actionDescription": "A chunk of metal groans overhead and begins to fall toward the flower. Spark looks up, then at the sprout. Without hesitation, it reaches to its own torso, detaches a curved panel with a soft CLICK, and holds it above the flower as a shield. The debris CLANGS against the panel. Spark's body sparks from the exposed wiring.",
+          "timing": {
+            "startSec": 8,
+            "endSec": 12,
+            "durationSec": 4
+          }
+        },
+        {
+          "segmentId": "seg-05",
+          "order": 5,
+          "segmentType": "action",
+          "sceneRef": {
+            "id": "scene-04"
+          },
+          "actionDescription": "Silence. A shaft of golden sunlight pierces the clouds, falling exactly on the flower and on Spark. The little robot settles beside the sprout, panel still held aloft, eye-light a steady, contented gold. FADE OUT.",
+          "timing": {
+            "startSec": 12,
+            "endSec": 15,
+            "durationSec": 3
+          }
+        }
+      ],
+      "sceneRefs": [
+        {
+          "id": "scene-01"
+        },
+        {
+          "id": "scene-02"
+        },
+        {
+          "id": "scene-03"
+        },
+        {
+          "id": "scene-04"
+        }
+      ]
+    },
+    "directorInstructions": {
+      "id": "di-spark",
+      "logicalId": "di-spark",
+      "entityType": "directorInstructions",
+      "name": "Spark \u2014 Director Notes",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "createdAt": "2026-03-28T15:12:54Z",
+      "updatedAt": "2026-03-28T15:12:54Z",
+      "visionStatement": "This is a silent story told entirely through physicality and light. No dialogue, no narration. The emotional arc lives in Spark's eye-light color, body language, and the contrast between the grey world and the green sprout. Channel WALL-E's opening act \u2014 loneliness made beautiful \u2014 but compress it into 15 seconds of pure visual storytelling.",
+      "mustHaves": [
+        "Spark's eye-light must shift color to signal emotion: dim amber (listless) \u2192 warm gold (curiosity) \u2192 bright gold (determination) \u2192 steady gold (peace)",
+        "The flower must be the only organic color in frame until the final sunbeam",
+        "The sacrifice moment (panel detach) must include a visible flinch \u2014 Spark feels it",
+        "Final shot: camera slowly pulls back to reveal the scale of the junkyard vs. the tiny shelter"
+      ],
+      "mustAvoid": [
+        "No dialogue or text of any kind",
+        "No anthropomorphic facial features on Spark \u2014 emotion comes from the eye-light and posture only",
+        "No other living creatures \u2014 Spark and the flower are alone",
+        "No saturated colors in the environment until the final sunbeam"
+      ],
+      "cameraLanguage": "Start wide and impersonal. Push in as Spark finds the flower. Hold close during sacrifice. Pull back for the reveal. Rack focus from Spark to flower in the discovery shot.",
+      "editingLanguage": "No hard cuts. Slow dissolves for scene transitions. Let moments breathe.",
+      "musicDirection": "Solo piano, sparse. A single melodic phrase introduced in beat 2 that resolves in beat 4. Minor key shifting to major in the final three seconds.",
+      "colorDirection": "Desaturated blue-grey palette throughout. The flower is the only green. Spark's eye-light provides warm accent. Final sunbeam introduces warm gold to the environment for the first time."
+    }
+  },
+  "production": {
+    "characters": [
+      {
+        "id": "char-spark",
+        "logicalId": "char-spark",
+        "entityType": "character",
+        "name": "Spark",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "A palm-sized robot made of scrap metal. Single camera-lens eye that glows with emotion-driven light.",
+        "appearance": "Roughly 15cm tall. Body assembled from mismatched scrap: a sardine tin torso, bottle-cap joints, wire legs, a single camera-lens eye mounted on a flexible neck. Surface is scratched, dented, showing age. Despite the junk origins, there is an endearing asymmetry \u2014 one leg slightly shorter, giving a distinctive waddle.",
+        "personality": [
+          "curious",
+          "gentle",
+          "selfless",
+          "quiet"
+        ],
+        "ageRange": "indeterminate (mechanical)",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "tiny scrap-metal robot, sardine-tin torso, single camera-lens eye",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "appearance",
+            "locked": true
+          },
+          {
+            "fragment": "Pixar-quality 3D rendering, subsurface scattering on metal, ray-traced reflections",
+            "weight": 0.8,
+            "insertionOrder": 2,
+            "category": "style",
+            "locked": true
+          }
+        ],
+        "referenceAssetRefs": [
+          {
+            "id": "va-spark-ref"
+          }
+        ],
+        "coherenceRequirements": {
+          "required": true,
+          "minSimilarityScore": 0.92,
+          "lockedAttributes": [
+            "eye_color_behavior",
+            "body_proportions",
+            "surface_material"
+          ]
+        },
+        "heightM": 0.15
+      }
+    ],
+    "environments": [
+      {
+        "id": "env-junkyard",
+        "logicalId": "env-junkyard",
+        "entityType": "environment",
+        "name": "The Junkyard",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "A vast, desolate landscape of rusted metal and discarded machinery under overcast skies.",
+        "locationType": "exterior",
+        "architectureStyle": "post-industrial wasteland",
+        "timeOfDayDefaults": [
+          "overcast_day"
+        ],
+        "weatherDefaults": [
+          "overcast",
+          "still_air"
+        ],
+        "continuityNotes": "The junkyard color palette is strictly desaturated blue-grey. No warm tones in the environment until the final sunbeam in scene 4.",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "vast junkyard landscape, rusted metal, twisted scrap, overcast grey sky, desolate, no vegetation except one small sprout",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "environment",
+            "locked": true
+          },
+          {
+            "fragment": "Pixar-quality environment, volumetric fog, depth haze, photorealistic metal textures",
+            "weight": 0.8,
+            "insertionOrder": 2,
+            "category": "style",
+            "locked": true
+          }
+        ],
+        "referenceAssetRefs": [
+          {
+            "id": "va-junkyard-ref"
+          }
+        ]
+      }
+    ],
+    "props": [
+      {
+        "id": "prop-flower",
+        "logicalId": "prop-flower",
+        "entityType": "prop",
+        "name": "The Flower",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "A single tiny green sprout \u2014 the only living thing in the junkyard.",
+        "category": "organic",
+        "continuityNotes": "The sprout is approximately 5cm tall with two small leaves. It grows between two rusted gears. It is the ONLY source of green color in the entire piece until the environment is lit by the final sunbeam.",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "single tiny green sprout, two small leaves, growing between rusted gears, vivid green against grey",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "appearance",
+            "locked": true
+          }
+        ]
+      },
+      {
+        "id": "prop-panel",
+        "logicalId": "prop-panel",
+        "entityType": "prop",
+        "name": "Spark's Torso Panel",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "A curved metal panel that Spark detaches from its own body to shield the flower.",
+        "category": "mechanical",
+        "continuityNotes": "Before detachment: flush with Spark's torso. After: used as a tiny lean-to shelter over the flower. The detachment reveals wiring underneath \u2014 Spark's sacrifice is visible."
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene-01",
+        "logicalId": "scene-01",
+        "entityType": "scene",
+        "name": "Desolation",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Establishing the junkyard. Spark wanders.",
+        "sceneNumber": 1,
+        "targetDurationSec": 4,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-junkyard"
+        },
+        "timeOfDay": "overcast_day",
+        "mood": "melancholy",
+        "storyBeatRefs": [
+          {
+            "id": "beat-01"
+          }
+        ],
+        "shotRefs": [
+          {
+            "id": "shot-0101"
+          },
+          {
+            "id": "shot-0102"
+          }
+        ],
+        "transitionOut": {
+          "type": "dissolve",
+          "durationSec": 0.5
+        }
+      },
+      {
+        "id": "scene-02",
+        "logicalId": "scene-02",
+        "entityType": "scene",
+        "name": "Discovery",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Spark finds the flower.",
+        "sceneNumber": 2,
+        "targetDurationSec": 4,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-junkyard"
+        },
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          }
+        ],
+        "timeOfDay": "overcast_day",
+        "mood": "wonder",
+        "storyBeatRefs": [
+          {
+            "id": "beat-02"
+          }
+        ],
+        "shotRefs": [
+          {
+            "id": "shot-0201"
+          },
+          {
+            "id": "shot-0202"
+          }
+        ],
+        "transitionIn": {
+          "type": "dissolve",
+          "durationSec": 0.5
+        },
+        "transitionOut": {
+          "type": "dissolve",
+          "durationSec": 0.3
+        }
+      },
+      {
+        "id": "scene-03",
+        "logicalId": "scene-03",
+        "entityType": "scene",
+        "name": "Sacrifice",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Spark shields the flower with its own body panel.",
+        "sceneNumber": 3,
+        "targetDurationSec": 4,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-junkyard"
+        },
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          },
+          {
+            "id": "prop-panel"
+          }
+        ],
+        "timeOfDay": "overcast_day",
+        "mood": "tension",
+        "storyBeatRefs": [
+          {
+            "id": "beat-03"
+          }
+        ],
+        "shotRefs": [
+          {
+            "id": "shot-0301"
+          },
+          {
+            "id": "shot-0302"
+          }
+        ],
+        "transitionIn": {
+          "type": "dissolve",
+          "durationSec": 0.3
+        },
+        "transitionOut": {
+          "type": "dissolve",
+          "durationSec": 0.5
+        }
+      },
+      {
+        "id": "scene-04",
+        "logicalId": "scene-04",
+        "entityType": "scene",
+        "name": "Light",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Sunlight breaks through. Spark rests beside the sheltered flower.",
+        "sceneNumber": 4,
+        "targetDurationSec": 3,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-junkyard"
+        },
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          },
+          {
+            "id": "prop-panel"
+          }
+        ],
+        "timeOfDay": "golden_hour_breaking_through",
+        "mood": "hope",
+        "storyBeatRefs": [
+          {
+            "id": "beat-04"
+          }
+        ],
+        "shotRefs": [
+          {
+            "id": "shot-0401"
+          },
+          {
+            "id": "shot-0402"
+          }
+        ],
+        "transitionIn": {
+          "type": "dissolve",
+          "durationSec": 0.5
+        }
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot-0101",
+        "logicalId": "shot-0101",
+        "entityType": "shot",
+        "name": "Junkyard Wide",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Extreme wide establishing shot of the junkyard.",
+        "sceneRef": {
+          "id": "scene-01"
+        },
+        "shotNumber": 1,
+        "purpose": "Establish scale and desolation",
+        "targetDurationSec": 2.5,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-junkyard"
+        },
+        "cinematicSpec": {
+          "shotType": "establishing",
+          "cameraAngle": "high",
+          "cameraMovement": "crane",
+          "focalLengthMm": 24,
+          "aperture": 8,
+          "depthOfField": "deep",
+          "stabilization": "gimbal",
+          "framing": "Spark is a tiny glint in the lower third of a vast landscape",
+          "lighting": {
+            "mood": "bleak",
+            "style": "overcast diffuse",
+            "colorTemperatureKelvin": 6500,
+            "contrastStyle": "low_key"
+          },
+          "style": {
+            "genres": [
+              "animated_short"
+            ],
+            "adjectives": [
+              "desolate",
+              "cinematic",
+              "Pixar-quality"
+            ],
+            "palette": [
+              "#7B8794",
+              "#4A5568",
+              "#2D3748",
+              "#1A202C"
+            ]
+          }
+        }
+      },
+      {
+        "id": "shot-0102",
+        "logicalId": "shot-0102",
+        "entityType": "shot",
+        "name": "Spark Walking",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Medium tracking shot following Spark through the debris.",
+        "sceneRef": {
+          "id": "scene-01"
+        },
+        "shotNumber": 2,
+        "targetDurationSec": 1.5,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-junkyard"
+        },
+        "cinematicSpec": {
+          "shotType": "medium",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "dolly",
+          "focalLengthMm": 50,
+          "aperture": 2.8,
+          "depthOfField": "shallow",
+          "stabilization": "gimbal",
+          "compositionNotes": "Spark centered, background bokeh reveals scale of junkyard",
+          "lighting": {
+            "mood": "melancholy",
+            "style": "overcast diffuse with metallic reflections",
+            "colorTemperatureKelvin": 6500
+          },
+          "style": {
+            "adjectives": [
+              "intimate",
+              "lonely",
+              "Pixar-quality"
+            ],
+            "palette": [
+              "#7B8794",
+              "#4A5568",
+              "#E2A54A"
+            ]
+          }
+        },
+        "continuityNotes": "Spark's eye-light is dim amber \u2014 listless, without purpose."
+      },
+      {
+        "id": "shot-0201",
+        "logicalId": "shot-0201",
+        "entityType": "shot",
+        "name": "Spark Sees Flower",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Close-up of Spark's eye pivoting downward, then rack focus to the sprout.",
+        "sceneRef": {
+          "id": "scene-02"
+        },
+        "shotNumber": 1,
+        "targetDurationSec": 2,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          }
+        ],
+        "cinematicSpec": {
+          "shotType": "close_up",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "static",
+          "focalLengthMm": 85,
+          "aperture": 1.8,
+          "depthOfField": "shallow",
+          "focusMode": "rack",
+          "framing": "Spark's eye sharp foreground, flower blurred background, then rack to flower sharp",
+          "lighting": {
+            "mood": "curious",
+            "colorTemperatureKelvin": 6200
+          },
+          "style": {
+            "adjectives": [
+              "intimate",
+              "wonder",
+              "Pixar-quality"
+            ],
+            "palette": [
+              "#7B8794",
+              "#48BB78",
+              "#E2A54A"
+            ]
+          }
+        },
+        "continuityNotes": "Spark's eye-light shifts from dim amber to warm gold during this shot."
+      },
+      {
+        "id": "shot-0202",
+        "logicalId": "shot-0202",
+        "entityType": "shot",
+        "name": "Spark Leans In",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Low angle looking up at Spark leaning toward the flower, head tilting.",
+        "sceneRef": {
+          "id": "scene-02"
+        },
+        "shotNumber": 2,
+        "targetDurationSec": 2,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          }
+        ],
+        "cinematicSpec": {
+          "shotType": "medium_close_up",
+          "cameraAngle": "low",
+          "cameraMovement": "dolly",
+          "focalLengthMm": 65,
+          "aperture": 2.0,
+          "framing": "Flower foreground bottom frame, Spark looming gently above",
+          "lighting": {
+            "mood": "tender",
+            "colorTemperatureKelvin": 6000
+          },
+          "style": {
+            "adjectives": [
+              "warm",
+              "gentle",
+              "Pixar-quality"
+            ]
+          }
+        }
+      },
+      {
+        "id": "shot-0301",
+        "logicalId": "shot-0301",
+        "entityType": "shot",
+        "name": "Debris Falls",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Wide-to-medium: metal chunk falls, Spark looks up in alarm.",
+        "sceneRef": {
+          "id": "scene-03"
+        },
+        "shotNumber": 1,
+        "targetDurationSec": 2,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          }
+        ],
+        "cinematicSpec": {
+          "shotType": "medium",
+          "cameraAngle": "low",
+          "cameraMovement": "tilt",
+          "focalLengthMm": 35,
+          "aperture": 4,
+          "framing": "Spark and flower in lower frame, debris entering from above",
+          "lighting": {
+            "mood": "ominous",
+            "colorTemperatureKelvin": 6800,
+            "contrastStyle": "chiaroscuro"
+          },
+          "style": {
+            "adjectives": [
+              "dramatic",
+              "tense",
+              "Pixar-quality"
+            ]
+          }
+        }
+      },
+      {
+        "id": "shot-0302",
+        "logicalId": "shot-0302",
+        "entityType": "shot",
+        "name": "Panel Detach",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Close-up: Spark detaches its torso panel and shields the flower.",
+        "sceneRef": {
+          "id": "scene-03"
+        },
+        "shotNumber": 2,
+        "targetDurationSec": 2,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          },
+          {
+            "id": "prop-panel"
+          }
+        ],
+        "cinematicSpec": {
+          "shotType": "close_up",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "static",
+          "focalLengthMm": 100,
+          "aperture": 2.0,
+          "framing": "Tight on Spark's hands detaching the panel, exposed wiring visible, sparks fly",
+          "lighting": {
+            "mood": "dramatic",
+            "colorTemperatureKelvin": 5500,
+            "contrastStyle": "chiaroscuro"
+          },
+          "style": {
+            "adjectives": [
+              "visceral",
+              "heroic",
+              "Pixar-quality"
+            ]
+          }
+        },
+        "continuityNotes": "The CLICK of detachment must be audible. Spark flinches \u2014 this costs something."
+      },
+      {
+        "id": "shot-0401",
+        "logicalId": "shot-0401",
+        "entityType": "shot",
+        "name": "Sunbeam",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Close-up of light hitting the flower, then widening to include Spark.",
+        "sceneRef": {
+          "id": "scene-04"
+        },
+        "shotNumber": 1,
+        "targetDurationSec": 1.5,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          },
+          {
+            "id": "prop-panel"
+          }
+        ],
+        "cinematicSpec": {
+          "shotType": "close_up",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "dolly",
+          "focalLengthMm": 85,
+          "aperture": 2.0,
+          "framing": "Flower and panel-shelter in golden light, Spark settling beside",
+          "lighting": {
+            "mood": "warm",
+            "style": "golden hour volumetric",
+            "colorTemperatureKelvin": 4500,
+            "contrastStyle": "natural"
+          },
+          "style": {
+            "adjectives": [
+              "luminous",
+              "hopeful",
+              "Pixar-quality"
+            ],
+            "palette": [
+              "#F6E05E",
+              "#48BB78",
+              "#E2A54A",
+              "#7B8794"
+            ]
+          }
+        }
+      },
+      {
+        "id": "shot-0402",
+        "logicalId": "shot-0402",
+        "entityType": "shot",
+        "name": "Pullback Reveal",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Slow pullback revealing Spark and flower as a tiny point of warmth in the vast junkyard. Fade out.",
+        "sceneRef": {
+          "id": "scene-04"
+        },
+        "shotNumber": 2,
+        "targetDurationSec": 1.5,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "propRefs": [
+          {
+            "id": "prop-flower"
+          },
+          {
+            "id": "prop-panel"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-junkyard"
+        },
+        "cinematicSpec": {
+          "shotType": "establishing",
+          "cameraAngle": "high",
+          "cameraMovement": "crane",
+          "focalLengthMm": 24,
+          "aperture": 8,
+          "depthOfField": "deep",
+          "framing": "Mirror of shot 0101 but now with a single point of golden warmth in the grey landscape",
+          "lighting": {
+            "mood": "bittersweet_hope",
+            "style": "single shaft of golden light in overcast",
+            "colorTemperatureKelvin": 5000
+          },
+          "style": {
+            "adjectives": [
+              "epic",
+              "intimate",
+              "hopeful",
+              "Pixar-quality"
+            ]
+          }
+        },
+        "continuityNotes": "This mirrors shot-0101 compositionally but the mood has transformed. The audience should feel the contrast."
+      }
+    ],
+    "styleGuides": [
+      {
+        "id": "sg-pixar",
+        "logicalId": "sg-pixar",
+        "entityType": "styleGuide",
+        "name": "Pixar House Style",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Core visual style rules for Pixar-quality rendering.",
+        "scope": "project",
+        "guidelines": {
+          "genres": [
+            "animated_short",
+            "3d_animation"
+          ],
+          "adjectives": [
+            "photorealistic_stylized",
+            "warm",
+            "expressive",
+            "cinematic"
+          ],
+          "palette": [
+            "#7B8794",
+            "#4A5568",
+            "#2D3748",
+            "#48BB78",
+            "#E2A54A",
+            "#F6E05E"
+          ],
+          "textureDescriptors": [
+            "subsurface_scattering",
+            "ray_traced_reflections",
+            "physically_based_materials"
+          ],
+          "cameraLanguage": "Motivated camera movement. Every move reveals or emphasizes emotion.",
+          "editingLanguage": "Slow dissolves. Let moments breathe. No cuts faster than 1.5 seconds."
+        },
+        "negativeStylePrompt": "flat shading, anime style, low-poly, wireframe, uncanny valley human faces, photorealistic humans, stock footage, 2D cel animation"
+      }
+    ]
+  },
+  "assetLibrary": {
+    "visualAssets": [
+      {
+        "id": "va-spark-ref",
+        "logicalId": "va-spark-ref",
+        "entityType": "visualAsset",
+        "name": "Spark Character Reference Sheet",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "visualType": "character_sheet",
+        "modality": "image",
+        "purpose": "Canonical reference for Spark's appearance from multiple angles.",
+        "isCanonicalReference": true,
+        "characterRefs": [
+          {
+            "id": "char-spark"
+          }
+        ],
+        "spec": {
+          "resolution": {
+            "widthPx": 4096,
+            "heightPx": 4096
+          },
+          "style": {
+            "adjectives": [
+              "turnaround_sheet",
+              "orthographic_views",
+              "Pixar-quality"
+            ]
+          }
+        }
+      },
+      {
+        "id": "va-junkyard-ref",
+        "logicalId": "va-junkyard-ref",
+        "entityType": "visualAsset",
+        "name": "Junkyard Environment Concept",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "visualType": "environment_concept",
+        "modality": "image",
+        "purpose": "Canonical reference for the junkyard environment.",
+        "isCanonicalReference": true,
+        "environmentRefs": [
+          {
+            "id": "env-junkyard"
+          }
+        ],
+        "spec": {
+          "resolution": {
+            "widthPx": 4096,
+            "heightPx": 2160
+          },
+          "style": {
+            "adjectives": [
+              "panoramic",
+              "desaturated",
+              "atmospheric",
+              "Pixar-quality"
+            ],
+            "palette": [
+              "#7B8794",
+              "#4A5568",
+              "#2D3748"
+            ]
+          }
+        }
+      }
+    ],
+    "audioAssets": [
+      {
+        "id": "aa-score",
+        "logicalId": "aa-score",
+        "entityType": "audioAsset",
+        "name": "Spark \u2014 Piano Score",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Solo piano score. Sparse, emotional. Minor key resolving to major.",
+        "audioType": "music",
+        "mood": "bittersweet_to_hopeful",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          },
+          {
+            "id": "scene-03"
+          },
+          {
+            "id": "scene-04"
+          }
+        ],
+        "technicalSpec": {
+          "sampleRateHz": 48000,
+          "bitDepth": 24,
+          "channelLayout": "stereo"
+        }
+      },
+      {
+        "id": "aa-sfx-ambient",
+        "logicalId": "aa-sfx-ambient",
+        "entityType": "audioAsset",
+        "name": "Junkyard Ambience",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Wind through metal, distant creaking. Desolate.",
+        "audioType": "ambient",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          },
+          {
+            "id": "scene-03"
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-click",
+        "logicalId": "aa-sfx-click",
+        "entityType": "audioAsset",
+        "name": "Panel Detach Click",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "The distinct mechanical click when Spark removes its torso panel.",
+        "audioType": "foley",
+        "shotRefs": [
+          {
+            "id": "shot-0302"
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-clang",
+        "logicalId": "aa-sfx-clang",
+        "entityType": "audioAsset",
+        "name": "Debris Impact Clang",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Metal debris hitting Spark's panel shield.",
+        "audioType": "foley",
+        "shotRefs": [
+          {
+            "id": "shot-0302"
+          }
+        ]
+      }
+    ],
+    "marketingAssets": [
+      {
+        "id": "ma-thumbnail",
+        "logicalId": "ma-thumbnail",
+        "entityType": "marketingAsset",
+        "name": "Spark \u2014 Thumbnail",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "marketingType": "thumbnail",
+        "targetPlatforms": [
+          "youtube",
+          "vimeo"
+        ],
+        "sourceSceneRefs": [
+          {
+            "id": "scene-04"
+          }
+        ],
+        "copy": {
+          "headline": "Spark",
+          "altText": "A tiny scrap-metal robot shelters a green sprout under golden light in a vast junkyard"
+        }
+      }
+    ],
+    "genericAssets": []
+  },
+  "orchestration": {
+    "workflows": [
+      {
+        "workflowId": "wf-main",
+        "name": "Spark Production Pipeline",
+        "status": "pending",
+        "nodes": [
+          {
+            "nodeId": "wfn-gen-refs",
+            "name": "Generate Reference Assets",
+            "nodeType": "generation",
+            "outputs": [
+              {
+                "id": "va-spark-ref"
+              },
+              {
+                "id": "va-junkyard-ref"
+              }
+            ],
+            "generationStep": {
+              "stepId": "gs-refs",
+              "operationType": "text_to_image",
+              "provider": "anthropic",
+              "tool": "claude-artifacts"
+            }
+          },
+          {
+            "nodeId": "wfn-gen-shots",
+            "name": "Generate Shot Clips",
+            "nodeType": "generation",
+            "inputs": [
+              {
+                "id": "va-spark-ref"
+              },
+              {
+                "id": "va-junkyard-ref"
+              }
+            ],
+            "generationStep": {
+              "stepId": "gs-shots",
+              "operationType": "text_to_video"
+            }
+          },
+          {
+            "nodeId": "wfn-gen-audio",
+            "name": "Generate Audio Assets",
+            "nodeType": "generation",
+            "generationStep": {
+              "stepId": "gs-audio",
+              "operationType": "text_to_audio"
+            }
+          },
+          {
+            "nodeId": "wfn-compose",
+            "name": "Compose Timeline",
+            "nodeType": "transform",
+            "inputs": [
+              {
+                "id": "wfn-gen-shots"
+              },
+              {
+                "id": "wfn-gen-audio"
+              }
+            ],
+            "operation": {
+              "opId": "op-compose",
+              "opType": "concat",
+              "clipRefs": [
+                {
+                  "id": "shot-0101"
+                },
+                {
+                  "id": "shot-0102"
+                },
+                {
+                  "id": "shot-0201"
+                },
+                {
+                  "id": "shot-0202"
+                },
+                {
+                  "id": "shot-0301"
+                },
+                {
+                  "id": "shot-0302"
+                },
+                {
+                  "id": "shot-0401"
+                },
+                {
+                  "id": "shot-0402"
+                }
+              ]
+            }
+          },
+          {
+            "nodeId": "wfn-render",
+            "name": "Final Render",
+            "nodeType": "render",
+            "inputs": [
+              {
+                "id": "wfn-compose"
+              }
+            ],
+            "renderPlanRef": {
+              "id": "rp-master"
+            }
+          },
+          {
+            "nodeId": "wfn-review",
+            "name": "Director Review",
+            "nodeType": "approval",
+            "inputs": [
+              {
+                "id": "wfn-render"
+              }
+            ],
+            "role": "director",
+            "approvalStatus": "pending"
+          }
+        ],
+        "edges": [
+          {
+            "fromNodeId": "wfn-gen-refs",
+            "toNodeId": "wfn-gen-shots"
+          },
+          {
+            "fromNodeId": "wfn-gen-shots",
+            "toNodeId": "wfn-compose"
+          },
+          {
+            "fromNodeId": "wfn-gen-audio",
+            "toNodeId": "wfn-compose"
+          },
+          {
+            "fromNodeId": "wfn-compose",
+            "toNodeId": "wfn-render"
+          },
+          {
+            "fromNodeId": "wfn-render",
+            "toNodeId": "wfn-review"
+          }
+        ]
+      }
+    ]
+  },
+  "assembly": {
+    "timelines": [
+      {
+        "id": "tl-master",
+        "logicalId": "tl-master",
+        "entityType": "timeline",
+        "name": "Master Timeline",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "durationSec": 15,
+        "frameRate": {
+          "fps": 24,
+          "mode": "constant"
+        },
+        "resolution": {
+          "widthPx": 3840,
+          "heightPx": 2160
+        },
+        "aspectRatio": {
+          "expression": "16:9",
+          "numerator": 16,
+          "denominator": 9
+        },
+        "videoClips": [
+          {
+            "clipId": "vc-01",
+            "sourceRef": {
+              "id": "shot-0101"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 2.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-02",
+            "sourceRef": {
+              "id": "shot-0102"
+            },
+            "timelineStartSec": 2.5,
+            "durationSec": 1.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-03",
+            "sourceRef": {
+              "id": "shot-0201"
+            },
+            "timelineStartSec": 4.0,
+            "durationSec": 2.0,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-04",
+            "sourceRef": {
+              "id": "shot-0202"
+            },
+            "timelineStartSec": 6.0,
+            "durationSec": 2.0,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-05",
+            "sourceRef": {
+              "id": "shot-0301"
+            },
+            "timelineStartSec": 8.0,
+            "durationSec": 2.0,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-06",
+            "sourceRef": {
+              "id": "shot-0302"
+            },
+            "timelineStartSec": 10.0,
+            "durationSec": 2.0,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-07",
+            "sourceRef": {
+              "id": "shot-0401"
+            },
+            "timelineStartSec": 12.0,
+            "durationSec": 1.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-08",
+            "sourceRef": {
+              "id": "shot-0402"
+            },
+            "timelineStartSec": 13.5,
+            "durationSec": 1.5,
+            "layerOrder": 0
+          }
+        ],
+        "audioClips": [
+          {
+            "clipId": "ac-01",
+            "sourceRef": {
+              "id": "aa-score"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 15,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "ac-02",
+            "sourceRef": {
+              "id": "aa-sfx-ambient"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 12,
+            "layerOrder": 1
+          },
+          {
+            "clipId": "ac-03",
+            "sourceRef": {
+              "id": "aa-sfx-click"
+            },
+            "timelineStartSec": 10.5,
+            "durationSec": 0.3,
+            "layerOrder": 2
+          },
+          {
+            "clipId": "ac-04",
+            "sourceRef": {
+              "id": "aa-sfx-clang"
+            },
+            "timelineStartSec": 11.0,
+            "durationSec": 0.5,
+            "layerOrder": 2
+          }
+        ]
+      }
+    ],
+    "editVersions": [
+      {
+        "id": "ev-01",
+        "logicalId": "ev-01",
+        "entityType": "editVersion",
+        "name": "First Assembly",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "timelineRef": {
+          "id": "tl-master"
+        },
+        "changeList": [
+          "Initial assembly of all 8 shots with score and SFX"
+        ]
+      }
+    ],
+    "renderPlans": [
+      {
+        "id": "rp-master",
+        "logicalId": "rp-master",
+        "entityType": "renderPlan",
+        "name": "Master Render Plan",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "sourceTimelineRef": {
+          "id": "tl-master"
+        },
+        "targetOutputRefs": [
+          {
+            "id": "fo-master"
+          }
+        ],
+        "compatibleRuntimes": [
+          "ffmpeg",
+          "custom",
+          "custom"
+        ],
+        "operations": [
+          {
+            "opId": "op-grade",
+            "opType": "colorGrade",
+            "inputRef": {
+              "id": "tl-master"
+            },
+            "intent": "Match Pixar warm-to-cool palette arc"
+          },
+          {
+            "opId": "op-encode",
+            "opType": "encode",
+            "inputRef": {
+              "id": "tl-master"
+            },
+            "compression": {
+              "codec": "H.265",
+              "profile": "Main 10",
+              "crf": 18
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "deliverables": [
+    {
+      "id": "fo-master",
+      "logicalId": "fo-master",
+      "entityType": "finalOutput",
+      "name": "Master Output \u2014 4K HDR",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "createdAt": "2026-03-28T15:12:54Z",
+      "updatedAt": "2026-03-28T15:12:54Z",
+      "outputType": "master",
+      "platform": "cinema_display",
+      "runtimeSec": 15,
+      "sourceTimelineRef": {
+        "id": "tl-master"
+      },
+      "renderPlanRef": {
+        "id": "rp-master"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipId": "rel-01",
+      "relationshipType": "illustrates",
+      "from": {
+        "id": "va-spark-ref"
+      },
+      "to": {
+        "id": "char-spark"
+      },
+      "notes": "Canonical character reference sheet for Spark"
+    },
+    {
+      "relationshipId": "rel-02",
+      "relationshipType": "illustrates",
+      "from": {
+        "id": "va-junkyard-ref"
+      },
+      "to": {
+        "id": "env-junkyard"
+      },
+      "notes": "Canonical environment concept for the junkyard"
+    },
+    {
+      "relationshipId": "rel-03",
+      "relationshipType": "scored_by",
+      "from": {
+        "id": "scene-01"
+      },
+      "to": {
+        "id": "aa-score"
+      },
+      "notes": "Piano score underlays entire piece"
+    },
+    {
+      "relationshipId": "rel-04",
+      "relationshipType": "derived_from",
+      "from": {
+        "id": "fo-master"
+      },
+      "to": {
+        "id": "tl-master"
+      }
+    }
+  ]
+}
