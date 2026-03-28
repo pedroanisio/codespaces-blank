@@ -421,10 +421,36 @@
           }
         ],
         "referenceAssetRefs": [
-          {
-            "id": "va-spark-ref"
-          }
+          { "id": "va-spark-ref" }
         ],
+        "generation": {
+          "mode": "ai_generated",
+          "steps": [
+            {
+              "stepId": "gs-char-spark",
+              "operationType": "text_to_image",
+              "provider": "anthropic",
+              "tool": "claude-artifacts",
+              "prompt": "Character turnaround sheet: tiny scrap-metal robot, sardine-tin torso, bottle-cap joints, wire legs, single camera-lens eye on flexible neck. 15cm tall. Scratched, dented. One leg slightly shorter. Pixar-quality 3D rendering.",
+              "negativePrompt": "flat shading, anime, low-poly, human features, facial expressions, mouth, nose",
+              "resolution": {
+                "widthPx": 4096,
+                "heightPx": 4096
+              },
+              "status": "pending"
+            }
+          ],
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Spark body proportions",
+              "ref": { "id": "va-spark-ref" },
+              "weight": 1.0,
+              "lockLevel": "hard",
+              "attributes": ["eye_color_behavior", "body_proportions", "surface_material", "height_ratio"]
+            }
+          ]
+        },
         "coherenceRequirements": {
           "required": true,
           "minSimilarityScore": 0.92,
@@ -477,10 +503,36 @@
           }
         ],
         "referenceAssetRefs": [
-          {
-            "id": "va-junkyard-ref"
-          }
-        ]
+          { "id": "va-junkyard-ref" }
+        ],
+        "generation": {
+          "mode": "ai_generated",
+          "steps": [
+            {
+              "stepId": "gs-env-junkyard",
+              "operationType": "text_to_image",
+              "provider": "anthropic",
+              "tool": "claude-artifacts",
+              "prompt": "Vast junkyard landscape, rusted metal, twisted scrap, overcast grey sky. Desaturated blue-grey palette. No vegetation. Pixar-quality environment, volumetric fog, depth haze, photorealistic metal textures. Panoramic 16:9.",
+              "negativePrompt": "green vegetation, warm colors, sunshine, people, animals, clean surfaces",
+              "resolution": {
+                "widthPx": 4096,
+                "heightPx": 2160
+              },
+              "status": "pending"
+            }
+          ],
+          "consistencyAnchors": [
+            {
+              "anchorType": "environment",
+              "name": "Junkyard color constraint",
+              "ref": { "id": "va-junkyard-ref" },
+              "weight": 1.0,
+              "lockLevel": "hard",
+              "attributes": ["color_palette", "desaturation_level", "fog_density", "metal_texture_style"]
+            }
+          ]
+        }
       }
     ],
     "props": [
@@ -890,7 +942,60 @@
             ]
           }
         },
-        "continuityNotes": "Spark's eye-light shifts from dim amber to warm gold during this shot."
+        "continuityNotes": "Spark's eye-light shifts from dim amber to warm gold during this shot.",
+        "generation": {
+          "mode": "ai_generated",
+          "steps": [
+            {
+              "stepId": "gs-shot-0201",
+              "operationType": "text_to_video",
+              "prompt": "Close-up: a tiny scrap-metal robot's single camera-lens eye pivots downward. Rack focus from robot's eye (sharp) to a tiny green sprout between rusted gears (sharp). The robot's eye-light shifts from dim amber to warm gold. Pixar-quality 3D animation, shallow depth of field, 85mm f/1.8.",
+              "negativePrompt": "flat shading, anime, dialogue, text, human features, bright colors in background",
+              "seed": 42,
+              "guidanceScale": 7.5,
+              "inferenceSteps": 50,
+              "durationSec": 2.0,
+              "resolution": {
+                "widthPx": 3840,
+                "heightPx": 2160
+              },
+              "frameRate": {
+                "fps": 24,
+                "mode": "constant"
+              },
+              "referenceAssets": [
+                {
+                  "ref": { "id": "va-spark-ref" },
+                  "role": "character_reference",
+                  "weight": 0.9,
+                  "lockAttributes": ["eye_color_behavior", "body_proportions"]
+                },
+                {
+                  "ref": { "id": "va-junkyard-ref" },
+                  "role": "environment_reference",
+                  "weight": 0.7
+                }
+              ],
+              "consistencyAnchors": [
+                {
+                  "anchorType": "character",
+                  "name": "Spark identity",
+                  "ref": { "id": "char-spark" },
+                  "weight": 1.0,
+                  "lockLevel": "hard"
+                },
+                {
+                  "anchorType": "style",
+                  "name": "Pixar rendering quality",
+                  "ref": { "id": "sg-pixar" },
+                  "weight": 0.85,
+                  "lockLevel": "medium"
+                }
+              ],
+              "status": "pending"
+            }
+          ]
+        }
       },
       {
         "id": "shot-0202",
@@ -1289,21 +1394,50 @@
         },
         "createdAt": "2026-03-28T15:12:54Z",
         "updatedAt": "2026-03-28T15:12:54Z",
-        "description": "Solo piano score. Sparse, emotional. Minor key resolving to major.",
+        "description": "Solo piano score. Sparse, emotional. Minor key throughout beats 1-3, resolving to major in the final 3 seconds. A single melodic phrase introduced at the discovery (beat 2) returns and resolves at the sunbeam (beat 4).",
         "audioType": "music",
         "mood": "bittersweet_to_hopeful",
         "sceneRefs": [
+          { "id": "scene-01" },
+          { "id": "scene-02" },
+          { "id": "scene-03" },
+          { "id": "scene-04" }
+        ],
+        "syncPoints": [
           {
-            "id": "scene-01"
+            "label": "score_entry",
+            "time": { "startSec": 1.0, "durationSec": 0.5 },
+            "toleranceFrames": 6,
+            "beat": 1
           },
           {
-            "id": "scene-02"
+            "label": "melodic_phrase_intro",
+            "time": { "startSec": 4.5, "durationSec": 2.0 },
+            "toleranceFrames": 4,
+            "beat": 2
           },
           {
-            "id": "scene-03"
+            "label": "tension_build",
+            "time": { "startSec": 8.5, "durationSec": 1.5 },
+            "toleranceFrames": 4,
+            "beat": 3
           },
           {
-            "id": "scene-04"
+            "label": "silence_breath",
+            "time": { "startSec": 11.5, "endSec": 12.0, "durationSec": 0.5 },
+            "toleranceFrames": 2
+          },
+          {
+            "label": "key_change_minor_to_major",
+            "time": { "startSec": 12.0, "durationSec": 0.5 },
+            "toleranceFrames": 3,
+            "beat": 4
+          },
+          {
+            "label": "melodic_phrase_resolution",
+            "time": { "startSec": 13.0, "endSec": 14.5, "durationSec": 1.5 },
+            "toleranceFrames": 6,
+            "beat": 4
           }
         ],
         "technicalSpec": {
@@ -1367,12 +1501,154 @@
         },
         "createdAt": "2026-03-28T15:12:54Z",
         "updatedAt": "2026-03-28T15:12:54Z",
-        "description": "Metal debris hitting Spark's panel shield.",
+        "description": "Metal debris hitting Spark's panel shield. Resonant, slightly distant — the panel absorbs the blow.",
         "audioType": "foley",
         "shotRefs": [
           {
             "id": "shot-0302"
           }
+        ]
+      },
+      {
+        "id": "aa-sfx-footsteps",
+        "logicalId": "aa-sfx-footsteps",
+        "entityType": "audioAsset",
+        "name": "Spark Footsteps",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Tiny metallic taps — Spark's wire legs picking across rusted surfaces. Rhythm matches animation cadence. Slightly irregular due to one shorter leg (the waddle).",
+        "audioType": "foley",
+        "sceneRefs": [
+          { "id": "scene-01" },
+          { "id": "scene-02" }
+        ]
+      },
+      {
+        "id": "aa-sfx-servo",
+        "logicalId": "aa-sfx-servo",
+        "entityType": "audioAsset",
+        "name": "Spark Servo Whirs",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Subtle micro-motor sounds: eye pivot at discovery, head tilt when examining flower, arm reach during sacrifice. Each movement has a soft mechanical signature.",
+        "audioType": "foley",
+        "sceneRefs": [
+          { "id": "scene-02" },
+          { "id": "scene-03" }
+        ]
+      },
+      {
+        "id": "aa-sfx-eyelight",
+        "logicalId": "aa-sfx-eyelight",
+        "entityType": "audioAsset",
+        "name": "Spark Eye-Light Hum",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "A low continuous drone that shifts pitch and warmth with the eye-light color. Dim amber = low, slightly buzzy. Warm gold = higher, rounder, almost musical. Steady gold (final) = sustained warm tone that blends into the score's resolution.",
+        "audioType": "sfx",
+        "sceneRefs": [
+          { "id": "scene-01" },
+          { "id": "scene-02" },
+          { "id": "scene-03" },
+          { "id": "scene-04" }
+        ],
+        "syncPoints": [
+          {
+            "label": "amber_to_gold_shift",
+            "time": { "startSec": 4.5, "endSec": 5.5, "durationSec": 1.0 },
+            "toleranceFrames": 3
+          },
+          {
+            "label": "bright_gold_determination",
+            "time": { "startSec": 9.5, "endSec": 10.0, "durationSec": 0.5 },
+            "toleranceFrames": 2
+          },
+          {
+            "label": "steady_gold_peace",
+            "time": { "startSec": 12.5, "endSec": 15.0, "durationSec": 2.5 },
+            "toleranceFrames": 6
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-debris-groan",
+        "logicalId": "aa-sfx-debris-groan",
+        "entityType": "audioAsset",
+        "name": "Debris Groan",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Metal structure above begins to give way — a low, ominous groan that precedes the fall. Builds tension before the sacrifice.",
+        "audioType": "foley",
+        "shotRefs": [
+          { "id": "shot-0301" }
+        ]
+      },
+      {
+        "id": "aa-sfx-debris-fall",
+        "logicalId": "aa-sfx-debris-fall",
+        "entityType": "audioAsset",
+        "name": "Debris Fall Whoosh",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "The sound of the metal chunk falling through air toward the flower. A rushing scrape that accelerates — Doppler-like. Ends abruptly at the CLANG of impact.",
+        "audioType": "foley",
+        "shotRefs": [
+          { "id": "shot-0301" },
+          { "id": "shot-0302" }
+        ]
+      },
+      {
+        "id": "aa-sfx-crackle",
+        "logicalId": "aa-sfx-crackle",
+        "entityType": "audioAsset",
+        "name": "Exposed Wiring Crackle",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Electrical sparking and crackling from Spark's exposed internals after the panel is removed. Brief, painful, then subsides — Spark absorbs the cost.",
+        "audioType": "foley",
+        "shotRefs": [
+          { "id": "shot-0302" }
+        ]
+      },
+      {
+        "id": "aa-ambient-warm",
+        "logicalId": "aa-ambient-warm",
+        "entityType": "audioAsset",
+        "name": "Junkyard Ambience — Warm",
+        "version": {
+          "number": "1.0.0",
+          "state": "approved"
+        },
+        "createdAt": "2026-03-28T15:12:54Z",
+        "updatedAt": "2026-03-28T15:12:54Z",
+        "description": "Scene 4 ambient: the wind dies down, the creaking stops. A near-silence — then the faintest warmth: a distant soft tone, almost like the junkyard exhaling. The world has shifted.",
+        "audioType": "ambient",
+        "sceneRefs": [
+          { "id": "scene-04" }
         ]
       }
     ],
@@ -1655,40 +1931,89 @@
         ],
         "audioClips": [
           {
-            "clipId": "ac-01",
-            "sourceRef": {
-              "id": "aa-score"
-            },
+            "clipId": "ac-score",
+            "sourceRef": { "id": "aa-score" },
             "timelineStartSec": 0,
             "durationSec": 15,
             "layerOrder": 0
           },
           {
-            "clipId": "ac-02",
-            "sourceRef": {
-              "id": "aa-sfx-ambient"
-            },
+            "clipId": "ac-ambient-grey",
+            "sourceRef": { "id": "aa-sfx-ambient" },
             "timelineStartSec": 0,
-            "durationSec": 12,
-            "layerOrder": 1
+            "durationSec": 12.5,
+            "layerOrder": 1,
+            "transitionOut": {
+              "type": "fade",
+              "durationSec": 1.0
+            }
           },
           {
-            "clipId": "ac-03",
-            "sourceRef": {
-              "id": "aa-sfx-click"
-            },
+            "clipId": "ac-ambient-warm",
+            "sourceRef": { "id": "aa-ambient-warm" },
+            "timelineStartSec": 12.0,
+            "durationSec": 3.0,
+            "layerOrder": 1,
+            "transitionIn": {
+              "type": "fade",
+              "durationSec": 0.8
+            }
+          },
+          {
+            "clipId": "ac-eyelight",
+            "sourceRef": { "id": "aa-sfx-eyelight" },
+            "timelineStartSec": 0,
+            "durationSec": 15,
+            "layerOrder": 2
+          },
+          {
+            "clipId": "ac-footsteps",
+            "sourceRef": { "id": "aa-sfx-footsteps" },
+            "timelineStartSec": 0.5,
+            "durationSec": 7.5,
+            "layerOrder": 3
+          },
+          {
+            "clipId": "ac-servo",
+            "sourceRef": { "id": "aa-sfx-servo" },
+            "timelineStartSec": 4.0,
+            "durationSec": 8.0,
+            "layerOrder": 3
+          },
+          {
+            "clipId": "ac-debris-groan",
+            "sourceRef": { "id": "aa-sfx-debris-groan" },
+            "timelineStartSec": 8.3,
+            "durationSec": 1.2,
+            "layerOrder": 4
+          },
+          {
+            "clipId": "ac-debris-fall",
+            "sourceRef": { "id": "aa-sfx-debris-fall" },
+            "timelineStartSec": 9.5,
+            "durationSec": 1.5,
+            "layerOrder": 4
+          },
+          {
+            "clipId": "ac-click",
+            "sourceRef": { "id": "aa-sfx-click" },
             "timelineStartSec": 10.5,
             "durationSec": 0.3,
-            "layerOrder": 2
+            "layerOrder": 4
           },
           {
-            "clipId": "ac-04",
-            "sourceRef": {
-              "id": "aa-sfx-clang"
-            },
+            "clipId": "ac-clang",
+            "sourceRef": { "id": "aa-sfx-clang" },
             "timelineStartSec": 11.0,
             "durationSec": 0.5,
-            "layerOrder": 2
+            "layerOrder": 4
+          },
+          {
+            "clipId": "ac-crackle",
+            "sourceRef": { "id": "aa-sfx-crackle" },
+            "timelineStartSec": 11.1,
+            "durationSec": 0.9,
+            "layerOrder": 5
           }
         ]
       }
@@ -1734,25 +2059,80 @@
           }
         ],
         "compatibleRuntimes": [
-          "ffmpeg",
-          "custom",
-          "custom"
+          "ffmpeg"
         ],
         "operations": [
           {
+            "opId": "op-audio-mix",
+            "opType": "audioMix",
+            "tracks": [
+              {
+                "audioRef": { "id": "aa-score" },
+                "gainDb": -3.0,
+                "pan": 0
+              },
+              {
+                "audioRef": { "id": "aa-sfx-ambient" },
+                "gainDb": -8.0,
+                "pan": 0
+              },
+              {
+                "audioRef": { "id": "aa-ambient-warm" },
+                "gainDb": -10.0,
+                "pan": 0
+              },
+              {
+                "audioRef": { "id": "aa-sfx-eyelight" },
+                "gainDb": -18.0,
+                "pan": 0
+              },
+              {
+                "audioRef": { "id": "aa-sfx-footsteps" },
+                "gainDb": -12.0,
+                "pan": -0.1
+              },
+              {
+                "audioRef": { "id": "aa-sfx-servo" },
+                "gainDb": -14.0,
+                "pan": 0.05
+              },
+              {
+                "audioRef": { "id": "aa-sfx-debris-groan" },
+                "gainDb": -6.0,
+                "pan": 0.3
+              },
+              {
+                "audioRef": { "id": "aa-sfx-debris-fall" },
+                "gainDb": -4.0,
+                "pan": 0.2
+              },
+              {
+                "audioRef": { "id": "aa-sfx-click" },
+                "gainDb": -2.0,
+                "pan": 0
+              },
+              {
+                "audioRef": { "id": "aa-sfx-clang" },
+                "gainDb": -3.0,
+                "pan": 0.15
+              },
+              {
+                "audioRef": { "id": "aa-sfx-crackle" },
+                "gainDb": -8.0,
+                "pan": -0.05
+              }
+            ]
+          },
+          {
             "opId": "op-grade",
             "opType": "colorGrade",
-            "inputRef": {
-              "id": "tl-master"
-            },
-            "intent": "Match Pixar warm-to-cool palette arc"
+            "inputRef": { "id": "tl-master" },
+            "intent": "Match Pixar warm-to-cool palette arc. Desaturated blue-grey scenes 1-3, golden warmth introduced at 12s."
           },
           {
             "opId": "op-encode",
             "opType": "encode",
-            "inputRef": {
-              "id": "tl-master"
-            },
+            "inputRef": { "id": "tl-master" },
             "compression": {
               "codec": "H.265",
               "profile": "Main 10",
@@ -1790,45 +2170,91 @@
     {
       "relationshipId": "rel-01",
       "relationshipType": "illustrates",
-      "from": {
-        "id": "va-spark-ref"
-      },
-      "to": {
-        "id": "char-spark"
-      },
+      "from": { "id": "va-spark-ref" },
+      "to": { "id": "char-spark" },
       "notes": "Canonical character reference sheet for Spark"
     },
     {
       "relationshipId": "rel-02",
       "relationshipType": "illustrates",
-      "from": {
-        "id": "va-junkyard-ref"
-      },
-      "to": {
-        "id": "env-junkyard"
-      },
+      "from": { "id": "va-junkyard-ref" },
+      "to": { "id": "env-junkyard" },
       "notes": "Canonical environment concept for the junkyard"
     },
     {
       "relationshipId": "rel-03",
       "relationshipType": "scored_by",
-      "from": {
-        "id": "scene-01"
-      },
-      "to": {
-        "id": "aa-score"
-      },
-      "notes": "Piano score underlays entire piece"
+      "from": { "id": "prj-spark" },
+      "to": { "id": "aa-score" },
+      "notes": "Piano score underlays entire 15-second piece, all 4 scenes"
     },
     {
       "relationshipId": "rel-04",
       "relationshipType": "derived_from",
-      "from": {
-        "id": "fo-master"
-      },
-      "to": {
-        "id": "tl-master"
-      }
+      "from": { "id": "fo-master" },
+      "to": { "id": "tl-master" }
+    },
+    {
+      "relationshipId": "rel-05",
+      "relationshipType": "narrated_by",
+      "from": { "id": "prj-spark" },
+      "to": { "id": "aa-sfx-eyelight" },
+      "notes": "The eye-light hum is the closest thing to a narrator — its tonal shifts track Spark's emotional arc"
+    },
+    {
+      "relationshipId": "rel-06",
+      "relationshipType": "enhances",
+      "from": { "id": "aa-sfx-footsteps" },
+      "to": { "id": "char-spark" },
+      "notes": "Footstep rhythm gives Spark physical presence and personality (the waddle)"
+    },
+    {
+      "relationshipId": "rel-07",
+      "relationshipType": "references",
+      "from": { "id": "shot-0402" },
+      "to": { "id": "shot-0101" },
+      "notes": "Final pullback mirrors opening crane shot — same composition, transformed mood"
+    },
+    {
+      "relationshipId": "rel-08",
+      "relationshipType": "depends_on",
+      "from": { "id": "aa-sfx-crackle" },
+      "to": { "id": "aa-sfx-click" },
+      "notes": "Crackle immediately follows the click — must be synced within 2 frames"
+    }
+  ],
+  "dependencies": [
+    {
+      "edgeId": "dep-01",
+      "fromRef": { "id": "va-spark-ref" },
+      "toRef": { "id": "char-spark" },
+      "dependencyType": "derives_from",
+      "required": true,
+      "notes": "Character reference sheet must be generated before any shot containing Spark"
+    },
+    {
+      "edgeId": "dep-02",
+      "fromRef": { "id": "va-junkyard-ref" },
+      "toRef": { "id": "env-junkyard" },
+      "dependencyType": "derives_from",
+      "required": true,
+      "notes": "Environment concept must be approved before shot generation begins"
+    },
+    {
+      "edgeId": "dep-03",
+      "fromRef": { "id": "tl-master" },
+      "toRef": { "id": "aa-score" },
+      "dependencyType": "requires",
+      "required": true,
+      "notes": "Timeline assembly requires finalized score with sync points"
+    },
+    {
+      "edgeId": "dep-04",
+      "fromRef": { "id": "fo-master" },
+      "toRef": { "id": "rp-master" },
+      "dependencyType": "requires",
+      "required": true,
+      "notes": "Final output requires completed render plan execution"
     }
   ]
 }
