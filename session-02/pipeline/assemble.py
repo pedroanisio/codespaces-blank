@@ -1104,6 +1104,16 @@ def _encode_cmd(
     audio_cfg = qp.get("audio") or {}
     sample_rate = audio_cfg.get("sampleRateHz", 44100)
 
+    # Map standard codec names to ffmpeg encoder names
+    _CODEC_TO_FFMPEG = {
+        "H.264": "libx264", "h264": "libx264", "h.264": "libx264", "AVC": "libx264",
+        "H.265": "libx265", "h265": "libx265", "h.265": "libx265", "HEVC": "libx265",
+        "VP9": "libvpx-vp9", "vp9": "libvpx-vp9",
+        "AV1": "libsvtav1", "av1": "libsvtav1",
+        "libx264": "libx264", "libx265": "libx265",
+        "libvpx-vp9": "libvpx-vp9", "libsvtav1": "libsvtav1",
+    }
+
     codec = "libx264"
     bitrate_flag: list[str] = ["-crf", "18"]
     profile_flag: list[str] = []
@@ -1112,13 +1122,17 @@ def _encode_cmd(
             if op.get("opType") == "encode":
                 comp = op.get("compression") or {}
                 if comp.get("codec"):
-                    codec = comp["codec"]
+                    raw_codec = comp["codec"]
+                    codec = _CODEC_TO_FFMPEG.get(raw_codec, raw_codec)
                 if comp.get("bitrateMbps"):
                     bitrate_flag = ["-b:v", f"{comp['bitrateMbps']}M"]
                 elif comp.get("crf"):
                     bitrate_flag = ["-crf", str(comp["crf"])]
                 if comp.get("profile"):
-                    profile_flag = ["-profile:v", comp["profile"]]
+                    # Normalize profile names for ffmpeg (e.g. "Main 10" → "main10")
+                    raw_profile = comp["profile"]
+                    normalized = raw_profile.lower().replace(" ", "")
+                    profile_flag = ["-profile:v", normalized]
                 if comp.get("maxBitrateMbps"):
                     bitrate_flag += ["-maxrate", f"{comp['maxBitrateMbps']}M",
                                      "-bufsize", f"{comp['maxBitrateMbps'] * 2}M"]
@@ -1566,4 +1580,297 @@ def assemble(
     if final_path.exists():
         populate_final_output(instance, final_path)
 
+    return final_path
+
+
+# ── Scene-parallel rendering ─────────────────────────────────────────────────
+
+def assemble_scene(
+    context: "SceneRenderContext",
+    shot_clips: dict[str, Path],
+    audio_files: dict[str, Path],
+    output_dir: Path,
+) -> Path:
+    """Render a single scene to an independent MP4 segment.
+
+    Steps:
+      1. Concat this scene's shots (intra-scene cuts only)
+      2. Build a per-scene audio mix from sliced tracks
+      3. Apply scene-scoped color grade
+      4. Encode to near-lossless intermediate (CRF 1)
+
+    Parameters
+    ----------
+    context     : SceneRenderContext from scene_splitter.split_instance_by_scene()
+    shot_clips  : {shot_id: Path} — pre-generated shot video clips
+    audio_files : {audio_asset_id: Path} — pre-generated audio files
+    output_dir  : Where to write intermediate files and the scene segment
+
+    Returns
+    -------
+    Path to the rendered scene segment MP4.
+    """
+    from pipeline.scene_splitter import SceneRenderContext  # noqa: F811
+
+    scene_id = context.scene.get("id") or context.scene.get("logicalId") or f"scene-{context.scene_index}"
+    scene_name = context.scene.get("name") or scene_id
+    inter = output_dir / "intermediate" / scene_id
+    inter.mkdir(parents=True, exist_ok=True)
+
+    log.info("assemble_scene_start", scene=scene_name, shots=len(context.shots),
+             audio_slices=len(context.audio_slices))
+
+    # ── 1. Concat this scene's shots ─────────────────────────────────────────
+    scene_shot_ids = {s.get("id", "") for s in context.shots} | {s.get("logicalId", "") for s in context.shots}
+    ordered_clips: list[Path] = []
+    target_durations: list[float] = []
+    for shot in context.shots:
+        sid = shot.get("logicalId") or shot.get("id") or ""
+        clip = shot_clips.get(sid)
+        if clip and clip.exists():
+            ordered_clips.append(clip)
+            target_durations.append(float(shot.get("targetDurationSec", 0)))
+        else:
+            # Try matching by id if logicalId didn't match
+            alt_id = shot.get("id") or ""
+            clip = shot_clips.get(alt_id)
+            if clip and clip.exists():
+                ordered_clips.append(clip)
+                target_durations.append(float(shot.get("targetDurationSec", 0)))
+            else:
+                log.warning("scene_shot_missing", scene=scene_name, shot=sid)
+
+    if not ordered_clips:
+        raise RuntimeError(f"No shot clips for scene {scene_name}")
+
+    concat_path = inter / "01_concat.mp4"
+    # No cross-scene transitions for intra-scene concat (just cuts)
+    _concat_clips_ffmpeg(ordered_clips, concat_path, target_durations=target_durations)
+    log.info("scene_concat_done", scene=scene_name, clips=len(ordered_clips))
+
+    # ── 2. Audio mix from sliced tracks ──────────────────────────────────────
+    scene_duration = context.scene_end_sec - context.scene_start_sec
+    mixed_path = inter / "02_mixed.mp4"
+
+    if context.audio_slices:
+        cmd = _build_scene_audio_mix_cmd(
+            concat_path, context.audio_slices, audio_files,
+            scene_duration, mixed_path,
+        )
+        result = subprocess.run(cmd, capture_output=True)
+        if result.returncode != 0:
+            log.error("scene_audio_mix_failed", scene=scene_name,
+                      stderr=result.stderr.decode()[:500])
+            shutil.copy(concat_path, mixed_path)
+        else:
+            log.info("scene_audio_mix_done", scene=scene_name,
+                     tracks=len(context.audio_slices))
+    else:
+        shutil.copy(concat_path, mixed_path)
+
+    # ── 3. Color grade ───────────────────────────────────────────────────────
+    graded_path = inter / "03_graded.mp4"
+    params = context.color_grade_params
+    cmd = _color_grade_cmd(mixed_path, params, 1.0, graded_path)
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        log.error("scene_color_grade_failed", scene=scene_name,
+                  stderr=result.stderr.decode()[:500])
+        shutil.copy(mixed_path, graded_path)
+    else:
+        log.info("scene_color_grade_done", scene=scene_name, params=params)
+
+    # ── 4. Encode to intermediate ────────────────────────────────────────────
+    scene_path = output_dir / f"{scene_id}.mp4"
+
+    # For scene segments, use near-lossless CRF 1 as intermediate
+    # (the stitch pass does the final encode)
+    cmd = [
+        "ffmpeg", "-y", "-i", str(graded_path),
+        "-c:v", "libx264", "-preset", "fast", "-crf", "1",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "192k",
+        "-movflags", "+faststart",
+        str(scene_path),
+    ]
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        log.error("scene_encode_failed", scene=scene_name,
+                  stderr=result.stderr.decode()[:500])
+        shutil.copy(graded_path, scene_path)
+
+    log.info("assemble_scene_complete", scene=scene_name, output=scene_path.name)
+    return scene_path
+
+
+def _build_scene_audio_mix_cmd(
+    video_path: Path,
+    audio_slices: list,
+    audio_files: dict[str, Path],
+    scene_duration: float,
+    out_path: Path,
+) -> list[str]:
+    """Build FFmpeg command to mix sliced audio tracks onto a scene's video.
+
+    Each AudioSlice has already been intersected with the scene's time range
+    and remapped to scene-local time (0-based).
+    """
+    inputs: list[str] = ["-i", str(video_path)]
+    filter_parts: list[str] = []
+    mix_inputs: list[str] = []
+    valid_tracks = 0
+
+    for idx, audio_slice in enumerate(audio_slices):
+        audio_path = audio_files.get(audio_slice.audio_asset_id)
+        if not audio_path or not audio_path.exists():
+            continue
+
+        # Compute the portion of the source file to use
+        # The source file covers the full asset; we need to seek to
+        # source_start_sec and take (source_end - source_start) seconds
+        source_offset = audio_slice.source_start_sec
+        slice_duration = audio_slice.source_end_sec - audio_slice.source_start_sec
+
+        inputs += ["-i", str(audio_path)]
+        stream = idx + 1 + (valid_tracks - idx if valid_tracks != idx else 0)
+        stream = valid_tracks + 1  # corrected: stream index = 1-based valid track count
+
+        audio_type = audio_slice.audio_asset.get("audioType", "")
+        chain = f"[{stream}:a]"
+
+        # Seek into the source file to the scene's portion
+        # For full-span tracks (score, ambient), atrim selects the scene window
+        chain += f"atrim=start={source_offset}:duration={slice_duration},asetpts=PTS-STARTPTS,"
+
+        # Delay to scene-local position
+        delay_ms = int(audio_slice.local_start_sec * 1000)
+        if delay_ms > 0:
+            chain += f"adelay={delay_ms}|{delay_ms},"
+
+        # Pad to scene duration
+        chain += f"apad=whole_dur={scene_duration}"
+
+        # Gain
+        if audio_slice.gain_db != 0:
+            chain += f",volume={audio_slice.gain_db}dB"
+
+        # Fades
+        if audio_slice.fade_in_sec > 0:
+            chain += f",afade=t=in:d={audio_slice.fade_in_sec:.2f}"
+        if audio_slice.fade_out_sec > 0:
+            fade_start = slice_duration - audio_slice.fade_out_sec
+            if fade_start > 0:
+                chain += f",afade=t=out:st={fade_start:.2f}:d={audio_slice.fade_out_sec:.2f}"
+
+        # Pan
+        if audio_slice.pan != 0:
+            left_gain = max(0, 1.0 - audio_slice.pan)
+            right_gain = max(0, 1.0 + audio_slice.pan)
+            chain += f",pan=stereo|c0={left_gain:.2f}*c0|c1={right_gain:.2f}*c0"
+
+        tag = f"[a{valid_tracks}]"
+        filter_parts.append(chain + tag)
+        mix_inputs.append(tag)
+        valid_tracks += 1
+
+    if not mix_inputs:
+        return ["ffmpeg", "-y", "-i", str(video_path), "-c", "copy", str(out_path)]
+
+    mix_filter = "".join(mix_inputs) + f"amix=inputs={valid_tracks}:normalize=0[aout]"
+    filter_parts.append(mix_filter)
+
+    return [
+        "ffmpeg", "-y",
+        *inputs,
+        "-filter_complex", ";".join(filter_parts),
+        "-map", "0:v",
+        "-map", "[aout]",
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "192k",
+        str(out_path),
+    ]
+
+
+def stitch_scenes(
+    scene_segments: list[Path],
+    transitions: list[dict],
+    output_dir: Path,
+    instance: dict,
+) -> Path:
+    """Join pre-rendered scene segments into the final deliverable.
+
+    Parameters
+    ----------
+    scene_segments : Ordered list of scene MP4 file paths.
+    transitions    : List of transition specs between consecutive scenes.
+                     Length must be len(scene_segments) - 1.
+                     Each dict has 'type' and 'durationSec'.
+    output_dir     : Output directory for the final file.
+    instance       : Full v3 instance (for qualityProfile and project name).
+
+    Returns
+    -------
+    Path to the final stitched and encoded video.
+    """
+    if not scene_segments:
+        raise RuntimeError("No scene segments to stitch")
+
+    inter = output_dir / "intermediate" / "stitch"
+    inter.mkdir(parents=True, exist_ok=True)
+
+    project_name = (
+        (instance.get("project") or {}).get("name", "output")
+        .lower().replace(" ", "-")[:40]
+    )
+
+    # ── Step 1: Concatenate scene segments with cross-scene transitions ───────
+    concat_path = inter / "01_stitch_concat.mp4"
+
+    # Pad transitions to correct length
+    while len(transitions) < len(scene_segments) - 1:
+        transitions.append({"type": "cut", "durationSec": 0})
+
+    # Build pseudo-scenes for _concat_clips_ffmpeg transition support
+    pseudo_scenes: list[dict] = []
+    for i in range(len(scene_segments)):
+        scene_dict: dict = {"shotRefs": [{"id": f"seg-{i}"}]}
+        if i < len(transitions):
+            scene_dict["transitionOut"] = transitions[i]
+        if i > 0:
+            scene_dict["transitionIn"] = transitions[i - 1]
+        pseudo_scenes.append(scene_dict)
+
+    # Get actual durations for each segment
+    segment_durations = [_get_clip_duration(p) for p in scene_segments]
+
+    _concat_clips_ffmpeg(
+        scene_segments, concat_path,
+        scenes=pseudo_scenes,
+        target_durations=segment_durations,
+    )
+    log.info("stitch_concat_done", segments=len(scene_segments))
+
+    # ── Step 2: Final encode per qualityProfile ──────────────────────────────
+    quality_profiles = instance.get("qualityProfiles") or []
+    qp = (quality_profiles[0] if quality_profiles else {}).get("profile") or {}
+    audio_codec, audio_bitrate = _resolve_audio_codec(instance)
+    render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
+    render_plan = render_plans[0] if render_plans else {}
+
+    final_path = output_dir / f"{project_name}.mp4"
+    cmd = _encode_cmd(
+        concat_path, qp, final_path,
+        render_plan=render_plan,
+        audio_codec=audio_codec,
+        audio_bitrate=audio_bitrate,
+    )
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        log.error("stitch_encode_failed", stderr=result.stderr.decode()[:500])
+        shutil.copy(concat_path, final_path)
+
+    if final_path.exists():
+        populate_final_output(instance, final_path)
+
+    log.info("stitch_complete", output=final_path.name)
     return final_path

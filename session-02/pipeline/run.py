@@ -46,6 +46,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -309,6 +310,129 @@ def _run_dry(instance: dict, output_dir: Path) -> None:
     print(f"\n  No APIs called. No files written.\n")
 
 
+def _run_render_scene(instance: dict, output_dir: Path, scene_id: str, *, verbose: bool) -> Path:
+    """Render a single scene independently. Returns path to scene MP4."""
+    from pipeline.scene_splitter import split_instance_by_scene
+    from pipeline.assemble import assemble_scene
+
+    log.info("─── %s ───", "scene_render")
+    log.info("Scene: %s", scene_id)
+
+    contexts = split_instance_by_scene(instance)
+    target = None
+    for ctx in contexts:
+        ctx_id = ctx.scene.get("id") or ctx.scene.get("logicalId") or ""
+        if ctx_id == scene_id:
+            target = ctx
+            break
+
+    if target is None:
+        available = [c.scene.get("id", "?") for c in contexts]
+        raise ValueError(f"Scene '{scene_id}' not found. Available: {available}")
+
+    # Generate only this scene's shots + audio
+    t_gen = time.perf_counter()
+    log.info("─── %s ───", "generation (scene-scoped)")
+
+    shot_clips: dict[str, Path] = {}
+    audio_files: dict[str, Path] = {}
+
+    def _gen_shots():
+        return generate_shots(instance, output_dir, scene_filter=scene_id)
+
+    def _gen_audio():
+        return generate_audio(instance, output_dir, scene_filter=scene_id)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        fut_shots = pool.submit(_gen_shots)
+        fut_audio = pool.submit(_gen_audio)
+        for fut in as_completed([fut_shots, fut_audio]):
+            result = fut.result()
+            if fut is fut_shots:
+                shot_clips = result
+            else:
+                audio_files = result
+
+    log.info("Scene generation: %d shots, %d audio in %.1fs",
+             len(shot_clips), len(audio_files), time.perf_counter() - t_gen)
+
+    # Assemble single scene
+    log.info("─── %s ───", "assembly (scene)")
+    return assemble_scene(target, shot_clips, audio_files, output_dir)
+
+
+def _run_render_parallel(instance: dict, output_dir: Path, *, verbose: bool) -> Path:
+    """Render all scenes in parallel, then stitch. Returns path to final MP4."""
+    from pipeline.scene_splitter import split_instance_by_scene
+    from pipeline.assemble import assemble_scene, stitch_scenes
+
+    log.info("─── %s ───", "parallel_scene_render")
+
+    contexts = split_instance_by_scene(instance)
+    if not contexts:
+        raise RuntimeError("No scenes found in instance")
+
+    log.info("Splitting into %d independent scene renders", len(contexts))
+
+    # ── Step 1: Generate ALL shots + audio (shared across scenes) ─────────
+    t_gen = time.perf_counter()
+    log.info("─── %s ───", "generation (all)")
+
+    shot_clips: dict[str, Path] = {}
+    audio_files: dict[str, Path] = {}
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        fut_shots = pool.submit(generate_shots, instance, output_dir)
+        fut_audio = pool.submit(generate_audio, instance, output_dir)
+        for fut in as_completed([fut_shots, fut_audio]):
+            result = fut.result()
+            if fut is fut_shots:
+                shot_clips = result
+            else:
+                audio_files = result
+
+    log.info("Generation complete: %d shots, %d audio in %.1fs",
+             len(shot_clips), len(audio_files), time.perf_counter() - t_gen)
+
+    # ── Step 2: Assemble each scene independently ─────────────────────────
+    log.info("─── %s ───", "assembly (per-scene)")
+    t_asm = time.perf_counter()
+
+    scene_segments: list[Path] = [None] * len(contexts)  # type: ignore[list-item]
+    errors: list[str] = []
+
+    def _assemble_one(idx: int, ctx) -> tuple[int, Path]:
+        return idx, assemble_scene(ctx, shot_clips, audio_files, output_dir)
+
+    with ThreadPoolExecutor(max_workers=min(len(contexts), 4)) as pool:
+        futures = {
+            pool.submit(_assemble_one, i, ctx): i
+            for i, ctx in enumerate(contexts)
+        }
+        for fut in as_completed(futures):
+            try:
+                idx, path = fut.result()
+                scene_segments[idx] = path
+            except Exception as exc:
+                i = futures[fut]
+                errors.append(f"scene-{i}: {exc}")
+                log.error("scene_assembly_failed", scene_index=i, error=str(exc))
+
+    if errors:
+        raise RuntimeError(f"Scene assembly failed: {'; '.join(errors)}")
+
+    log.info("All %d scenes assembled in %.1fs", len(contexts), time.perf_counter() - t_asm)
+
+    # ── Step 3: Stitch scenes together ────────────────────────────────────
+    log.info("─── %s ───", "stitch")
+    transitions: list[dict] = []
+    for i in range(len(contexts) - 1):
+        tail = contexts[i].transition_tail
+        transitions.append({"type": tail.type, "durationSec": tail.duration_sec})
+
+    return stitch_scenes(scene_segments, transitions, output_dir, instance)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="SAFE AI Production — Video Generation Pipeline",
@@ -322,9 +446,11 @@ Modes:
   check instance.json            validate instance against schema only
 
 Options:
-  --dry-run       show what WOULD happen, no API calls, no files written
-  --stub-only     real pipeline but FFmpeg stubs instead of AI APIs
-  --start-from X  resume skills from skill X (e.g. s07-director)
+  --dry-run            show what WOULD happen, no API calls, no files written
+  --stub-only          real pipeline but FFmpeg stubs instead of AI APIs
+  --start-from X       resume skills from skill X (e.g. s07-director)
+  --scene SCENE_ID     render only this scene (e.g. scene-01)
+  --parallel-scenes    render all scenes independently, then stitch
 
 Examples:
   python -m pipeline.run --idea "A robot learning to paint"
@@ -333,6 +459,8 @@ Examples:
   python -m pipeline.run render demo-30s.json
   python -m pipeline.run render demo-30s.json --dry-run
   python -m pipeline.run render demo-30s.json --stub-only
+  python -m pipeline.run render demo-30s.json --scene scene-02
+  python -m pipeline.run render demo-30s.json --parallel-scenes
   python -m pipeline.run refine output/instance.json --start-from s07-director
   python -m pipeline.run check demo-30s.json
 """,
@@ -370,6 +498,10 @@ Examples:
                         help="Skip JSON Schema validation.")
         p.add_argument("--start-from", metavar="SKILL_ID", default=None,
                         help="Resume pipeline from a specific skill.")
+        p.add_argument("--scene", metavar="SCENE_ID", default=None,
+                        help="Render only this scene (e.g. scene-01).")
+        p.add_argument("--parallel-scenes", action="store_true",
+                        help="Render all scenes independently, then stitch.")
         p.add_argument("--schema", default=str(_V3_SCHEMA), metavar="SCHEMA_JSON",
                         help="Path to v3 JSON Schema file.")
         p.add_argument("-v", "--verbose", action="store_true",
@@ -382,12 +514,70 @@ Examples:
         parser.print_help()
         return 1
 
+    # ── Validate mutually exclusive flags ─────────────────────────────────
+    if getattr(args, "scene", None) and getattr(args, "parallel_scenes", False):
+        log.error("--scene and --parallel-scenes are mutually exclusive")
+        return 1
+
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Build ID (UUID) ──────────────────────────────────────────────────
+    build_id = uuid.uuid4().hex[:12]
+
+    # ── Persist all log output to {output_dir}/build-{id}.log ────────────
+    _build_log_path = output_dir / f"build-{build_id}.log"
+    _build_log_file = open(_build_log_path, "w", encoding="utf-8")  # noqa: SIM115
+
+    # stdlib logging → file (in addition to console)
+    _file_handler = logging.FileHandler(_build_log_path, mode="a", encoding="utf-8")
+    _file_handler.setLevel(logging.DEBUG)
+    _file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s  %(levelname)-7s  %(name)s — %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    ))
+    logging.getLogger().addHandler(_file_handler)
+
+    # structlog → tee to both stderr (console) and build log file
+    try:
+        import structlog  # noqa: PLC0415
+
+        class _TeeLoggerFactory:
+            """Write structlog output to both stderr and the build log file."""
+            def __init__(self, log_file):
+                self._file = log_file
+            def __call__(self, *args, **kwargs):
+                return self._TeeLogger(self._file)
+            class _TeeLogger:
+                def __init__(self, log_file):
+                    self._file = log_file
+                def msg(self, message: str) -> None:
+                    sys.stderr.write(message + "\n")
+                    sys.stderr.flush()
+                    self._file.write(message + "\n")
+                    self._file.flush()
+                def __getattr__(self, name):
+                    return self.msg
+
+        structlog.configure(
+            processors=[
+                structlog.contextvars.merge_contextvars,
+                structlog.processors.add_log_level,
+                structlog.processors.StackInfoRenderer(),
+                structlog.dev.ConsoleRenderer(),
+            ],
+            wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG),
+            logger_factory=_TeeLoggerFactory(_build_log_file),
+        )
+    except (ImportError, Exception):
+        pass  # structlog not available or already configured
+
+    log.info("Build ID: %s", build_id)
     log.info("Output directory: %s", output_dir.resolve())
+    log.info("Build log: %s", _build_log_path.name)
 
     # ── Stub-only: clear API keys ─────────────────────────────────────────
     if args.stub_only:
@@ -516,23 +706,63 @@ Examples:
 
     instance = _run_derive(instance)
 
-    try:
-        final_path = _run_render(instance, output_dir, verbose=args.verbose)
-    except Exception as exc:
-        log.error("Render failed: %s", exc)
-        return 1
+    scene_id = getattr(args, "scene", None)
+    parallel = getattr(args, "parallel_scenes", False)
+
+    # ── Single-scene render ──────────────────────────────────────────────
+    if scene_id:
+        try:
+            final_path = _run_render_scene(instance, output_dir, scene_id, verbose=args.verbose)
+        except Exception as exc:
+            log.error("Scene render failed: %s", exc)
+            return 1
+    # ── Parallel-scene render ────────────────────────────────────────────
+    elif parallel:
+        try:
+            final_path = _run_render_parallel(instance, output_dir, verbose=args.verbose)
+        except Exception as exc:
+            log.error("Parallel render failed: %s", exc)
+            return 1
+    # ── Monolithic render (default) ──────────────────────────────────────
+    else:
+        try:
+            final_path = _run_render(instance, output_dir, verbose=args.verbose)
+        except Exception as exc:
+            log.error("Render failed: %s", exc)
+            return 1
 
     t_total = time.perf_counter() - t_start
 
     if final_path.exists():
         size_mb = final_path.stat().st_size / 1_048_576
+        log.info("  Build ID    : %s", build_id)
         log.info("  Total time  : %.1fs", t_total)
         log.info("  Output      : %s", final_path.resolve())
         log.info("  File size   : %.2f MB", size_mb)
         print(f"\n✓ Render complete → {final_path.resolve()}  ({size_mb:.2f} MB)")
+        print(f"  Build ID: {build_id}")
+        print(f"  Log: {_build_log_path.name}")
     else:
         log.warning("Output file missing: %s", final_path)
         print(f"\n⚠ Assembly returned {final_path} but file does not exist")
+
+    # ── Write build manifest ─────────────────────────────────────────────
+    from datetime import datetime, timezone
+    build_manifest = {
+        "buildId": build_id,
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "command": " ".join(sys.argv),
+        "instance": str(Path(args.instance).resolve()) if hasattr(args, "instance") and args.instance else None,
+        "outputDir": str(output_dir.resolve()),
+        "log": _build_log_path.name,
+        "output": final_path.name if final_path.exists() else None,
+        "sizeMB": round(size_mb, 2) if final_path.exists() else None,
+        "durationSec": round(t_total, 1),
+        "stubOnly": args.stub_only,
+    }
+    (output_dir / f"build-{build_id}.json").write_text(
+        json.dumps(build_manifest, indent=2), encoding="utf-8"
+    )
 
     return 0
 

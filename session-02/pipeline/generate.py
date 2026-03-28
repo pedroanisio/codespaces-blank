@@ -625,7 +625,13 @@ def _generate_reference_images(
     Generates canonical reference images for ALL production entities:
       - Characters: 3 views (front, 3/4, full body) — S13 Step 2
       - Environments: 2 plates (wide, detail) — NO characters — S13 Step 3
-      - Props: 1 isolated render per significant prop — S13 Step 4
+      - Props: 2 views per significant prop — S13 Step 4
+      - POV plates: 1 per character × environment pair
+
+    Generation is parallelized in waves:
+      Wave 1: All anchor views (first view per entity) — fully parallel
+      Wave 2: All secondary views (using wave 1 anchors) — fully parallel
+      Wave 3: Third views + POV plates — fully parallel
 
     All images are cached on disk. Returns a ReferenceLibrary.
     """
@@ -643,87 +649,7 @@ def _generate_reference_images(
     color_dir = di.get("colorDirection", "")
     lighting_hint = f"Lit with {color_dir} color cast." if color_dir else ""
 
-    # ── S13 Step 2: Character sprite references (3 views each) ────────────
-    for char in production.get("characters", []):
-        char_lid = char.get("logicalId") or char.get("id") or "unknown"
-        char_name = char.get("name", "character")
-        char_desc = char.get("description", "")
-
-        # Collect locked prompt fragments if available
-        locked_frags = [
-            f.get("fragment", "")
-            for f in char.get("canonicalPromptFragments", [])
-            if f.get("locked")
-        ]
-        identity_block = "; ".join(locked_frags) if locked_frags else char_desc
-
-        lib.characters[char_lid] = {}
-        anchor_bytes: bytes | None = None  # first view becomes reference for subsequent views
-        for view_name, view_instruction in _CHARACTER_VIEWS:
-            ref_path = refs_dir / f"{char_lid}.{view_name}.png"
-
-            if ref_path.exists():
-                cached = ref_path.read_bytes()
-                lib.characters[char_lid][view_name] = cached
-                if anchor_bytes is None:
-                    anchor_bytes = cached
-                log.info("ref_cache_hit", file=ref_path.name)
-                continue
-
-            prompt = (
-                f"Character reference of {char_name}: {identity_block}. "
-                f"{view_instruction} "
-                f"{lighting_hint} "
-                f"Photorealistic, cinematic."
-            )
-            if anchor_bytes:
-                prompt += " Maintain exact same character design, proportions, colors, and materials as the reference image."
-
-            log.info("ref_generating", entity=char_name, view=view_name)
-            img_bytes = generate_image(prompt, size="1024x1024", quality="hd", reference_image=anchor_bytes)
-            ref_path.write_bytes(img_bytes)
-            lib.characters[char_lid][view_name] = img_bytes
-            if anchor_bytes is None:
-                anchor_bytes = img_bytes
-            log.info("ref_generated", entity=char_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
-
-    # ── S13 Step 3: Environment plates (2 views, NO characters) ───────────
-    for env in production.get("environments", []):
-        env_lid = env.get("logicalId") or env.get("id") or "unknown"
-        env_name = env.get("name", "environment")
-        env_desc = env.get("description", "")
-
-        lib.environments[env_lid] = {}
-        env_anchor: bytes | None = None
-        for view_name, view_instruction in _ENVIRONMENT_VIEWS:
-            ref_path = refs_dir / f"{env_lid}.{view_name}.png"
-
-            if ref_path.exists():
-                cached = ref_path.read_bytes()
-                lib.environments[env_lid][view_name] = cached
-                if env_anchor is None:
-                    env_anchor = cached
-                log.info("ref_cache_hit", file=ref_path.name)
-                continue
-
-            prompt = (
-                f"Environment reference of {env_name}: {env_desc}. "
-                f"{view_instruction} "
-                f"Photorealistic, cinematic. Style: {preamble[:400]}"
-            )
-            if env_anchor:
-                prompt += " Maintain exact same environment style, color palette, lighting, and atmosphere as the reference image."
-
-            log.info("ref_generating", entity=env_name, view=view_name)
-            img_bytes = generate_image(prompt, size="1024x1024", quality="hd", reference_image=env_anchor)
-            ref_path.write_bytes(img_bytes)
-            lib.environments[env_lid][view_name] = img_bytes
-            if env_anchor is None:
-                env_anchor = img_bytes
-            log.info("ref_generated", entity=env_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
-
-    # ── S13 Step 4: Prop sprite references (multi-angle, env lighting) ────
-    # Find which environment each prop appears in via scenes
+    # ── Pre-compute prop-to-environment mapping ──────────────────────────
     prop_to_env: dict[str, dict] = {}
     for scene in production.get("scenes", []):
         env_ref_id = (scene.get("environmentRef") or {}).get("id", "")
@@ -743,52 +669,7 @@ def _generate_reference_images(
                         prop_to_env[p_lid] = env
                     break
 
-    for prop in production.get("props", []):
-        prop_lid = prop.get("logicalId") or prop.get("id") or "unknown"
-        prop_name = prop.get("name", "prop")
-        prop_desc = prop.get("description", "")
-
-        # Build environment lighting context for the sprite
-        env = prop_to_env.get(prop_lid)
-        if env:
-            env_light = f"Lit with the lighting of {env.get('name', 'environment')}: {env.get('description', '')[:150]}. "
-        elif color_dir:
-            env_light = f"Lit with {color_dir} color cast. "
-        else:
-            env_light = ""
-
-        lib.props[prop_lid] = {}
-        prop_anchor: bytes | None = None
-        for view_name, view_instruction in _PROP_VIEWS:
-            ref_path = refs_dir / f"{prop_lid}.{view_name}.png"
-
-            if ref_path.exists():
-                cached = ref_path.read_bytes()
-                lib.props[prop_lid][view_name] = cached
-                if prop_anchor is None:
-                    prop_anchor = cached
-                log.info("ref_cache_hit", file=ref_path.name)
-                continue
-
-            prompt = (
-                f"Prop reference of {prop_name}: {prop_desc}. "
-                f"{view_instruction} "
-                f"{env_light}"
-                f"Photorealistic, cinematic."
-            )
-            if prop_anchor:
-                prompt += " Maintain exact same prop design, proportions, colors, and materials as the reference image."
-
-            log.info("ref_generating_prop", entity=prop_name, view=view_name)
-            img_bytes = generate_image(prompt, size="1024x1024", quality="hd", reference_image=prop_anchor)
-            ref_path.write_bytes(img_bytes)
-            lib.props[prop_lid][view_name] = img_bytes
-            if prop_anchor is None:
-                prop_anchor = img_bytes
-            log.info("ref_generated", entity=prop_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
-
-    # ── S13 Step 3b: POV environment plates (per character × environment) ──
-    # Find which characters appear in which environments via scenes
+    # ── Pre-compute character × environment pairs for POV plates ─────────
     char_env_pairs: list[tuple[dict, dict]] = []
     seen_pairs: set[str] = set()
     for scene in production.get("scenes", []):
@@ -810,6 +691,161 @@ def _generate_reference_images(
                         char_env_pairs.append((c, env))
                     break
 
+    # ── Initialize lib containers ────────────────────────────────────────
+    for char in production.get("characters", []):
+        lib.characters[char.get("logicalId") or char.get("id") or "unknown"] = {}
+    for env in production.get("environments", []):
+        lib.environments[env.get("logicalId") or env.get("id") or "unknown"] = {}
+    for prop in production.get("props", []):
+        lib.props[prop.get("logicalId") or prop.get("id") or "unknown"] = {}
+
+    # ── Anchors: dict from entity_lid → bytes (set by wave 1) ────────────
+    anchors: dict[str, bytes] = {}
+
+    # ── Helper: generate or load a single reference image ────────────────
+    def _gen_one(
+        entity_type: str,
+        entity_lid: str,
+        entity_name: str,
+        view_name: str,
+        prompt: str,
+        anchor_key: str | None = None,
+    ) -> tuple[str, str, str, bytes]:
+        """Returns (entity_type, entity_lid, view_name, img_bytes)."""
+        ref_path = refs_dir / f"{entity_lid}.{view_name}.png"
+
+        if ref_path.exists():
+            cached = ref_path.read_bytes()
+            log.info("ref_cache_hit", file=ref_path.name)
+            return entity_type, entity_lid, view_name, cached
+
+        anchor = anchors.get(anchor_key) if anchor_key else None
+        if anchor:
+            prompt += " Maintain exact same design, proportions, colors, and materials as the reference image."
+
+        log_fn = log.info
+        log_fn("ref_generating", entity=entity_name, view=view_name)
+        img_bytes = generate_image(prompt, size="1024x1024", quality="hd", reference_image=anchor)
+        ref_path.write_bytes(img_bytes)
+        log_fn("ref_generated", entity=entity_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
+        return entity_type, entity_lid, view_name, img_bytes
+
+    def _run_wave(tasks: list, max_workers: int = 4) -> None:
+        """Execute a list of (callable, args) in parallel."""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(fn, *args): label for fn, args, label in tasks}
+            for fut in as_completed(futures):
+                try:
+                    etype, elid, vname, img_bytes = fut.result()
+                    if etype == "character":
+                        lib.characters[elid][vname] = img_bytes
+                    elif etype == "environment":
+                        lib.environments[elid][vname] = img_bytes
+                    elif etype == "prop":
+                        lib.props[elid][vname] = img_bytes
+                    elif etype == "pov":
+                        lib.pov_plates[elid] = img_bytes
+                    # Store as anchor for subsequent waves
+                    if vname in ("front", "wide_plate") and elid not in anchors:
+                        anchors[elid] = img_bytes
+                except Exception as exc:
+                    log.warning("ref_generation_failed", label=futures[fut], error=str(exc))
+
+    # ── WAVE 1: All first/anchor views (fully parallel) ──────────────────
+    wave1: list = []
+
+    for char in production.get("characters", []):
+        lid = char.get("logicalId") or char.get("id") or "unknown"
+        name = char.get("name", "character")
+        locked_frags = [f.get("fragment", "") for f in char.get("canonicalPromptFragments", []) if f.get("locked")]
+        identity = "; ".join(locked_frags) if locked_frags else char.get("description", "")
+        view_name, view_instr = _CHARACTER_VIEWS[0]
+        prompt = f"Character reference of {name}: {identity}. {view_instr} {lighting_hint} Photorealistic, cinematic."
+        wave1.append((_gen_one, ("character", lid, name, view_name, prompt, None), f"char:{lid}:{view_name}"))
+
+    for env in production.get("environments", []):
+        lid = env.get("logicalId") or env.get("id") or "unknown"
+        name = env.get("name", "environment")
+        desc = env.get("description", "")
+        view_name, view_instr = _ENVIRONMENT_VIEWS[0]
+        prompt = f"Environment reference of {name}: {desc}. {view_instr} Photorealistic, cinematic. Style: {preamble[:400]}"
+        wave1.append((_gen_one, ("environment", lid, name, view_name, prompt, None), f"env:{lid}:{view_name}"))
+
+    for prop in production.get("props", []):
+        lid = prop.get("logicalId") or prop.get("id") or "unknown"
+        name = prop.get("name", "prop")
+        desc = prop.get("description", "")
+        env = prop_to_env.get(lid)
+        if env:
+            env_light = f"Lit with the lighting of {env.get('name', 'environment')}: {env.get('description', '')[:150]}. "
+        elif color_dir:
+            env_light = f"Lit with {color_dir} color cast. "
+        else:
+            env_light = ""
+        view_name, view_instr = _PROP_VIEWS[0]
+        prompt = f"Prop reference of {name}: {desc}. {view_instr} {env_light}Photorealistic, cinematic."
+        wave1.append((_gen_one, ("prop", lid, name, view_name, prompt, None), f"prop:{lid}:{view_name}"))
+
+    log.info("ref_wave_1_start", tasks=len(wave1))
+    _run_wave(wave1)
+    log.info("ref_wave_1_complete", anchors=len(anchors))
+
+    # ── WAVE 2: All secondary views (use wave 1 anchors) ────────────────
+    wave2: list = []
+
+    for char in production.get("characters", []):
+        lid = char.get("logicalId") or char.get("id") or "unknown"
+        name = char.get("name", "character")
+        locked_frags = [f.get("fragment", "") for f in char.get("canonicalPromptFragments", []) if f.get("locked")]
+        identity = "; ".join(locked_frags) if locked_frags else char.get("description", "")
+        if len(_CHARACTER_VIEWS) > 1:
+            view_name, view_instr = _CHARACTER_VIEWS[1]
+            prompt = f"Character reference of {name}: {identity}. {view_instr} {lighting_hint} Photorealistic, cinematic."
+            wave2.append((_gen_one, ("character", lid, name, view_name, prompt, lid), f"char:{lid}:{view_name}"))
+
+    for env in production.get("environments", []):
+        lid = env.get("logicalId") or env.get("id") or "unknown"
+        name = env.get("name", "environment")
+        desc = env.get("description", "")
+        if len(_ENVIRONMENT_VIEWS) > 1:
+            view_name, view_instr = _ENVIRONMENT_VIEWS[1]
+            prompt = f"Environment reference of {name}: {desc}. {view_instr} Photorealistic, cinematic. Style: {preamble[:400]}"
+            wave2.append((_gen_one, ("environment", lid, name, view_name, prompt, lid), f"env:{lid}:{view_name}"))
+
+    for prop in production.get("props", []):
+        lid = prop.get("logicalId") or prop.get("id") or "unknown"
+        name = prop.get("name", "prop")
+        desc = prop.get("description", "")
+        env = prop_to_env.get(lid)
+        if env:
+            env_light = f"Lit with the lighting of {env.get('name', 'environment')}: {env.get('description', '')[:150]}. "
+        elif color_dir:
+            env_light = f"Lit with {color_dir} color cast. "
+        else:
+            env_light = ""
+        if len(_PROP_VIEWS) > 1:
+            view_name, view_instr = _PROP_VIEWS[1]
+            prompt = f"Prop reference of {name}: {desc}. {view_instr} {env_light}Photorealistic, cinematic."
+            wave2.append((_gen_one, ("prop", lid, name, view_name, prompt, lid), f"prop:{lid}:{view_name}"))
+
+    log.info("ref_wave_2_start", tasks=len(wave2))
+    _run_wave(wave2)
+    log.info("ref_wave_2_complete")
+
+    # ── WAVE 3: Third views (characters only) + POV plates ───────────────
+    wave3: list = []
+
+    for char in production.get("characters", []):
+        lid = char.get("logicalId") or char.get("id") or "unknown"
+        name = char.get("name", "character")
+        locked_frags = [f.get("fragment", "") for f in char.get("canonicalPromptFragments", []) if f.get("locked")]
+        identity = "; ".join(locked_frags) if locked_frags else char.get("description", "")
+        if len(_CHARACTER_VIEWS) > 2:
+            view_name, view_instr = _CHARACTER_VIEWS[2]
+            prompt = f"Character reference of {name}: {identity}. {view_instr} {lighting_hint} Photorealistic, cinematic."
+            wave3.append((_gen_one, ("character", lid, name, view_name, prompt, lid), f"char:{lid}:{view_name}"))
+
     for char, env in char_env_pairs:
         char_lid = char.get("logicalId") or char.get("id") or "unknown"
         env_lid = env.get("logicalId") or env.get("id") or "unknown"
@@ -818,15 +854,7 @@ def _generate_reference_images(
         env_desc = env.get("description", "")
         height_m = char.get("heightM", 1.7)
         eye_height = round(height_m * 0.94, 2)
-
         pov_key = f"{char_lid}:{env_lid}"
-        ref_path = refs_dir / f"pov.{char_lid}.{env_lid}.png"
-
-        if ref_path.exists():
-            lib.pov_plates[pov_key] = ref_path.read_bytes()
-            log.info("ref_cache_hit", file=ref_path.name)
-            continue
-
         prompt = (
             f"First-person POV shot from {char_name}'s perspective inside {env_name}: {env_desc}. "
             f"Camera at eye-level height ({eye_height}m from floor). "
@@ -836,11 +864,25 @@ def _generate_reference_images(
             f"Photorealistic, cinematic. Style: {preamble[:400]}"
         )
 
-        log.info("ref_generating_pov_plate", character=char_name, environment=env_name, eye_height_m=eye_height)
-        img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
-        ref_path.write_bytes(img_bytes)
-        lib.pov_plates[pov_key] = img_bytes
-        log.info("ref_pov_plate_generated", character=char_name, environment=env_name, file=ref_path.name, size_bytes=len(img_bytes))
+        # POV _gen_one wrapper — uses pov_key as entity_lid
+        def _gen_pov(pov_key=pov_key, prompt=prompt, char_name=char_name, env_name=env_name, eye_height=eye_height):
+            ref_path = refs_dir / f"pov.{pov_key.replace(':', '.')}.png"
+            if ref_path.exists():
+                cached = ref_path.read_bytes()
+                log.info("ref_cache_hit", file=ref_path.name)
+                return "pov", pov_key, "pov", cached
+            log.info("ref_generating_pov_plate", character=char_name, environment=env_name, eye_height_m=eye_height)
+            img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
+            ref_path.write_bytes(img_bytes)
+            log.info("ref_pov_plate_generated", character=char_name, environment=env_name, file=ref_path.name, size_bytes=len(img_bytes))
+            return "pov", pov_key, "pov", img_bytes
+
+        wave3.append((_gen_pov, (), f"pov:{pov_key}"))
+
+    if wave3:
+        log.info("ref_wave_3_start", tasks=len(wave3))
+        _run_wave(wave3)
+        log.info("ref_wave_3_complete")
 
     # ── Summary ───────────────────────────────────────────────────────────
     total_chars = sum(len(v) for v in lib.characters.values())
@@ -1046,7 +1088,12 @@ def _enrich_prompt(shot: dict, instance: dict, preamble: str) -> str:
 
 # ── public API ────────────────────────────────────────────────────────────────
 
-def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
+def generate_shots(
+    instance: dict,
+    output_dir: Path,
+    *,
+    scene_filter: str | None = None,
+) -> dict[str, Path]:
     """
     Generate (or stub) one video clip per shot.
 
@@ -1056,6 +1103,10 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
       3. Enrich each shot prompt with character/environment/style context
       4. Pass reference images to video model for visual anchoring
 
+    Parameters
+    ----------
+    scene_filter : If set, only generate shots belonging to this scene ID.
+
     Returns {shot_logical_id: path_to_clip}.
     """
     shots_dir = output_dir / "shots"
@@ -1064,6 +1115,22 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
     runway_key = os.getenv("RUNWAY_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
     all_shots = _shots_in_order(instance)
+
+    # Apply scene filter if specified
+    if scene_filter:
+        scene_shot_ids: set[str] = set()
+        for scene in (instance.get("production") or {}).get("scenes") or []:
+            scene_id = scene.get("id") or scene.get("logicalId") or ""
+            if scene_id == scene_filter:
+                for ref in scene.get("shotRefs") or []:
+                    ref_id = ref.get("id") or ref.get("logicalId") or ""
+                    if ref_id:
+                        scene_shot_ids.add(ref_id)
+                break
+        all_shots = [s for s in all_shots
+                     if (s.get("id") or "") in scene_shot_ids
+                     or (s.get("logicalId") or "") in scene_shot_ids]
+        log.info("scene_filter_applied", scene=scene_filter, shots=len(all_shots))
 
     if not all_shots:
         log.warning("generate_shots_empty", msg="no shots found in instance")
@@ -1255,9 +1322,19 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
     return results
 
 
-def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
+def generate_audio(
+    instance: dict,
+    output_dir: Path,
+    *,
+    scene_filter: str | None = None,
+) -> dict[str, Path]:
     """
     Generate (or stub) one audio file per audioAsset.
+
+    Parameters
+    ----------
+    scene_filter : If set, only generate audio assets that overlap this scene's
+                   time range on the master timeline.
 
     Returns {asset_logical_id: path_to_file}.
     Reads from instance["assetLibrary"]["audioAssets"] (v3).
@@ -1271,6 +1348,23 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
     audio_assets: list[dict] = (
         instance.get("assetLibrary", {}).get("audioAssets") or []
     )
+
+    # Filter to only assets overlapping the target scene
+    if scene_filter:
+        from pipeline.scene_splitter import slice_audio_for_scene, _scene_time_ranges
+        scene_ranges = _scene_time_ranges(instance)
+        scene_start = scene_end = 0.0
+        for scene, start, end in scene_ranges:
+            scene_id = scene.get("id") or scene.get("logicalId") or ""
+            if scene_id == scene_filter:
+                scene_start, scene_end = start, end
+                break
+        slices = slice_audio_for_scene(scene_start, scene_end, instance)
+        needed_ids = {s.audio_asset_id for s in slices}
+        audio_assets = [a for a in audio_assets
+                        if (a.get("id") or "") in needed_ids
+                        or (a.get("logicalId") or "") in needed_ids]
+        log.info("scene_filter_audio", scene=scene_filter, assets=len(audio_assets))
     results: dict[str, Path] = {}
 
     def _asset_id(asset: dict) -> str:
