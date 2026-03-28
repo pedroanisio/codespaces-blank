@@ -1,0 +1,2859 @@
+{
+  "schemaVersion": "3.0.0",
+  "package": {
+    "packageId": "pkg-tc-hunt-001",
+    "createdAt": "2026-03-28T18:00:00Z",
+    "updatedAt": "2026-03-28T18:00:00Z",
+    "schemaUri": "https://example.org/schemas/unified-video-project-v3.schema.json",
+    "versioningPolicy": {
+      "immutablePublishedVersions": true,
+      "defaultReferenceMode": "exact",
+      "requireContentHashForPublished": false,
+      "allowParallelBranches": false,
+      "approvalRequiredForDeliverables": true
+    },
+    "createdBy": [
+      {
+        "name": "Studio Pipeline",
+        "role": "system"
+      }
+    ]
+  },
+  "project": {
+    "id": "prj-tc-hunt",
+    "logicalId": "prj-tc-hunt",
+    "entityType": "project",
+    "name": "Thundercats — Hunt Teaser",
+    "version": {
+      "number": "1.0.0",
+      "state": "draft"
+    },
+    "createdAt": "2026-03-28T18:00:00Z",
+    "updatedAt": "2026-03-28T18:00:00Z",
+    "description": "15-second first-person POV chase teaser for a Thundercats feature film. The audience is the prey. The apex breaks from POV into a 360° hero reveal of Lion-O and Cheetara in the Third Earth jungle. IP owned by Warner Bros. Discovery — this document is for creative development only.",
+    "targetRuntimeSec": 15,
+    "defaultQualityProfileRef": {
+      "id": "qp-master"
+    },
+    "languages": [
+      "en"
+    ],
+    "genres": [
+      "animation",
+      "action",
+      "fantasy"
+    ],
+    "audiences": [
+      "pg13_and_up"
+    ],
+    "globalCharacterRefs": [
+      {
+        "id": "char-liono"
+      },
+      {
+        "id": "char-cheetara"
+      }
+    ],
+    "globalEnvironmentRefs": [
+      {
+        "id": "env-jungle"
+      }
+    ],
+    "globalStyleRefs": [
+      {
+        "id": "sg-photocgi"
+      }
+    ]
+  },
+  "qualityProfiles": [
+    {
+      "id": "qp-master",
+      "logicalId": "qp-master",
+      "entityType": "qualityProfile",
+      "name": "Master Output Profile",
+      "version": {
+        "number": "1.0.0",
+        "state": "approved"
+      },
+      "createdAt": "2026-03-28T18:00:00Z",
+      "updatedAt": "2026-03-28T18:00:00Z",
+      "profile": {
+        "name": "4K Photorealistic Master",
+        "video": {
+          "resolution": {
+            "preset": "4K_UHD",
+            "widthPx": 3840,
+            "heightPx": 2160
+          },
+          "aspectRatio": {
+            "expression": "2.39:1",
+            "numerator": 239,
+            "denominator": 100
+          },
+          "frameRate": {
+            "fps": 24,
+            "mode": "constant"
+          },
+          "bitDepth": 10,
+          "colorSpace": "ACEScg",
+          "dynamicRange": "HDR10",
+          "runtimeTargetSec": 15,
+          "runtimeToleranceSec": 0.5,
+          "qualityControls": {
+            "denoiseLevel": 0.1,
+            "sharpenLevel": 0.25,
+            "antiFlicker": true,
+            "compression": {
+              "codec": "H.265",
+              "profile": "Main 10",
+              "crf": 16
+            }
+          }
+        },
+        "audio": {
+          "sampleRateHz": 48000,
+          "bitDepth": 24,
+          "channelLayout": "7.1",
+          "loudnessIntegratedLUFS": -14,
+          "truePeakDbTP": -1
+        }
+      }
+    }
+  ],
+  "canonicalDocuments": {
+    "story": {
+      "id": "story-tc-hunt",
+      "logicalId": "story-tc-hunt",
+      "entityType": "story",
+      "name": "Thundercats Hunt Teaser — Story Document",
+      "version": {
+        "number": "1.0.0",
+        "state": "draft"
+      },
+      "createdAt": "2026-03-28T18:00:00Z",
+      "updatedAt": "2026-03-28T18:00:00Z",
+      "description": "Narrative structure for the 15-second hunt teaser.",
+      "logline": "Something is chasing you through the jungle. You don't see it — until it lets you.",
+      "synopsis": "First-person POV: the audience runs through a dense Third Earth jungle, branches snapping, foliage tearing. Shadows close in on both flanks. The prey stumbles to a halt at the edge of a clearing. Silence. The camera tears free from the POV, rising and orbiting to reveal Lion-O and Cheetara standing where the pursuers were — calm, unhurried, predatory. The Sword of Omens glints on Lion-O's hip. They were never behind you. They were already there.",
+      "themes": [
+        "predator_and_prey",
+        "power",
+        "myth"
+      ],
+      "tone": [
+        "visceral",
+        "primal",
+        "awe"
+      ],
+      "beats": [
+        {
+          "beatId": "beat-01",
+          "name": "Flight",
+          "order": 1,
+          "description": "First-person POV sprinting through dense jungle. Something is behind. Branches snap, foliage parts violently. The audience IS the prey.",
+          "purpose": "inciting_incident",
+          "targetRange": {
+            "startSec": 0,
+            "endSec": 5,
+            "durationSec": 5
+          },
+          "sceneRefs": [
+            {
+              "id": "scene-01"
+            }
+          ],
+          "emotionalObjective": "adrenaline_fear"
+        },
+        {
+          "beatId": "beat-02",
+          "name": "Closing",
+          "order": 2,
+          "description": "The pursuers close in. Flashes of movement on both sides — golden fur, a blur of speed. The prey can't outrun this.",
+          "purpose": "rising_action",
+          "targetRange": {
+            "startSec": 5,
+            "endSec": 9,
+            "durationSec": 4
+          },
+          "sceneRefs": [
+            {
+              "id": "scene-02"
+            }
+          ],
+          "emotionalObjective": "escalating_dread"
+        },
+        {
+          "beatId": "beat-03",
+          "name": "Apex",
+          "order": 3,
+          "description": "The prey stops. Silence. The camera rips free from first-person, ascends, and orbits 360° to reveal Lion-O and Cheetara in full heroic stance. The Sword of Omens catches light.",
+          "purpose": "climax",
+          "targetRange": {
+            "startSec": 9,
+            "endSec": 15,
+            "durationSec": 6
+          },
+          "sceneRefs": [
+            {
+              "id": "scene-03"
+            }
+          ],
+          "emotionalObjective": "awe_and_recognition"
+        }
+      ],
+      "arcs": [
+        {
+          "arcId": "arc-audience",
+          "name": "Audience Perspective Shift",
+          "description": "The audience starts as prey — terrified, running. At the apex, the perspective inverts: the pursuers are the heroes. Fear transmutes to awe.",
+          "startBeatRef": {
+            "id": "beat-01"
+          },
+          "endBeatRef": {
+            "id": "beat-03"
+          },
+          "trajectory": [
+            "terror",
+            "panic",
+            "surrender",
+            "awe"
+          ]
+        }
+      ],
+      "sceneRefs": [
+        {
+          "id": "scene-01"
+        },
+        {
+          "id": "scene-02"
+        },
+        {
+          "id": "scene-03"
+        }
+      ]
+    },
+    "script": {
+      "id": "script-tc-hunt",
+      "logicalId": "script-tc-hunt",
+      "entityType": "script",
+      "name": "Thundercats Hunt Teaser — Script",
+      "version": {
+        "number": "1.0.0",
+        "state": "draft"
+      },
+      "createdAt": "2026-03-28T18:00:00Z",
+      "updatedAt": "2026-03-28T18:00:00Z",
+      "description": "Full script with action lines and sound cues. No dialogue.",
+      "format": "custom",
+      "language": "en",
+      "segments": [
+        {
+          "segmentId": "seg-01",
+          "order": 1,
+          "segmentType": "scene_heading",
+          "sceneRef": {
+            "id": "scene-01"
+          },
+          "text": "EXT. THIRD EARTH JUNGLE — DAY (CANOPY-FILTERED)"
+        },
+        {
+          "segmentId": "seg-02",
+          "order": 2,
+          "segmentType": "action",
+          "sceneRef": {
+            "id": "scene-01"
+          },
+          "actionDescription": "BLACK. Heavy breathing. Eyes open — FIRST PERSON. We are running. Dense jungle, massive trees with trunks wider than houses. Bioluminescent fungi pulse faintly on bark. Ferns and vines whip past the camera at sprint speed. The breathing is ragged, panicked. Behind us: the CRACK of branches, the thud of something heavy and fast. We don't look back.",
+          "timing": {
+            "startSec": 0,
+            "endSec": 5,
+            "durationSec": 5
+          }
+        },
+        {
+          "segmentId": "seg-03",
+          "order": 3,
+          "segmentType": "action",
+          "sceneRef": {
+            "id": "scene-02"
+          },
+          "actionDescription": "POV accelerates — but so do the pursuers. Left side: a BLUR of gold and spotted fur tears through the undergrowth, impossibly fast, parallel to us. Right side: a darker shape, massive, keeps pace without effort. A low GROWL rumbles through the canopy. The jungle narrows. A fallen log forces a hard turn. The POV stumbles, catches balance, keeps running. Ahead: the canopy opens into a clearing. The light is blinding after the jungle gloom.",
+          "timing": {
+            "startSec": 5,
+            "endSec": 9,
+            "durationSec": 4
+          }
+        },
+        {
+          "segmentId": "seg-04",
+          "order": 4,
+          "segmentType": "action",
+          "sceneRef": {
+            "id": "scene-03"
+          },
+          "actionDescription": "The POV breaks into the clearing and STOPS. Silence — the jungle noise cuts dead. One heartbeat. Two. The camera shudders, then TEARS FREE from first-person: it lifts vertically, rising above the clearing floor, rotating as it ascends. Below and before us — revealed as the camera orbits — LION-O and CHEETARA stand in the center of the clearing. They are not winded. They are not hurried. Lion-O: tall, powerfully built, red mane catching dappled light, Thundercats insignia on his chest. The Sword of Omens sits in its sheath at his hip, the Eye of Thundera just visible in the claw guard, catching a single ray of sun. Cheetara: lean, coiled, her bo staff planted in the earth beside her, spotted pattern on her shoulders catching light. The 360° orbit completes. They were never chasing from behind. They were herding. SMASH CUT TO BLACK.",
+          "timing": {
+            "startSec": 9,
+            "endSec": 15,
+            "durationSec": 6
+          }
+        }
+      ],
+      "sceneRefs": [
+        {
+          "id": "scene-01"
+        },
+        {
+          "id": "scene-02"
+        },
+        {
+          "id": "scene-03"
+        }
+      ]
+    },
+    "directorInstructions": {
+      "id": "di-tc-hunt",
+      "logicalId": "di-tc-hunt",
+      "entityType": "directorInstructions",
+      "name": "Thundercats Hunt Teaser — Director Notes",
+      "version": {
+        "number": "1.0.0",
+        "state": "draft"
+      },
+      "createdAt": "2026-03-28T18:00:00Z",
+      "updatedAt": "2026-03-28T18:00:00Z",
+      "visionStatement": "This teaser is a perspective inversion. The audience starts as the prey — primal, visceral, terrified. The reveal at the apex isn't a scare; it's the moment the audience realizes the predators are the protagonists. The fear should transmute into awe. The 360° reveal is the money shot: it recontextualizes everything the audience just experienced. These aren't monsters. These are heroes — but heroes who are, unambiguously, apex predators. The tone is: if you saw this in a jungle, you would run. And you would lose.",
+      "mustHaves": [
+        "First-person POV must feel physical — handheld shake, motion blur on periphery, breathing on the audio track",
+        "The pursuers are NEVER fully visible during the chase — only fragments: a blur of gold, a shadow, the snap of a branch under something heavy",
+        "The silence at the clearing is the pivot — all jungle noise must cut to near-zero for at least one full second before the camera lifts",
+        "The 360° orbit must be smooth and steady — the chaos of the chase contrasts with the composed reveal",
+        "Lion-O and Cheetara must appear calm, unhurried, in complete control — they were never exerting themselves",
+        "Sword of Omens: sheathed, but the Eye of Thundera in the claw guard catches a single ray of light — a subtle glint, not a glow",
+        "Cheetara's bo staff is planted vertically in the earth beside her — she is still, not posed mid-action",
+        "The final frame before smash cut: the camera has completed its orbit and faces Lion-O and Cheetara head-on, eye level"
+      ],
+      "mustAvoid": [
+        "No dialogue, no text overlays, no title cards — the teaser is pure visual and sound",
+        "No clear view of the pursuers during the chase — mystery is the engine",
+        "No slow motion — the chase must feel real-time, urgent",
+        "No fantasy UI overlays, no magic effects during the chase — this is physical, not supernatural",
+        "No smiling or friendly expressions on the reveal — Lion-O and Cheetara are not greeting the camera. They are predators who have concluded a hunt",
+        "The Sword of Omens must NOT glow, pulse, or activate — it is inert, a tool at rest, a promise not yet fulfilled"
+      ],
+      "cameraLanguage": "Beats 1-2: aggressive handheld, first-person. The lens is low — prey-height, not human standing height. FOV is wide (14-18mm equivalent) to exaggerate speed and proximity of foliage. Beat 3 transition: the camera lifts smoothly from handheld chaos into a crane-like ascent. The orbit is a steady 360° at roughly 3m radius, completing in ~4 seconds. The final position is dead center, eye level, facing both characters.",
+      "editingLanguage": "No traditional cuts during the POV chase — it should feel like one continuous shot with impact-motivated whip pans. The ONLY hard cut in the entire piece is the smash cut to black at the end.",
+      "musicDirection": "Beats 1-2: percussive, tribal, building. Deep drums, no melody. The rhythm matches the footfall cadence of the prey. Beat 3 silence: the percussion drops completely for the one-second breath. Then the reveal: a low brass swell — horns and cellos — that builds through the 360° orbit and cuts dead on the smash to black. No resolution. The music promises, but does not deliver. The audience should feel like they need to see more.",
+      "colorDirection": "Chase: desaturated green-brown jungle, crushed blacks, naturalistic. The only color accents during the chase are the faint bioluminescent fungi (cyan-green). Reveal: the clearing introduces warm light — dappled golden sun breaking through the canopy. Lion-O's mane and the Thundercats insignia provide the first saturated warm tones. Cheetara's spotted pattern provides golden accents. The shift from cool-dark to warm-light mirrors the emotional shift from fear to awe."
+    }
+  },
+  "production": {
+    "characters": [
+      {
+        "id": "char-liono",
+        "logicalId": "char-liono",
+        "entityType": "character",
+        "name": "Lion-O",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "Lord of the Thundercats. A humanoid lion — powerful, regal, young but commanding. In this teaser he is a predator at the end of a hunt: calm, composed, radiating controlled power.",
+        "appearance": "Tall (~195cm), heavily muscled but not bulky — a sprinter's build layered onto a lion's frame. Tawny skin with fine fur visible in close-up. Prominent red-orange mane, thick and wild but naturally shaped — not styled, not symmetric. Strong jaw, feline nose, amber eyes with slit pupils. Wears a fitted blue-grey bodysuit with the red Thundercats insignia on the chest. The Sword of Omens sits in a claw-shaped sheath at his left hip; the Eye of Thundera is a dark red gem set in the claw guard.",
+        "personality": [
+          "commanding",
+          "patient",
+          "predatory",
+          "restrained_power"
+        ],
+        "ageRange": "young_adult",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "humanoid lion, tawny fur, red-orange mane, amber slit-pupil eyes, muscular sprinter build, Thundercats insignia on chest",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "appearance",
+            "locked": true
+          },
+          {
+            "fragment": "photorealistic CGI, Unreal Engine 5 quality, subsurface scattering on skin and fur, ray-traced global illumination, pore-level detail",
+            "weight": 0.9,
+            "insertionOrder": 2,
+            "category": "style",
+            "locked": true
+          }
+        ],
+        "bannedTraits": [
+          "cartoon proportions",
+          "cel-shaded rendering",
+          "anime eyes",
+          "human skin without fur",
+          "glowing sword",
+          "crown or helmet",
+          "cape or cloak",
+          "smiling or friendly expression in this teaser"
+        ],
+        "referenceAssetRefs": [
+          {
+            "id": "va-liono-ref"
+          }
+        ],
+        "coherenceRequirements": {
+          "required": true,
+          "minSimilarityScore": 0.92,
+          "lockedAttributes": [
+            "mane_color",
+            "eye_color_and_pupil_shape",
+            "body_proportions",
+            "insignia_placement",
+            "sword_sheath_position"
+          ]
+        },
+        "heightM": 1.95
+      },
+      {
+        "id": "char-cheetara",
+        "logicalId": "char-cheetara",
+        "entityType": "character",
+        "name": "Cheetara",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "Thundercats cleric and fastest of the team. A humanoid cheetah — lithe, coiled, radiating speed even while standing perfectly still. In this teaser she is the one the prey glimpsed as a blur — the flanker.",
+        "appearance": "Tall (~180cm), lean and athletic — a sprinter/gymnast build. Golden-tan skin with visible cheetah spot pattern on shoulders, forearms, and cheekbones. Short golden hair swept back. Sharp amber-green eyes, vertical pupils. Wears a fitted bodysuit in muted gold and warm grey. Bo staff: a long metal staff with subtle geometric engravings, currently planted vertically in the earth beside her.",
+        "personality": [
+          "fast",
+          "precise",
+          "watchful",
+          "coiled_stillness"
+        ],
+        "ageRange": "young_adult",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "humanoid cheetah, golden-tan skin, cheetah spot pattern on shoulders and cheekbones, lean athletic build, short golden hair, amber-green eyes with vertical pupils",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "appearance",
+            "locked": true
+          },
+          {
+            "fragment": "photorealistic CGI, Unreal Engine 5 quality, subsurface scattering on skin, ray-traced global illumination, muscle definition visible under suit",
+            "weight": 0.9,
+            "insertionOrder": 2,
+            "category": "style",
+            "locked": true
+          }
+        ],
+        "bannedTraits": [
+          "cartoon proportions",
+          "cel-shaded rendering",
+          "anime eyes",
+          "overly sexualized pose or proportions",
+          "human skin without spot pattern",
+          "action pose in reveal — she is still",
+          "hair longer than jawline",
+          "smiling or friendly expression in this teaser"
+        ],
+        "referenceAssetRefs": [
+          {
+            "id": "va-cheetara-ref"
+          }
+        ],
+        "coherenceRequirements": {
+          "required": true,
+          "minSimilarityScore": 0.92,
+          "lockedAttributes": [
+            "spot_pattern",
+            "eye_color_and_pupil_shape",
+            "body_proportions",
+            "hair_style",
+            "staff_design"
+          ]
+        },
+        "heightM": 1.8
+      }
+    ],
+    "environments": [
+      {
+        "id": "env-jungle",
+        "logicalId": "env-jungle",
+        "entityType": "environment",
+        "name": "Third Earth Jungle",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "A dense, primeval jungle on Third Earth. Massive trees with buttress roots wider than houses. The canopy is so thick that ground level is perpetual twilight. Faint bioluminescent fungi on tree bark provide the only non-solar light. The jungle floor is a tangle of roots, ferns, and fallen logs. The air is thick with moisture and particulate.",
+        "locationType": "exterior",
+        "architectureStyle": "primeval_alien_jungle",
+        "timeOfDayDefaults": [
+          "canopy_filtered_day"
+        ],
+        "weatherDefaults": [
+          "humid",
+          "still_air",
+          "particulate_haze"
+        ],
+        "continuityNotes": "The jungle in scenes 1-2 is dense and dark — desaturated greens, crushed blacks, minimal direct sun. The clearing in scene 3 breaks the canopy, allowing dappled golden light through. This is the ONLY source of warm light in the piece.",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "dense primeval jungle, massive trees, buttress roots, thick canopy filtering light, bioluminescent fungi on bark, ferns and vines, humid atmosphere, volumetric haze",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "environment",
+            "locked": true
+          },
+          {
+            "fragment": "photorealistic environment, Unreal Engine 5 Nanite/Lumen quality, volumetric fog, god rays through canopy gaps, photogrammetric bark textures, particle dust motes",
+            "weight": 0.9,
+            "insertionOrder": 2,
+            "category": "style",
+            "locked": true
+          }
+        ],
+        "referenceAssetRefs": [
+          {
+            "id": "va-jungle-ref"
+          }
+        ]
+      },
+      {
+        "id": "env-clearing",
+        "logicalId": "env-clearing",
+        "entityType": "environment",
+        "name": "Third Earth Jungle — Clearing",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "A natural clearing within the jungle where the canopy breaks. Dappled golden sunlight streams through. The floor is packed earth with sparse low vegetation. Ancient stone fragments — hints of a ruined structure — are partially visible, overgrown. This is where the hunt ends.",
+        "locationType": "exterior",
+        "architectureStyle": "overgrown_ruins_clearing",
+        "timeOfDayDefaults": [
+          "dappled_golden_day"
+        ],
+        "weatherDefaults": [
+          "clear_patch",
+          "humid"
+        ],
+        "continuityNotes": "The clearing must feel like a natural arena — a place where hunts are concluded. The warm light here is the payoff for the cold darkness of the jungle chase.",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "jungle clearing, broken canopy, dappled golden sunlight, packed earth floor, ancient stone ruins overgrown with moss, warm light contrast against surrounding dark jungle",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "environment",
+            "locked": true
+          }
+        ]
+      }
+    ],
+    "props": [
+      {
+        "id": "prop-sword",
+        "logicalId": "prop-sword",
+        "entityType": "prop",
+        "name": "Sword of Omens",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "The legendary Thundercats blade. In this teaser it is SHEATHED — a claw-shaped guard encloses the hilt, with the Eye of Thundera (a dark red gem) set into the guard. The blade is not visible. The sword catches a single glint of sunlight during the reveal — nothing more.",
+        "category": "weapon",
+        "continuityNotes": "The sword is ALWAYS sheathed in this teaser. It must NOT glow, pulse, extend, or activate. The Eye of Thundera is dark red, inert. The only visual event is a single specular highlight from the sun hitting the gem — a glint, not a glow. The sword is a promise for the full film, not a payoff here.",
+        "canonicalPromptFragments": [
+          {
+            "fragment": "sheathed sword in claw-shaped guard on left hip, dark red gem (Eye of Thundera) in guard, metallic surface, inert, single sun glint",
+            "weight": 1.0,
+            "insertionOrder": 1,
+            "category": "appearance",
+            "locked": true
+          }
+        ]
+      },
+      {
+        "id": "prop-staff",
+        "logicalId": "prop-staff",
+        "entityType": "prop",
+        "name": "Cheetara's Bo Staff",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "A long metal staff with subtle geometric engravings along its length. In the reveal, it is planted vertically in the earth beside Cheetara — she is not holding it. It stands on its own, embedded in the packed earth of the clearing.",
+        "category": "weapon",
+        "continuityNotes": "The staff is planted in the earth in the reveal shot. Cheetara's hands are free. The staff standing upright on its own signals her control — she doesn't need to grip her weapon."
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene-01",
+        "logicalId": "scene-01",
+        "entityType": "scene",
+        "name": "The Flight",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "First-person POV sprint through dense jungle. The audience is the prey. Something fast and heavy pursues from behind.",
+        "sceneNumber": 1,
+        "targetDurationSec": 5,
+        "environmentRef": {
+          "id": "env-jungle"
+        },
+        "timeOfDay": "canopy_filtered_day",
+        "mood": "primal_fear",
+        "storyBeatRefs": [
+          {
+            "id": "beat-01"
+          }
+        ],
+        "shotRefs": [
+          {
+            "id": "shot-0101"
+          },
+          {
+            "id": "shot-0102"
+          }
+        ],
+        "transitionOut": {
+          "type": "custom",
+          "durationSec": 0.3,
+          "parameters": {
+            "style": "whip_pan"
+          }
+        },
+        "generation": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-jungle",
+              "ref": {
+                "id": "env-jungle"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "scene-02",
+        "logicalId": "scene-02",
+        "entityType": "scene",
+        "name": "The Closing",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "POV accelerates. Pursuers flank on both sides — glimpses of golden fur and a massive dark shape. The jungle narrows toward a clearing.",
+        "sceneNumber": 2,
+        "targetDurationSec": 4,
+        "characterRefs": [
+          {
+            "id": "char-cheetara"
+          },
+          {
+            "id": "char-liono"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-jungle"
+        },
+        "timeOfDay": "canopy_filtered_day",
+        "mood": "escalating_dread",
+        "storyBeatRefs": [
+          {
+            "id": "beat-02"
+          }
+        ],
+        "shotRefs": [
+          {
+            "id": "shot-0201"
+          },
+          {
+            "id": "shot-0202"
+          },
+          {
+            "id": "shot-0203"
+          }
+        ],
+        "transitionIn": {
+          "type": "custom",
+          "durationSec": 0.3,
+          "parameters": {
+            "style": "whip_pan"
+          }
+        },
+        "transitionOut": {
+          "type": "cut",
+          "durationSec": 0
+        },
+        "generation": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-jungle",
+              "ref": {
+                "id": "env-jungle"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "scene-03",
+        "logicalId": "scene-03",
+        "entityType": "scene",
+        "name": "The Apex",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "The prey stops at the clearing edge. Silence. Camera tears free from POV, ascends, and orbits 360° to reveal Lion-O and Cheetara. Smash cut to black.",
+        "sceneNumber": 3,
+        "targetDurationSec": 6,
+        "characterRefs": [
+          {
+            "id": "char-liono"
+          },
+          {
+            "id": "char-cheetara"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-clearing"
+        },
+        "propRefs": [
+          {
+            "id": "prop-sword"
+          },
+          {
+            "id": "prop-staff"
+          }
+        ],
+        "timeOfDay": "dappled_golden_day",
+        "mood": "awe",
+        "storyBeatRefs": [
+          {
+            "id": "beat-03"
+          }
+        ],
+        "shotRefs": [
+          {
+            "id": "shot-0301"
+          },
+          {
+            "id": "shot-0302"
+          },
+          {
+            "id": "shot-0303"
+          }
+        ],
+        "transitionIn": {
+          "type": "cut",
+          "durationSec": 0
+        },
+        "generation": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-clearing",
+              "ref": {
+                "id": "env-clearing"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-sword",
+              "ref": {
+                "id": "prop-sword"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-staff",
+              "ref": {
+                "id": "prop-staff"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot-0101",
+        "logicalId": "shot-0101",
+        "entityType": "shot",
+        "name": "POV — Eyes Open",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "Black to eyes opening. First-person POV running through jungle. Foliage whipping past. Heavy breathing.",
+        "sceneRef": {
+          "id": "scene-01"
+        },
+        "shotNumber": 1,
+        "purpose": "Establish POV, immerse the audience as the prey",
+        "targetDurationSec": 2.5,
+        "environmentRef": {
+          "id": "env-jungle"
+        },
+        "cinematicSpec": {
+          "shotType": "pov",
+          "cameraAngle": "low",
+          "cameraMovement": "handheld",
+          "focalLengthMm": 14,
+          "aperture": 2.8,
+          "depthOfField": "deep",
+          "stabilization": "handheld",
+          "framing": "Low POV — prey height, roughly 1m above ground. Foliage fills frame, motion blur on periphery. Ground roots and ferns visible below.",
+          "lighting": {
+            "mood": "oppressive",
+            "style": "canopy-filtered ambient, no direct sun",
+            "colorTemperatureKelvin": 5500,
+            "contrastStyle": "low_key"
+          },
+          "style": {
+            "genres": [
+              "action",
+              "thriller"
+            ],
+            "adjectives": [
+              "visceral",
+              "immersive",
+              "photorealistic",
+              "Unreal-Engine-5"
+            ],
+            "palette": [
+              "#2D3B2D",
+              "#1A2618",
+              "#3D4F3D",
+              "#0A0F0A"
+            ]
+          }
+        },
+        "continuityNotes": "Opens from black — eyelid-open wipe effect. The first visual is blurred foliage rushing past, snapping into focus as the 'eyes' open fully.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-jungle",
+              "ref": {
+                "id": "env-jungle"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0101",
+          "operationType": "video_generation"
+        }
+      },
+      {
+        "id": "shot-0102",
+        "logicalId": "shot-0102",
+        "entityType": "shot",
+        "name": "POV — Running Deeper",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "Continuous POV. The jungle thickens. Branches snap behind us. A heavy thud of pursuit.",
+        "sceneRef": {
+          "id": "scene-01"
+        },
+        "shotNumber": 2,
+        "targetDurationSec": 2.5,
+        "environmentRef": {
+          "id": "env-jungle"
+        },
+        "cinematicSpec": {
+          "shotType": "pov",
+          "cameraAngle": "low",
+          "cameraMovement": "handheld",
+          "focalLengthMm": 16,
+          "aperture": 2.8,
+          "depthOfField": "shallow",
+          "stabilization": "handheld",
+          "framing": "Slightly tighter than shot-0101. Vines and roots force lateral dodges. Camera jerks left-right as the prey weaves.",
+          "lighting": {
+            "mood": "claustrophobic",
+            "style": "deep canopy, minimal ambient, bioluminescent fungi accents",
+            "colorTemperatureKelvin": 5200,
+            "contrastStyle": "chiaroscuro"
+          },
+          "style": {
+            "adjectives": [
+              "frantic",
+              "primal",
+              "photorealistic"
+            ],
+            "palette": [
+              "#1A2618",
+              "#0D1A0D",
+              "#2DFFD0"
+            ]
+          },
+          "temporalBridgeAnchorRef": {
+            "id": "shot-0101",
+            "notes": "Auto-linked: previous shot in same scene for visual continuity"
+          }
+        },
+        "continuityNotes": "The bioluminescent fungi appear here for the first time — faint cyan-green pulses on tree bark. They provide the only non-ambient light.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-jungle",
+              "ref": {
+                "id": "env-jungle"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0102",
+          "operationType": "video_generation"
+        }
+      },
+      {
+        "id": "shot-0201",
+        "logicalId": "shot-0201",
+        "entityType": "shot",
+        "name": "POV — Cheetara Flank",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "POV whips left — a BLUR of golden-spotted fur tears through the undergrowth parallel to the camera. Gone before recognition.",
+        "sceneRef": {
+          "id": "scene-02"
+        },
+        "shotNumber": 1,
+        "targetDurationSec": 1.5,
+        "characterRefs": [
+          {
+            "id": "char-cheetara"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-jungle"
+        },
+        "cinematicSpec": {
+          "shotType": "pov",
+          "cameraAngle": "low",
+          "cameraMovement": "pan",
+          "focalLengthMm": 18,
+          "aperture": 2.0,
+          "depthOfField": "shallow",
+          "stabilization": "handheld",
+          "framing": "Left periphery: golden blur between tree trunks. Too fast to resolve. The camera jerks to follow but the blur is already gone.",
+          "lighting": {
+            "mood": "threatening",
+            "colorTemperatureKelvin": 5200
+          },
+          "style": {
+            "adjectives": [
+              "fast",
+              "subliminal",
+              "photorealistic"
+            ],
+            "palette": [
+              "#1A2618",
+              "#D4A843",
+              "#0D1A0D"
+            ]
+          },
+          "compositionNotes": "Whip pan left — too fast to resolve the blur. Camera jerks to follow but the target is already gone."
+        },
+        "continuityNotes": "Cheetara is visible for approximately 4-6 FRAMES. Enough to register gold and spotted pattern subconsciously. Not enough to identify.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-jungle",
+              "ref": {
+                "id": "env-jungle"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0201",
+          "operationType": "video_generation"
+        }
+      },
+      {
+        "id": "shot-0202",
+        "logicalId": "shot-0202",
+        "entityType": "shot",
+        "name": "POV — Lion-O Flank",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "POV snaps right — a larger, darker shape parallels, moving with terrifying ease. A low growl reverberates.",
+        "sceneRef": {
+          "id": "scene-02"
+        },
+        "shotNumber": 2,
+        "targetDurationSec": 1.5,
+        "characterRefs": [
+          {
+            "id": "char-liono"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-jungle"
+        },
+        "cinematicSpec": {
+          "shotType": "pov",
+          "cameraAngle": "low",
+          "cameraMovement": "handheld",
+          "focalLengthMm": 18,
+          "aperture": 2.0,
+          "depthOfField": "shallow",
+          "stabilization": "handheld",
+          "framing": "Right periphery: a large dark shape weaving between trunks. Visible longer than Cheetara — maybe 10 frames — but still not identifiable. Mass and power are the impressions, not detail.",
+          "lighting": {
+            "mood": "ominous",
+            "colorTemperatureKelvin": 5000,
+            "contrastStyle": "chiaroscuro"
+          },
+          "style": {
+            "adjectives": [
+              "heavy",
+              "powerful",
+              "photorealistic"
+            ],
+            "palette": [
+              "#1A2618",
+              "#8B4513",
+              "#2D3748"
+            ]
+          },
+          "temporalBridgeAnchorRef": {
+            "id": "shot-0201",
+            "notes": "Auto-linked: previous shot in same scene for visual continuity"
+          }
+        },
+        "continuityNotes": "Lion-O's shape is larger and moves differently from Cheetara's — loping, heavy, deliberate versus her razor-fast blur.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-jungle",
+              "ref": {
+                "id": "env-jungle"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0202",
+          "operationType": "video_generation"
+        }
+      },
+      {
+        "id": "shot-0203",
+        "logicalId": "shot-0203",
+        "entityType": "shot",
+        "name": "POV — Stumble to Clearing",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "POV hits a fallen log, stumbles, recovers. Ahead the canopy opens — blinding light. The prey sprints toward it.",
+        "sceneRef": {
+          "id": "scene-02"
+        },
+        "shotNumber": 3,
+        "targetDurationSec": 1,
+        "environmentRef": {
+          "id": "env-jungle"
+        },
+        "cinematicSpec": {
+          "shotType": "pov",
+          "cameraAngle": "low",
+          "cameraMovement": "handheld",
+          "focalLengthMm": 14,
+          "aperture": 4,
+          "depthOfField": "deep",
+          "stabilization": "handheld",
+          "framing": "Camera dips violently (stumble), recovers. Ahead: overexposed gap in the canopy — the clearing. The prey runs toward the light.",
+          "lighting": {
+            "mood": "desperate",
+            "colorTemperatureKelvin": 5500,
+            "contrastStyle": "extreme_contrast"
+          },
+          "style": {
+            "adjectives": [
+              "chaotic",
+              "desperate",
+              "photorealistic"
+            ]
+          },
+          "temporalBridgeAnchorRef": {
+            "id": "shot-0202",
+            "notes": "Auto-linked: previous shot in same scene for visual continuity"
+          }
+        },
+        "continuityNotes": "The clearing light ahead is overexposed — the camera is adjusted for jungle darkness and the bright clearing blows out. This visual overload marks the transition to the apex.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-jungle",
+              "ref": {
+                "id": "env-jungle"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0203",
+          "operationType": "video_generation"
+        }
+      },
+      {
+        "id": "shot-0301",
+        "logicalId": "shot-0301",
+        "entityType": "shot",
+        "name": "The Halt",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "POV bursts into the clearing and STOPS. Exposure adjusts. Silence. One heartbeat. Two.",
+        "sceneRef": {
+          "id": "scene-03"
+        },
+        "shotNumber": 1,
+        "targetDurationSec": 1.5,
+        "environmentRef": {
+          "id": "env-clearing"
+        },
+        "cinematicSpec": {
+          "shotType": "pov",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "static",
+          "focalLengthMm": 24,
+          "aperture": 4,
+          "depthOfField": "deep",
+          "stabilization": "handheld",
+          "framing": "The POV stops abruptly. Camera sways slightly — post-exertion tremor. The clearing is visible: packed earth, ancient stone fragments, dappled light. Empty. Nothing ahead. The exposure normalizes over ~0.5s.",
+          "lighting": {
+            "mood": "uncanny_calm",
+            "style": "dappled golden sunlight through broken canopy",
+            "colorTemperatureKelvin": 4800,
+            "contrastStyle": "natural"
+          },
+          "style": {
+            "adjectives": [
+              "still",
+              "sudden",
+              "photorealistic"
+            ],
+            "palette": [
+              "#D4A843",
+              "#8B7355",
+              "#4A5C3A",
+              "#F5E6C8"
+            ]
+          }
+        },
+        "continuityNotes": "The silence is the pivot. ALL ambient jungle sound cuts to near-zero. Only the prey's heartbeat and breathing remain. This silence must last at least 1 full second.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-clearing",
+              "ref": {
+                "id": "env-clearing"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-sword",
+              "ref": {
+                "id": "prop-sword"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-staff",
+              "ref": {
+                "id": "prop-staff"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0301",
+          "operationType": "video_generation"
+        }
+      },
+      {
+        "id": "shot-0302",
+        "logicalId": "shot-0302",
+        "entityType": "shot",
+        "name": "Camera Liberation",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "The camera tears free from the POV — rising vertically from prey-height to 3m above ground. The transition from handheld chaos to smooth crane movement is the visual signal that we have left the prey's perspective.",
+        "sceneRef": {
+          "id": "scene-03"
+        },
+        "shotNumber": 2,
+        "targetDurationSec": 1.5,
+        "environmentRef": {
+          "id": "env-clearing"
+        },
+        "characterRefs": [
+          {
+            "id": "char-liono"
+          },
+          {
+            "id": "char-cheetara"
+          }
+        ],
+        "propRefs": [
+          {
+            "id": "prop-sword"
+          },
+          {
+            "id": "prop-staff"
+          }
+        ],
+        "cinematicSpec": {
+          "shotType": "crane",
+          "cameraAngle": "low",
+          "cameraMovement": "crane",
+          "focalLengthMm": 35,
+          "aperture": 4,
+          "depthOfField": "medium",
+          "stabilization": "gimbal",
+          "framing": "Camera lifts smoothly. As it rises, Lion-O and Cheetara enter the bottom of frame — first their heads, then full bodies revealed from above. They stand roughly 5m apart in the clearing, facing the camera's original position.",
+          "lighting": {
+            "mood": "reverent",
+            "style": "dappled golden sunlight, volumetric shafts",
+            "colorTemperatureKelvin": 4500,
+            "contrastStyle": "natural"
+          },
+          "style": {
+            "adjectives": [
+              "smooth",
+              "controlled",
+              "majestic",
+              "photorealistic"
+            ],
+            "palette": [
+              "#D4A843",
+              "#3B6FA0",
+              "#C74040",
+              "#F5E6C8"
+            ]
+          },
+          "compositionNotes": "Camera starts at low prey-height and rises smoothly to 3m — the angle transitions from low to eye level during the crane move.",
+          "temporalBridgeAnchorRef": {
+            "id": "shot-0301",
+            "notes": "Auto-linked: previous shot in same scene for visual continuity"
+          }
+        },
+        "continuityNotes": "The transition from handheld to crane must be seamless — the 'tear' is felt as a sudden smoothing-out and upward acceleration, not a cut.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-clearing",
+              "ref": {
+                "id": "env-clearing"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-sword",
+              "ref": {
+                "id": "prop-sword"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-staff",
+              "ref": {
+                "id": "prop-staff"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0302",
+          "operationType": "video_generation"
+        }
+      },
+      {
+        "id": "shot-0303",
+        "logicalId": "shot-0303",
+        "entityType": "shot",
+        "name": "360 Hero Reveal",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "Full 360° orbit around Lion-O and Cheetara at eye level. The money shot. Completes the orbit to face them head-on. Smash cut to black.",
+        "sceneRef": {
+          "id": "scene-03"
+        },
+        "shotNumber": 3,
+        "targetDurationSec": 3,
+        "characterRefs": [
+          {
+            "id": "char-liono"
+          },
+          {
+            "id": "char-cheetara"
+          }
+        ],
+        "environmentRef": {
+          "id": "env-clearing"
+        },
+        "propRefs": [
+          {
+            "id": "prop-sword"
+          },
+          {
+            "id": "prop-staff"
+          }
+        ],
+        "cinematicSpec": {
+          "shotType": "orbiting",
+          "cameraAngle": "eye_level",
+          "cameraMovement": "orbit",
+          "focalLengthMm": 50,
+          "aperture": 2.8,
+          "depthOfField": "medium",
+          "stabilization": "gimbal",
+          "framing": "3m radius orbit centered between Lion-O and Cheetara. Both characters fill the frame. The orbit begins from behind them (showing the jungle they emerged from), sweeps past Lion-O's left side (Sword of Omens glint at ~180°), continues past Cheetara's right (staff visible planted in earth), and completes facing them head-on. Final frame: both characters looking directly into camera.",
+          "lighting": {
+            "mood": "heroic",
+            "style": "dappled golden sunlight, volumetric god rays, rim light on both characters",
+            "colorTemperatureKelvin": 4500,
+            "contrastStyle": "natural"
+          },
+          "style": {
+            "genres": [
+              "action",
+              "fantasy",
+              "hero_reveal"
+            ],
+            "adjectives": [
+              "epic",
+              "composed",
+              "predatory",
+              "photorealistic",
+              "Unreal-Engine-5"
+            ],
+            "palette": [
+              "#D4A843",
+              "#3B6FA0",
+              "#C74040",
+              "#48BB78",
+              "#F5E6C8"
+            ]
+          },
+          "temporalBridgeAnchorRef": {
+            "id": "shot-0302",
+            "notes": "Auto-linked: previous shot in same scene for visual continuity"
+          }
+        },
+        "continuityNotes": "The Sword of Omens glint occurs at approximately the 180° mark of the orbit — a single specular highlight as the camera angle aligns the sun with the Eye of Thundera gem. NOT a glow. A hard, fast glint. The smash cut to black occurs on the final frame of the orbit — the characters are facing camera, eye-level, dead center.",
+        "genParams": {
+          "consistencyAnchors": [
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-liono",
+              "ref": {
+                "id": "char-liono"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "character",
+              "name": "Character identity — char-cheetara",
+              "ref": {
+                "id": "char-cheetara"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "appearance",
+                "costume",
+                "proportions",
+                "color"
+              ]
+            },
+            {
+              "anchorType": "environment",
+              "name": "Environment continuity — env-clearing",
+              "ref": {
+                "id": "env-clearing"
+              },
+              "lockLevel": "hard",
+              "attributes": [
+                "layout",
+                "lighting",
+                "color_temperature",
+                "atmosphere",
+                "set_dressing"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-sword",
+              "ref": {
+                "id": "prop-sword"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            },
+            {
+              "anchorType": "prop",
+              "name": "Prop continuity — prop-staff",
+              "ref": {
+                "id": "prop-staff"
+              },
+              "lockLevel": "medium",
+              "attributes": [
+                "appearance",
+                "position",
+                "scale"
+              ]
+            }
+          ],
+          "stepId": "gen-shot-0303",
+          "operationType": "video_generation"
+        }
+      }
+    ],
+    "styleGuides": [
+      {
+        "id": "sg-photocgi",
+        "logicalId": "sg-photocgi",
+        "entityType": "styleGuide",
+        "name": "Photorealistic CGI House Style",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "description": "Unreal Engine 5 / movie-grade photorealistic CGI. The goal is that a still from this teaser could be mistaken for a photograph of a live-action production with practical creature makeup.",
+        "scope": "project",
+        "guidelines": {
+          "genres": [
+            "photorealistic_cgi",
+            "action_fantasy"
+          ],
+          "adjectives": [
+            "photorealistic",
+            "cinematic",
+            "physically_based",
+            "volumetric"
+          ],
+          "palette": [
+            "#2D3B2D",
+            "#1A2618",
+            "#D4A843",
+            "#3B6FA0",
+            "#C74040",
+            "#F5E6C8"
+          ],
+          "textureDescriptors": [
+            "subsurface_scattering_on_skin_and_fur",
+            "ray_traced_global_illumination",
+            "physically_based_materials",
+            "pore_and_follicle_detail",
+            "photogrammetric_environment_textures",
+            "volumetric_atmospheric_scattering"
+          ],
+          "cameraLanguage": "POV chase: aggressive handheld, low angle, ultra-wide. Reveal: smooth crane and orbit, standard focal lengths. The contrast between these two modes IS the visual narrative.",
+          "editingLanguage": "No hard cuts during chase — continuous stitched shot. Smash cut to black is the ONLY hard cut in the piece."
+        },
+        "negativeStylePrompt": "cel-shaded, anime, cartoon, flat color, low-poly, wireframe, stylized rendering, watercolor, painterly, 2D animation, stop-motion"
+      }
+    ]
+  },
+  "assetLibrary": {
+    "visualAssets": [
+      {
+        "id": "va-liono-ref",
+        "logicalId": "va-liono-ref",
+        "entityType": "visualAsset",
+        "name": "Lion-O Character Reference Sheet",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "visualType": "character_sheet",
+        "modality": "image",
+        "purpose": "Canonical reference for Lion-O's photorealistic appearance.",
+        "isCanonicalReference": true,
+        "characterRefs": [
+          {
+            "id": "char-liono"
+          }
+        ]
+      },
+      {
+        "id": "va-cheetara-ref",
+        "logicalId": "va-cheetara-ref",
+        "entityType": "visualAsset",
+        "name": "Cheetara Character Reference Sheet",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "visualType": "character_sheet",
+        "modality": "image",
+        "purpose": "Canonical reference for Cheetara's photorealistic appearance.",
+        "isCanonicalReference": true,
+        "characterRefs": [
+          {
+            "id": "char-cheetara"
+          }
+        ]
+      },
+      {
+        "id": "va-jungle-ref",
+        "logicalId": "va-jungle-ref",
+        "entityType": "visualAsset",
+        "name": "Third Earth Jungle Environment Concept",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "visualType": "environment_concept",
+        "modality": "image",
+        "purpose": "Canonical reference for the jungle and clearing environments.",
+        "isCanonicalReference": true,
+        "environmentRefs": [
+          {
+            "id": "env-jungle"
+          },
+          {
+            "id": "env-clearing"
+          }
+        ]
+      }
+    ],
+    "audioAssets": [
+      {
+        "id": "aa-score",
+        "logicalId": "aa-score",
+        "entityType": "audioAsset",
+        "name": "Hunt Score — Percussion to Brass Swell",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "music",
+        "description": "Beats 1-2: tribal percussion — deep drums, no melody. Rhythm synced to footfall cadence, accelerating. Beat 3 silence: percussion drops completely for ~1s. Reveal: low brass swell — French horns and cellos — building through the 360° orbit. Cuts dead on smash to black. No melodic resolution. The audience must feel unfinished — they need to see more.",
+        "mood": "primal_to_heroic",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          },
+          {
+            "id": "scene-03"
+          }
+        ],
+        "syncPoints": [
+          {
+            "label": "percussion_entry",
+            "time": {
+              "startSec": 0.5,
+              "durationSec": 0.5
+            },
+            "toleranceFrames": 6,
+            "beat": 1
+          },
+          {
+            "label": "percussion_accelerando",
+            "time": {
+              "startSec": 5.0,
+              "durationSec": 4.0
+            },
+            "toleranceFrames": 4,
+            "beat": 2
+          },
+          {
+            "label": "silence_drop",
+            "time": {
+              "startSec": 9.0,
+              "endSec": 10.2,
+              "durationSec": 1.2
+            },
+            "toleranceFrames": 2
+          },
+          {
+            "label": "brass_swell_entry",
+            "time": {
+              "startSec": 10.5,
+              "durationSec": 0.5
+            },
+            "toleranceFrames": 3,
+            "beat": 3
+          },
+          {
+            "label": "brass_crescendo_peak",
+            "time": {
+              "startSec": 13.5,
+              "endSec": 15.0,
+              "durationSec": 1.5
+            },
+            "toleranceFrames": 2,
+            "beat": 3
+          }
+        ],
+        "technicalSpec": {
+          "sampleRateHz": 48000,
+          "bitDepth": 24,
+          "channelLayout": "7.1"
+        }
+      },
+      {
+        "id": "aa-ambient-jungle",
+        "logicalId": "aa-ambient-jungle",
+        "entityType": "audioAsset",
+        "name": "Third Earth Jungle Ambience",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "ambient",
+        "description": "Dense alien jungle ambience. Insect-like chirps (not Earth insects — slightly wrong frequencies), distant calls, canopy rustle. Oppressive, thick, alive. This ambience STOPS DEAD at the clearing silence.",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-breathing",
+        "logicalId": "aa-sfx-breathing",
+        "entityType": "audioAsset",
+        "name": "Prey Breathing",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "foley",
+        "description": "Ragged, panicked breathing — close-mic, binaural. Accelerates through the chase. Catches and holds during the silence. The breathing is the audience's own.",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          },
+          {
+            "id": "scene-03"
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-footsteps-prey",
+        "logicalId": "aa-sfx-footsteps-prey",
+        "entityType": "audioAsset",
+        "name": "Prey Footsteps",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "foley",
+        "description": "Bare feet or light boots on jungle floor — leaves, roots, soft earth. Rapid, irregular cadence of someone running hard and panicking.",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-foliage",
+        "logicalId": "aa-sfx-foliage",
+        "entityType": "audioAsset",
+        "name": "Foliage Impact / Branch Snap",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "foley",
+        "description": "Branches snapping, ferns slapping against the camera/body, vines whipping. Continuous texture layered over the chase.",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-pursuit",
+        "logicalId": "aa-sfx-pursuit",
+        "entityType": "audioAsset",
+        "name": "Pursuit Sounds — Pursuers",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "foley",
+        "description": "Behind and flanking: heavy branch snaps (Lion-O's mass), a near-silent whoosh (Cheetara's speed), a deep sub-bass growl. These sounds are spatially placed — behind, then flanking left (Cheetara), then flanking right (Lion-O) — using the 7.1 field.",
+        "sceneRefs": [
+          {
+            "id": "scene-01"
+          },
+          {
+            "id": "scene-02"
+          }
+        ],
+        "syncPoints": [
+          {
+            "label": "cheetara_flank_whoosh",
+            "time": {
+              "startSec": 5.0,
+              "endSec": 5.8,
+              "durationSec": 0.8
+            },
+            "toleranceFrames": 3
+          },
+          {
+            "label": "liono_growl",
+            "time": {
+              "startSec": 6.5,
+              "endSec": 7.5,
+              "durationSec": 1.0
+            },
+            "toleranceFrames": 4
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-heartbeat",
+        "logicalId": "aa-sfx-heartbeat",
+        "entityType": "audioAsset",
+        "name": "Heartbeat",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "sfx",
+        "description": "Deep, binaural heartbeat. Enters at the clearing silence — the only sound after the jungle ambience and percussion cut. Two beats: thud-thud... thud-thud. Then the brass enters and the heartbeat fades beneath it.",
+        "sceneRefs": [
+          {
+            "id": "scene-03"
+          }
+        ],
+        "syncPoints": [
+          {
+            "label": "first_heartbeat",
+            "time": {
+              "startSec": 9.3,
+              "durationSec": 0.4
+            },
+            "toleranceFrames": 2
+          },
+          {
+            "label": "second_heartbeat",
+            "time": {
+              "startSec": 10.0,
+              "durationSec": 0.4
+            },
+            "toleranceFrames": 2
+          }
+        ]
+      },
+      {
+        "id": "aa-sfx-silence",
+        "logicalId": "aa-sfx-silence",
+        "entityType": "audioAsset",
+        "name": "Clearing Silence",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "audioType": "ambient",
+        "description": "Not true silence — a near-silent room tone with a very faint wind. The absence of the dense jungle ambience IS the event. The contrast is the point.",
+        "sceneRefs": [
+          {
+            "id": "scene-03"
+          }
+        ]
+      }
+    ],
+    "marketingAssets": [],
+    "genericAssets": []
+  },
+  "orchestration": {
+    "workflows": [
+      {
+        "workflowId": "wf-main",
+        "nodes": [
+          {
+            "nodeId": "wfn-gen-refs",
+            "name": "Generate Character & Environment References",
+            "nodeType": "generation",
+            "outputs": [
+              {
+                "id": "va-liono-ref"
+              },
+              {
+                "id": "va-cheetara-ref"
+              },
+              {
+                "id": "va-jungle-ref"
+              }
+            ],
+            "generationStep": {
+              "stepId": "gs-refs",
+              "operationType": "text_to_image",
+              "provider": "anthropic",
+              "tool": "claude-artifacts",
+              "status": "pending"
+            }
+          },
+          {
+            "nodeId": "wfn-gen-shots",
+            "name": "Generate Shot Clips",
+            "nodeType": "generation",
+            "inputs": [
+              {
+                "id": "va-liono-ref"
+              },
+              {
+                "id": "va-cheetara-ref"
+              },
+              {
+                "id": "va-jungle-ref"
+              }
+            ],
+            "generationStep": {
+              "stepId": "gs-shots",
+              "operationType": "text_to_video",
+              "status": "pending"
+            }
+          },
+          {
+            "nodeId": "wfn-gen-audio",
+            "name": "Generate Audio Assets",
+            "nodeType": "generation",
+            "generationStep": {
+              "stepId": "gs-audio",
+              "operationType": "text_to_audio",
+              "status": "pending"
+            }
+          },
+          {
+            "nodeId": "wfn-compose",
+            "name": "Compose Timeline",
+            "nodeType": "transform",
+            "inputs": [
+              {
+                "id": "wfn-gen-shots"
+              },
+              {
+                "id": "wfn-gen-audio"
+              }
+            ],
+            "operation": {
+              "opId": "op-compose",
+              "opType": "concat",
+              "clipRefs": [
+                {
+                  "id": "shot-0101"
+                },
+                {
+                  "id": "shot-0102"
+                },
+                {
+                  "id": "shot-0201"
+                },
+                {
+                  "id": "shot-0202"
+                },
+                {
+                  "id": "shot-0203"
+                },
+                {
+                  "id": "shot-0301"
+                },
+                {
+                  "id": "shot-0302"
+                },
+                {
+                  "id": "shot-0303"
+                }
+              ]
+            }
+          },
+          {
+            "nodeId": "wfn-render",
+            "name": "Final Render",
+            "nodeType": "render",
+            "inputs": [
+              {
+                "id": "wfn-compose"
+              }
+            ],
+            "renderPlanRef": {
+              "id": "rp-master"
+            }
+          },
+          {
+            "nodeId": "wfn-review",
+            "name": "Director Review",
+            "nodeType": "approval",
+            "inputs": [
+              {
+                "id": "wfn-render"
+              }
+            ],
+            "role": "director",
+            "approvalStatus": "pending"
+          }
+        ],
+        "edges": [
+          {
+            "fromNodeId": "wfn-gen-refs",
+            "toNodeId": "wfn-gen-shots"
+          },
+          {
+            "fromNodeId": "wfn-gen-shots",
+            "toNodeId": "wfn-compose"
+          },
+          {
+            "fromNodeId": "wfn-gen-audio",
+            "toNodeId": "wfn-compose"
+          },
+          {
+            "fromNodeId": "wfn-compose",
+            "toNodeId": "wfn-render"
+          },
+          {
+            "fromNodeId": "wfn-render",
+            "toNodeId": "wfn-review"
+          }
+        ]
+      }
+    ]
+  },
+  "assembly": {
+    "timelines": [
+      {
+        "id": "tl-master",
+        "logicalId": "tl-master",
+        "entityType": "timeline",
+        "name": "Master Timeline",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "durationSec": 15,
+        "frameRate": {
+          "fps": 24,
+          "mode": "constant"
+        },
+        "resolution": {
+          "widthPx": 3840,
+          "heightPx": 2160
+        },
+        "aspectRatio": {
+          "expression": "2.39:1",
+          "numerator": 239,
+          "denominator": 100
+        },
+        "videoClips": [
+          {
+            "clipId": "vc-01",
+            "sourceRef": {
+              "id": "shot-0101"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 2.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-02",
+            "sourceRef": {
+              "id": "shot-0102"
+            },
+            "timelineStartSec": 2.5,
+            "durationSec": 2.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-03",
+            "sourceRef": {
+              "id": "shot-0201"
+            },
+            "timelineStartSec": 5.0,
+            "durationSec": 1.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-04",
+            "sourceRef": {
+              "id": "shot-0202"
+            },
+            "timelineStartSec": 6.5,
+            "durationSec": 1.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-05",
+            "sourceRef": {
+              "id": "shot-0203"
+            },
+            "timelineStartSec": 8.0,
+            "durationSec": 1.0,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-06",
+            "sourceRef": {
+              "id": "shot-0301"
+            },
+            "timelineStartSec": 9.0,
+            "durationSec": 1.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-07",
+            "sourceRef": {
+              "id": "shot-0302"
+            },
+            "timelineStartSec": 10.5,
+            "durationSec": 1.5,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "vc-08",
+            "sourceRef": {
+              "id": "shot-0303"
+            },
+            "timelineStartSec": 12.0,
+            "durationSec": 3.0,
+            "layerOrder": 0
+          }
+        ],
+        "audioClips": [
+          {
+            "clipId": "ac-score",
+            "sourceRef": {
+              "id": "aa-score"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 15,
+            "layerOrder": 0
+          },
+          {
+            "clipId": "ac-ambient-jungle",
+            "sourceRef": {
+              "id": "aa-ambient-jungle"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 9.0,
+            "layerOrder": 1,
+            "transitionOut": {
+              "type": "cut",
+              "durationSec": 0
+            }
+          },
+          {
+            "clipId": "ac-silence",
+            "sourceRef": {
+              "id": "aa-sfx-silence"
+            },
+            "timelineStartSec": 9.0,
+            "durationSec": 6.0,
+            "layerOrder": 1,
+            "transitionIn": {
+              "type": "cut",
+              "durationSec": 0
+            }
+          },
+          {
+            "clipId": "ac-breathing",
+            "sourceRef": {
+              "id": "aa-sfx-breathing"
+            },
+            "timelineStartSec": 0,
+            "durationSec": 11.0,
+            "layerOrder": 2
+          },
+          {
+            "clipId": "ac-footsteps",
+            "sourceRef": {
+              "id": "aa-sfx-footsteps-prey"
+            },
+            "timelineStartSec": 0.3,
+            "durationSec": 8.7,
+            "layerOrder": 3
+          },
+          {
+            "clipId": "ac-foliage",
+            "sourceRef": {
+              "id": "aa-sfx-foliage"
+            },
+            "timelineStartSec": 0.2,
+            "durationSec": 8.8,
+            "layerOrder": 4
+          },
+          {
+            "clipId": "ac-pursuit",
+            "sourceRef": {
+              "id": "aa-sfx-pursuit"
+            },
+            "timelineStartSec": 1.5,
+            "durationSec": 7.5,
+            "layerOrder": 5
+          },
+          {
+            "clipId": "ac-heartbeat",
+            "sourceRef": {
+              "id": "aa-sfx-heartbeat"
+            },
+            "timelineStartSec": 9.0,
+            "durationSec": 2.0,
+            "layerOrder": 6
+          }
+        ]
+      }
+    ],
+    "editVersions": [
+      {
+        "id": "ev-01",
+        "logicalId": "ev-01",
+        "entityType": "editVersion",
+        "name": "First Assembly",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "timelineRef": {
+          "id": "tl-master"
+        },
+        "changeList": [
+          "Initial assembly of 8 shots across 3 scenes with 8-layer audio mix"
+        ]
+      }
+    ],
+    "renderPlans": [
+      {
+        "id": "rp-master",
+        "logicalId": "rp-master",
+        "entityType": "renderPlan",
+        "name": "Master Render Plan",
+        "version": {
+          "number": "1.0.0",
+          "state": "draft"
+        },
+        "createdAt": "2026-03-28T18:00:00Z",
+        "updatedAt": "2026-03-28T18:00:00Z",
+        "sourceTimelineRef": {
+          "id": "tl-master"
+        },
+        "operations": [
+          {
+            "opId": "op-concat",
+            "opType": "concat",
+            "clipRefs": [
+              {
+                "id": "shot-0101"
+              },
+              {
+                "id": "shot-0102"
+              },
+              {
+                "id": "shot-0201"
+              },
+              {
+                "id": "shot-0202"
+              },
+              {
+                "id": "shot-0203"
+              },
+              {
+                "id": "shot-0301"
+              },
+              {
+                "id": "shot-0302"
+              },
+              {
+                "id": "shot-0303"
+              }
+            ]
+          },
+          {
+            "opId": "op-audio-mix",
+            "opType": "audioMix",
+            "tracks": [
+              {
+                "audioRef": {
+                  "id": "aa-score"
+                },
+                "gainDb": -3.0,
+                "pan": 0
+              },
+              {
+                "audioRef": {
+                  "id": "aa-ambient-jungle"
+                },
+                "gainDb": -6.0,
+                "pan": 0
+              },
+              {
+                "audioRef": {
+                  "id": "aa-sfx-silence"
+                },
+                "gainDb": -20.0,
+                "pan": 0
+              },
+              {
+                "audioRef": {
+                  "id": "aa-sfx-breathing"
+                },
+                "gainDb": -4.0,
+                "pan": 0
+              },
+              {
+                "audioRef": {
+                  "id": "aa-sfx-footsteps-prey"
+                },
+                "gainDb": -8.0,
+                "pan": 0
+              },
+              {
+                "audioRef": {
+                  "id": "aa-sfx-foliage"
+                },
+                "gainDb": -10.0,
+                "pan": 0
+              },
+              {
+                "audioRef": {
+                  "id": "aa-sfx-pursuit"
+                },
+                "gainDb": -6.0,
+                "pan": 0
+              },
+              {
+                "audioRef": {
+                  "id": "aa-sfx-heartbeat"
+                },
+                "gainDb": -5.0,
+                "pan": 0
+              }
+            ]
+          },
+          {
+            "opId": "op-grade",
+            "opType": "colorGrade",
+            "inputRef": {
+              "id": "tl-master"
+            },
+            "intent": "Chase (0-9s): desaturated greens, crushed blacks, cool 5500K. Bioluminescent accents preserved as only non-ambient color. Clearing reveal (9-15s): warm shift to 4500K, golden dappled light, restored saturation on character costumes and skin/fur tones. The grade transition happens over ~1s aligned with the camera liberation."
+          },
+          {
+            "opId": "op-encode",
+            "opType": "encode",
+            "inputRef": {
+              "id": "tl-master"
+            },
+            "compression": {
+              "codec": "H.265",
+              "profile": "Main 10",
+              "crf": 16
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "deliverables": [
+    {
+      "id": "fo-master",
+      "logicalId": "fo-master",
+      "entityType": "finalOutput",
+      "name": "Thundercats Hunt Teaser — 4K HDR Master",
+      "version": {
+        "number": "1.0.0",
+        "state": "draft"
+      },
+      "createdAt": "2026-03-28T18:00:00Z",
+      "updatedAt": "2026-03-28T18:00:00Z",
+      "outputType": "teaser",
+      "platform": "cinema_display",
+      "runtimeSec": 15,
+      "sourceTimelineRef": {
+        "id": "tl-master"
+      },
+      "renderPlanRef": {
+        "id": "rp-master"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "relationshipId": "rel-01",
+      "relationshipType": "illustrates",
+      "from": {
+        "id": "va-liono-ref"
+      },
+      "to": {
+        "id": "char-liono"
+      },
+      "notes": "Canonical character reference for Lion-O"
+    },
+    {
+      "relationshipId": "rel-02",
+      "relationshipType": "illustrates",
+      "from": {
+        "id": "va-cheetara-ref"
+      },
+      "to": {
+        "id": "char-cheetara"
+      },
+      "notes": "Canonical character reference for Cheetara"
+    },
+    {
+      "relationshipId": "rel-03",
+      "relationshipType": "illustrates",
+      "from": {
+        "id": "va-jungle-ref"
+      },
+      "to": {
+        "id": "env-jungle"
+      },
+      "notes": "Canonical environment reference for both jungle and clearing"
+    },
+    {
+      "relationshipId": "rel-04",
+      "relationshipType": "scored_by",
+      "from": {
+        "id": "prj-tc-hunt"
+      },
+      "to": {
+        "id": "aa-score"
+      },
+      "notes": "Percussion-to-brass score underlays entire 15-second teaser"
+    },
+    {
+      "relationshipId": "rel-05",
+      "relationshipType": "derived_from",
+      "from": {
+        "id": "fo-master"
+      },
+      "to": {
+        "id": "tl-master"
+      }
+    },
+    {
+      "relationshipId": "rel-06",
+      "relationshipType": "references",
+      "from": {
+        "id": "shot-0303"
+      },
+      "to": {
+        "id": "shot-0201"
+      },
+      "notes": "The 360 reveal shows what the audience glimpsed as a blur — Cheetara's spotted golden fur, now in full detail"
+    },
+    {
+      "relationshipId": "rel-07",
+      "relationshipType": "references",
+      "from": {
+        "id": "shot-0303"
+      },
+      "to": {
+        "id": "shot-0202"
+      },
+      "notes": "The 360 reveal shows what the audience glimpsed as a dark shape — Lion-O's massive frame, now composed and still"
+    },
+    {
+      "relationshipId": "rel-08",
+      "relationshipType": "enhances",
+      "from": {
+        "id": "aa-sfx-pursuit"
+      },
+      "to": {
+        "id": "char-liono"
+      },
+      "notes": "The spatial placement of pursuit sounds (heavy branch snaps on the right channel) foreshadows Lion-O's position in the reveal"
+    },
+    {
+      "relationshipId": "rel-09",
+      "relationshipType": "enhances",
+      "from": {
+        "id": "aa-sfx-pursuit"
+      },
+      "to": {
+        "id": "char-cheetara"
+      },
+      "notes": "The near-silent whoosh on the left channel foreshadows Cheetara's speed — she makes almost no sound"
+    },
+    {
+      "relationshipId": "rel-10",
+      "relationshipType": "depends_on",
+      "from": {
+        "id": "aa-sfx-heartbeat"
+      },
+      "to": {
+        "id": "aa-sfx-silence"
+      },
+      "notes": "The heartbeat only works because of the silence — it must enter AFTER the jungle ambience cuts dead"
+    }
+  ],
+  "dependencies": [
+    {
+      "edgeId": "dep-01",
+      "fromRef": {
+        "id": "va-liono-ref"
+      },
+      "toRef": {
+        "id": "char-liono"
+      },
+      "dependencyType": "derives_from",
+      "required": true,
+      "notes": "Lion-O reference sheet must be generated and approved before reveal shots"
+    },
+    {
+      "edgeId": "dep-02",
+      "fromRef": {
+        "id": "va-cheetara-ref"
+      },
+      "toRef": {
+        "id": "char-cheetara"
+      },
+      "dependencyType": "derives_from",
+      "required": true,
+      "notes": "Cheetara reference sheet must be generated and approved before reveal shots"
+    },
+    {
+      "edgeId": "dep-03",
+      "fromRef": {
+        "id": "va-jungle-ref"
+      },
+      "toRef": {
+        "id": "env-jungle"
+      },
+      "dependencyType": "derives_from",
+      "required": true,
+      "notes": "Environment concept must be approved before any shot generation"
+    },
+    {
+      "edgeId": "dep-04",
+      "fromRef": {
+        "id": "tl-master"
+      },
+      "toRef": {
+        "id": "aa-score"
+      },
+      "dependencyType": "requires",
+      "required": true,
+      "notes": "Timeline assembly requires finalized score with sync points — the silence drop timing is critical"
+    },
+    {
+      "edgeId": "dep-05",
+      "fromRef": {
+        "id": "fo-master"
+      },
+      "toRef": {
+        "id": "rp-master"
+      },
+      "dependencyType": "requires",
+      "required": true,
+      "notes": "Final output requires completed render plan execution"
+    }
+  ]
+}

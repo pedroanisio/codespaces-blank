@@ -167,12 +167,14 @@ _VIDEO_PROVIDER_CONSTRAINTS = {
     "runway": {
         "min_duration_sec": 2,
         "max_duration_sec": 10,
+        "max_prompt_chars": 1000,
         "supports_reference_images": False,
         "supported_ratios": ["1280:720", "720:1280", "1280:768"],
     },
     "veo": {
-        "min_duration_sec": 1,
+        "min_duration_sec": 4,     # API rejects < 4
         "max_duration_sec": 8,
+        "max_prompt_chars": 8000,
         "supports_reference_images": True,
         "max_reference_images": 3,
         "supported_ratios": ["16:9", "9:16", "1:1"],
@@ -192,22 +194,27 @@ def _pick_video_provider(
     based on provider constraints and shot requirements.
 
     Checks duration limits, reference image support, and API key availability.
+
+    When the target duration is shorter than a provider's minimum, the provider
+    is still eligible — it will generate at its minimum duration and the assembly
+    stage will trim the clip to the target. A provider is only excluded if the
+    target exceeds its maximum (can't generate enough content).
+
     Always includes "stub" as the final fallback.
     """
     duration = float(shot.get("targetDurationSec", 5))
     has_refs = bool(reference_images and any(len(b) > 100 for b in reference_images))
     candidates: list[str] = []
 
-    # Runway
+    # Runway — eligible if target ≤ max (will clamp up to min if needed)
     rc = _VIDEO_PROVIDER_CONSTRAINTS["runway"]
-    if (runway_key
-            and rc["min_duration_sec"] <= duration <= rc["max_duration_sec"]):
+    if (runway_key and duration <= rc["max_duration_sec"]):
         candidates.append("runway")
 
-    # Veo
+    # Veo — eligible if target ≤ max (will clamp up to min if needed)
     vc = _VIDEO_PROVIDER_CONSTRAINTS["veo"]
     if (gemini_key and "REPLACE_ME" not in gemini_key
-            and vc["min_duration_sec"] <= duration <= vc["max_duration_sec"]):
+            and duration <= vc["max_duration_sec"]):
         # Prefer Veo when reference images are available and provider supports them
         if has_refs and vc["supports_reference_images"]:
             candidates.insert(0, "veo")
@@ -226,6 +233,72 @@ def _pick_video_provider(
     return candidates
 
 
+def _distill_prompt(prompt: str, max_chars: int, shot_id: str = "") -> str:
+    """
+    Distill a long enriched prompt into a concise version that fits within
+    max_chars, using an LLM to preserve narrative intent rather than truncating.
+
+    Falls back to smart truncation if no LLM is available.
+    """
+    if len(prompt) <= max_chars:
+        return prompt
+
+    # Try LLM distillation
+    try:
+        from pipeline.providers import _openai  # noqa: PLC0415
+        client = _openai()
+        if client:
+            resp = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            f"You are a video generation prompt distiller. "
+                            f"Condense the following shot description into EXACTLY {max_chars - 50} characters or fewer. "
+                            f"Keep: the specific ACTION (what happens), character appearance, camera angle/movement, lighting, mood. "
+                            f"Drop: general style context, color hex codes, technical metadata, redundant descriptions. "
+                            f"Output ONLY the condensed prompt, no explanation."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=max_chars // 3,
+                temperature=0.3,
+            )
+            distilled = resp.choices[0].message.content.strip()
+            if distilled and len(distilled) <= max_chars:
+                log.info("prompt_distilled", shot_id=shot_id,
+                         original_len=len(prompt), distilled_len=len(distilled))
+                return distilled
+            log.debug("prompt_distill_too_long", shot_id=shot_id, len=len(distilled))
+    except Exception as exc:
+        log.debug("prompt_distill_llm_failed", shot_id=shot_id, error=str(exc))
+
+    # Fallback: structured truncation — keep the most important sections
+    sections = prompt.split("\n\n")
+    # Priority: [WHAT HAPPENS] > [CAMERA] > [CHARACTERS] > [FRAMING] > rest
+    priority_keys = ["WHAT HAPPENS", "CAMERA", "CHARACTERS IN SHOT", "FRAMING", "CONTINUITY"]
+    prioritized: list[str] = []
+    remainder: list[str] = []
+    for section in sections:
+        if any(k in section for k in priority_keys):
+            prioritized.append(section)
+        else:
+            remainder.append(section)
+
+    result = "\n\n".join(prioritized)
+    for section in remainder:
+        if len(result) + len(section) + 2 <= max_chars:
+            result = result + "\n\n" + section
+        else:
+            break
+
+    log.info("prompt_truncated_smart", shot_id=shot_id,
+             original_len=len(prompt), truncated_len=len(result[:max_chars]))
+    return result[:max_chars]
+
+
 def _runway_generate_shot(
     shot: dict,
     api_key: str,
@@ -237,13 +310,14 @@ def _runway_generate_shot(
     import requests  # noqa: PLC0415
 
     gen_params = shot.get("genParams") or {}
-    prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
-    # Runway has a prompt length limit — truncate to 2000 chars
-    prompt = prompt[:2000]
+    rc = _VIDEO_PROVIDER_CONSTRAINTS["runway"]
+    raw_prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+    # Distill prompt to fit Runway's limit (preserves narrative intent)
+    prompt = _distill_prompt(raw_prompt, rc["max_prompt_chars"], shot_id=_shot_id(shot))
     duration = max(
-        _VIDEO_PROVIDER_CONSTRAINTS["runway"]["min_duration_sec"],
-        min(int(shot.get("targetDurationSec", 5)),
-            _VIDEO_PROVIDER_CONSTRAINTS["runway"]["max_duration_sec"]),
+        rc["min_duration_sec"],
+        min(round(float(shot.get("targetDurationSec", 5))),
+            rc["max_duration_sec"]),
     )
 
     payload = {
@@ -309,7 +383,13 @@ def _veo_generate_shot(
     from google.genai import types  # noqa: PLC0415
 
     gen_params = shot.get("genParams") or {}
-    prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+    vc = _VIDEO_PROVIDER_CONSTRAINTS["veo"]
+    raw_prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
+    prompt = _distill_prompt(raw_prompt, vc["max_prompt_chars"], shot_id=_shot_id(shot))
+
+    # Clamp duration to Veo's supported range
+    target_duration = float(shot.get("targetDurationSec", 5))
+    duration = max(vc["min_duration_sec"], min(int(target_duration), vc["max_duration_sec"]))
 
     client = genai.Client(api_key=api_key)
 
@@ -326,11 +406,16 @@ def _veo_generate_shot(
     # Veo supports max 3 reference images
     veo_refs = veo_refs[:3]
 
-    config = types.GenerateVideosConfig(aspect_ratio="16:9")
+    config = types.GenerateVideosConfig(
+        aspect_ratio="16:9",
+        number_of_videos=1,
+        duration_seconds=duration,
+    )
     if veo_refs:
         config.reference_images = veo_refs
         log.info("veo_reference_images_attached", count=len(veo_refs), shot_id=_shot_id(shot))
 
+    log.info("veo_request", shot_id=_shot_id(shot), duration=duration, prompt_len=len(prompt))
     operation = client.models.generate_videos(
         model="veo-3.1-generate-preview",
         prompt=prompt,

@@ -180,11 +180,13 @@ class TestVideoProviderRouting(unittest.TestCase):
         from pipeline.generate import _pick_video_provider
         self._pick = _pick_video_provider
 
-    def test_short_shot_skips_runway(self):
-        """1.5s shot must NOT include Runway (min 2s)."""
+    def test_short_shot_still_eligible(self):
+        """1.5s shot is eligible for providers — they generate at minimum
+        duration and the assembly trims to target."""
         shot = {"id": "s1", "targetDurationSec": 1.5}
         providers = self._pick(shot, runway_key="rk", gemini_key="gk")
-        self.assertNotIn("runway", providers)
+        # Both are eligible (target < max for both), assembly will trim
+        self.assertIn("runway", providers)
         self.assertIn("veo", providers)
         self.assertIn("stub", providers)
 
@@ -200,6 +202,14 @@ class TestVideoProviderRouting(unittest.TestCase):
         providers = self._pick(shot, runway_key="rk", gemini_key="gk")
         self.assertIn("runway", providers)
         self.assertNotIn("veo", providers)
+
+    def test_exceeds_all_maxes_only_stub(self):
+        """15s shot exceeds both providers' max — only stub."""
+        shot = {"id": "s-long", "targetDurationSec": 15.0}
+        providers = self._pick(shot, runway_key="rk", gemini_key="gk")
+        self.assertNotIn("runway", providers)
+        self.assertNotIn("veo", providers)
+        self.assertEqual(providers, ["stub"])
 
     def test_refs_promote_veo(self):
         """When reference images available, Veo is preferred (supports refs)."""
@@ -526,6 +536,42 @@ class TestRunwayEnrichedPrompt(unittest.TestCase):
 # ═════════════════════════════════════════════════════════════════════════════
 # §8  Schema path resolution
 # ═════════════════════════════════════════════════════════════════════════════
+
+class TestPromptDistillation(unittest.TestCase):
+    """Regression: video prompts must be distilled, never raw-truncated.
+    Raw truncation causes hallucinations from mid-sentence cuts."""
+
+    def test_no_raw_truncation_in_video_generators(self):
+        """_runway_generate_shot and _veo_generate_shot must not contain
+        prompt[:N] slicing — they must use _distill_prompt instead."""
+        import inspect
+        from pipeline.generate import _runway_generate_shot, _veo_generate_shot
+
+        for fn in (_runway_generate_shot, _veo_generate_shot):
+            source = inspect.getsource(fn)
+            # Check for raw slice patterns like prompt[:2000] or raw_prompt[:1000]
+            import re
+            slices = re.findall(r'prompt\[\s*:\s*\d+\s*\]', source)
+            self.assertEqual(
+                slices, [],
+                f"{fn.__name__} contains raw prompt truncation: {slices}. "
+                f"Use _distill_prompt() instead."
+            )
+
+    def test_distill_short_prompt_unchanged(self):
+        """Prompts under the limit pass through unchanged."""
+        from pipeline.generate import _distill_prompt
+        short = "A robot walks through a junkyard."
+        result = _distill_prompt(short, 1000)
+        self.assertEqual(result, short)
+
+    def test_distill_long_prompt_fits_limit(self):
+        """Long prompts are reduced to fit the limit."""
+        from pipeline.generate import _distill_prompt
+        long_prompt = "[WHAT HAPPENS]\n" + "A" * 2000 + "\n\n[CAMERA]\nwide shot\n\n[STYLE]\n" + "B" * 500
+        result = _distill_prompt(long_prompt, 500, shot_id="test")
+        self.assertLessEqual(len(result), 500)
+
 
 class TestSchemaPathResolution(unittest.TestCase):
     """Regression: all pipeline modules must point to schemas/active/gvpp-v3.schema.json."""
