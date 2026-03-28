@@ -12,6 +12,9 @@ google-genai>=1.5.0        # Gemini 2.5 Flash + Imagen 4 (image fallback)
 google-generativeai>=0.8.6 # Google Generative AI legacy SDK
 python-dotenv>=1.0.0       # Load .env API keys automatically
 
+# ── Logging ───────────────────────────────────────────────────────────────────
+structlog>=24.1.0          # Structured logging — JSON to disk + colored console
+
 # ── Utilities ──────────────────────────────────────────────────────────────────
 tqdm>=4.66                 # Progress bars for multi-skill pipeline runs
 

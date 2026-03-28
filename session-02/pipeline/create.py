@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
+import structlog
 import re
 import sys
 import textwrap
@@ -39,7 +39,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-log = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -1141,7 +1141,7 @@ def run_idea_pipeline(
     """Run the full 24-skill AI pipeline from a creative idea."""
     from pipeline.skills import run_pipeline
 
-    log.info("Running full 24-skill pipeline from idea...")
+    log.info("running_full_pipeline_from_idea")
     return run_pipeline(
         idea,
         output_dir=output_dir,
@@ -1179,7 +1179,7 @@ def run_refine(
         ordered = sorted(skill_names, key=lambda s: flat_order.index(s) if s in flat_order else 999)
 
         for skill_dir in ordered:
-            log.info("── Refining with %s", skill_dir)
+            log.info("refining_with_skill", skill=skill_dir)
             update = run_skill(
                 skill_dir, instance,
                 output_dir=output_dir,
@@ -1187,9 +1187,9 @@ def run_refine(
             )
             if update:
                 instance = _deep_merge(instance, update)
-                log.info("  ✓ Merged %d top-level keys", len(update))
+                log.info("merged_skill_update", top_level_keys=len(update))
             else:
-                log.warning("  ⚠ %s returned empty update", skill_dir)
+                log.warning("skill_returned_empty_update", skill=skill_dir)
         return instance
 
     # No specific skills — run the full pipeline phases
@@ -1203,11 +1203,11 @@ def run_refine(
             if start_from in phase:
                 skipping = False
             else:
-                log.info("Phase %d — skipped (resuming from %s)", phase_num, start_from)
+                log.info("phase_skipped", phase=phase_num, resuming_from=start_from)
                 continue
 
         phase_label = ", ".join(s.split("-", 1)[1] for s in phase)
-        log.info("── Phase %d: %s", phase_num, phase_label)
+        log.info("starting_phase", phase=phase_num, label=phase_label)
 
         for skill_dir in phase:
             update = run_skill(
@@ -1370,11 +1370,8 @@ def main() -> int:
     args = parser.parse_args()
 
     # ── Logging setup ────────────────────────────────────────
-    logging.basicConfig(
-        level=logging.DEBUG if getattr(args, "verbose", False) else logging.INFO,
-        format="%(asctime)s  %(levelname)-7s  %(name)s — %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    from pipeline.logging_config import configure_logging
+    configure_logging(verbose=getattr(args, "verbose", False))
 
     # ── Validate mode ────────────────────────────────────────
     if args.validate:

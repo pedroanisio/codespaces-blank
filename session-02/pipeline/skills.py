@@ -34,16 +34,17 @@ from __future__ import annotations
 
 import base64
 import json
-import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
+import structlog
+
 from pipeline import providers
 
-log = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 SKILLS_DIR = Path(__file__).parent.parent / "skills"
 
@@ -195,7 +196,7 @@ def _load_skill_md(skill_dir: str) -> str:
     """Load SKILL.md for a given skill directory name."""
     path = SKILLS_DIR / skill_dir / "SKILL.md"
     if not path.exists():
-        log.warning("SKILL.md not found: %s", path)
+        log.warning("skill_md_not_found", path=str(path))
         return f"# {skill_dir}\nNo specification found."
     return path.read_text(encoding="utf-8")
 
@@ -311,7 +312,7 @@ def run_skill(
     if skill_dir in _RESEARCH_SKILLS and os.getenv("BRAVE_API_KEY"):
         query = _build_research_query(skill_dir, idea, context)
         if query:
-            log.info("    🔍 %s — web research: %s", skill_dir, query[:60])
+            log.info("skill_web_research", skill=skill_dir, query=query[:60])
             web_ctx = providers.search_web_context(query, max_tokens=2048)
             if web_ctx:
                 user_parts.append(
@@ -330,11 +331,11 @@ def run_skill(
     )
     user = "\n\n".join(user_parts)
 
-    log.info("  ▶ %s — calling AI...", skill_dir)
+    log.info("skill_calling_ai", skill=skill_dir)
     t0 = time.perf_counter()
     update = providers.complete_json(system, user, max_tokens=8192)
     elapsed = time.perf_counter() - t0
-    log.info("  ✓ %s — %.1fs, %d top-level keys", skill_dir, elapsed, len(update))
+    log.info("skill_complete", skill=skill_dir, elapsed_s=round(elapsed, 1), keys=len(update))
 
     # Post-process media-generating skills
     if not stub_media and output_dir:
@@ -373,7 +374,7 @@ def _post_process(
             # Pick voice from character voiceProfile if available
             char_id = (asset.get("characterRef") or {}).get("logicalId", "")
             voice = _resolve_voice(char_id, instance)
-            log.info("    TTS: %s → %s", asset_id, out_path.name)
+            log.info("tts_generating", asset_id=asset_id, file=out_path.name)
             mp3 = providers.text_to_speech(transcript, voice=voice)
             if mp3:
                 out_path.write_bytes(mp3)
@@ -397,7 +398,7 @@ def _post_process(
             prompt = steps[0].get("prompt", "") if steps else ""
             if not prompt:
                 prompt = f"Reference image: {asset.get('purpose', 'cinematic reference')}"
-            log.info("    IMG: %s → %s", asset_id, out_path.name)
+            log.info("img_generating", asset_id=asset_id, file=out_path.name)
             png = providers.generate_image(prompt)
             out_path.write_bytes(png)
             asset["_filePath"] = str(out_path)
@@ -410,14 +411,14 @@ def _post_process(
             b64_a = _load_b64(refs[0].get("_filePath", ""))
             b64_b = _load_b64(refs[1].get("_filePath", ""))
             score = providers.vision_score(b64_a, b64_b)
-            log.info("    consistency score: %.3f", score)
+            log.info("consistency_score", score=round(score, 3))
             # Inject score into update if it has a consistency section
             update.setdefault("_consistencyScore", score)
 
     # ── S18: post-production — Descript transcription + AI editing ────────────
     elif skill_dir == "s18-post-production":
         if not os.getenv("DESCRIPT_API_KEY"):
-            log.debug("s18: DESCRIPT_API_KEY not set — skipping Descript integration")
+            log.debug("descript_skipped", reason="DESCRIPT_API_KEY not set")
         else:
             # Find any rendered video/audio to import into Descript
             media_candidates = list((output_dir / "shots").glob("*.mp4")) if (output_dir / "shots").is_dir() else []
@@ -433,7 +434,7 @@ def _post_process(
                 media_file = max(audio_candidates, key=lambda p: p.stat().st_size)
 
             if media_file:
-                log.info("    Descript: importing %s for transcription", media_file.name)
+                log.info("descript_importing", file=media_file.name)
                 import_result = providers.descript_import_media(
                     str(media_file.resolve()),
                     project_name=f"s18-{project_name}",
@@ -441,18 +442,18 @@ def _post_process(
                 project_id = import_result.get("project_id")
                 if project_id:
                     update.setdefault("_descript", {})["projectId"] = project_id
-                    log.info("    Descript: project created → %s", project_id)
+                    log.info("descript_project_created", project_id=project_id)
 
                     # Apply AI editing from director instructions
                     director = instance.get("canonicalDocuments", {}).get("directorInstructions", {})
                     post_notes = director.get("postProductionNotes", "") or director.get("editingStyle", "")
                     if post_notes:
-                        log.info("    Descript: applying agent edit — %s", post_notes[:60])
+                        log.info("descript_agent_edit", notes=post_notes[:60])
                         edit_result = providers.descript_agent_edit(project_id, post_notes)
                         job_id = edit_result.get("job_id")
                         if job_id:
                             update["_descript"]["jobId"] = job_id
-                            log.info("    Descript: agent edit job queued → %s", job_id)
+                            log.info("descript_edit_queued", job_id=job_id)
 
     return update
 
@@ -510,12 +511,9 @@ def run_pipeline(
     avail = providers.available_providers()
     configured = [k for k, v in avail.items() if v]
     if not configured:
-        log.warning(
-            "No AI providers configured. Set at least one API key in .env. "
-            "Skills will return empty updates (stub instance only)."
-        )
+        log.warning("no_providers_configured")
     else:
-        log.info("Active providers: %s", ", ".join(configured))
+        log.info("active_providers", providers=configured)
 
     instance = _empty_instance()
     skipping = start_from is not None
@@ -530,10 +528,10 @@ def run_pipeline(
             if start_from in phase:
                 skipping = False
             else:
-                log.info("Phase %d [%s] — skipped (resuming)", phase_num, phase_label)
+                log.info("phase_skipped", phase=phase_num, label=phase_label)
                 continue
 
-        log.info("── Phase %d: %s", phase_num, phase_label)
+        log.info("phase_start", phase=phase_num, label=phase_label)
 
         # Determine whether this skill is S01 (needs the idea)
         is_seed = phase == ["s01-concept-seed"]
@@ -564,7 +562,7 @@ def run_pipeline(
                     try:
                         updates[skill] = fut.result()
                     except Exception as exc:
-                        log.error("Skill %s failed: %s", skill, exc)
+                        log.error("skill_failed", skill=skill, error=str(exc))
                         updates[skill] = {}
 
             # Merge in a deterministic order
@@ -578,7 +576,7 @@ def run_pipeline(
                 json.dumps(instance, indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
-            log.debug("progress saved → %s", snap.name)
+            log.debug("progress_saved", file=snap.name)
 
     # Final save
     if output_dir:
@@ -587,7 +585,7 @@ def run_pipeline(
             json.dumps(instance, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
-        log.info("✓ Pipeline complete → %s", final.resolve())
+        log.info("pipeline_complete", output=str(final.resolve()))
 
     return instance
 
@@ -691,7 +689,7 @@ def bridge_v3_to_v2(instance: dict) -> dict:
             }
             for i, (label, color) in enumerate(_stub_shots)
         ]}]
-        log.info("bridge: no shots in instance — injected %d stub shots", len(_stub_shots))
+        log.info("bridge_stub_shots_injected", count=len(_stub_shots))
 
     # Build v2-style audio_assets dict
     v2_audio: dict[str, dict] = {}
@@ -809,11 +807,7 @@ if __name__ == "__main__":
     import argparse
     import sys
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s  %(levelname)-7s  %(name)s — %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    from pipeline.logging_config import configure_logging
 
     parser = argparse.ArgumentParser(description="Run the full 24-skill pipeline.")
     parser.add_argument("idea", help="Creative idea / concept for the video.")
@@ -825,8 +819,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+    configure_logging(verbose=args.verbose)
 
     instance = run_pipeline(
         args.idea,

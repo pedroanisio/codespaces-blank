@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import base64
 import json
-import logging
 import os
 import re
 import struct
@@ -42,6 +41,8 @@ import tempfile
 import zlib
 from pathlib import Path
 from typing import Any, Literal
+
+import structlog
 
 # Load .env — search from most-specific (session dir) to least-specific (repo root).
 # Later calls with override=True take precedence over earlier ones.
@@ -57,7 +58,7 @@ try:
 except ImportError:
     pass  # python-dotenv not installed yet; env vars must be set manually
 
-log = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 # ── lazy client factories ──────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ def _anthropic():
         import anthropic  # noqa: PLC0415
         return anthropic.Anthropic(api_key=key)
     except ImportError:
-        log.warning("anthropic package not installed")
+        log.warning("package_not_installed", package="anthropic")
         return None
 
 
@@ -87,7 +88,7 @@ def _openai(*, base_url: str | None = None, key_env: str = "OPENAI_API_KEY"):
             kw["base_url"] = base_url
         return OpenAI(**kw)
     except ImportError:
-        log.warning("openai package not installed")
+        log.warning("package_not_installed", package="openai")
         return None
 
 
@@ -109,7 +110,7 @@ def _gemini(model: str = "gemini-2.5-flash"):
         genai.configure(api_key=key)
         return genai.GenerativeModel(model)
     except ImportError:
-        log.warning("google-generativeai package not installed")
+        log.warning("package_not_installed", package="google-generativeai")
         return None
 
 
@@ -171,12 +172,12 @@ def complete_json(
         try:
             result = _dispatch(p, system, user + _JSON_INSTRUCTION, max_tokens)
             if result is not None:
-                log.debug("complete_json via %s (%d chars)", p, len(json.dumps(result)))
+                log.debug("complete_json_success", provider=p, chars=len(json.dumps(result)))
                 return result
         except Exception as exc:
-            log.debug("provider %s error: %s", p, exc)
+            log.debug("provider_error", provider=p, error=str(exc))
 
-    log.warning("complete_json: all providers failed — returning {}")
+    log.warning("complete_json_all_failed")
     return {}
 
 
@@ -306,10 +307,10 @@ def generate_image(
                     else base64.b64decode(resp.data[0].b64_json or "")
                 )
                 if img_bytes:
-                    log.debug("generate_image: %s ✓ (%d bytes)", img_model, len(img_bytes))
+                    log.debug("generate_image_success", model=img_model, bytes=len(img_bytes))
                     return img_bytes
             except Exception as exc:
-                log.debug("%s failed: %s — trying next", img_model, exc)
+                log.debug("generate_image_provider_failed", model=img_model, error=str(exc))
                 continue
 
     # Gemini Imagen 3 (new google-genai SDK)
@@ -328,7 +329,7 @@ def generate_image(
                 ),
             )
             if result.generated_images:
-                log.debug("generate_image: Gemini Imagen 4 ✓")
+                log.debug("generate_image_success", model="gemini_imagen_4")
                 return result.generated_images[0].image.image_bytes
         except ImportError:
             # Fallback to deprecated SDK
@@ -341,12 +342,12 @@ def generate_image(
                 imagen = genai_legacy.ImageGenerationModel("imagen-4.0-generate-001")
                 result = imagen.generate_images(prompt=prompt[:1024], number_of_images=1)
                 if result.images:
-                    log.debug("generate_image: Gemini Imagen (legacy SDK) ✓")
+                    log.debug("generate_image_success", model="gemini_imagen_legacy")
                     return result.images[0]._image_bytes
             except Exception as exc:
-                log.warning("Gemini Imagen (legacy) failed: %s", exc)
+                log.warning("generate_image_failed", model="gemini_imagen_legacy", error=str(exc))
         except Exception as exc:
-            log.warning("Gemini Imagen failed: %s", exc)
+            log.warning("generate_image_failed", model="gemini_imagen", error=str(exc))
 
     # Grok Aurora (xAI) — OpenAI-compatible image generation
     grok_client = _grok()
@@ -360,12 +361,12 @@ def generate_image(
             )
             data = resp.data[0].b64_json
             if data:
-                log.debug("generate_image: Grok Aurora ✓ (%d bytes)", len(data) * 3 // 4)
+                log.debug("generate_image_success", model="grok_aurora", bytes=len(data) * 3 // 4)
                 return base64.b64decode(data)
         except Exception as exc:
-            log.warning("Grok Aurora failed: %s", exc)
+            log.warning("generate_image_failed", model="grok_aurora", error=str(exc))
 
-    log.info("generate_image: using stub PNG")
+    log.info("generate_image_stub_png")
     return _stub_png(prompt)
 
 
@@ -427,10 +428,10 @@ def text_to_speech(
                 input=text[:4096],
                 speed=speed,
             )
-            log.debug("text_to_speech: OpenAI TTS-HD ✓")
+            log.debug("text_to_speech_success", provider="openai_tts_hd")
             return resp.content
         except Exception as exc:
-            log.warning("OpenAI TTS-HD failed: %s", exc)
+            log.warning("text_to_speech_failed", provider="openai_tts_hd", error=str(exc))
 
     # ElevenLabs fallback — eleven_v3 for maximum expressiveness
     el_key = os.getenv("ELEVENLABS_API_KEY", "")
@@ -445,15 +446,15 @@ def text_to_speech(
                 timeout=60,
             )
             resp.raise_for_status()
-            log.debug("text_to_speech: ElevenLabs v3 ✓")
+            log.debug("text_to_speech_success", provider="elevenlabs_v3")
             return resp.content
         except Exception as exc:
-            log.warning("ElevenLabs TTS failed: %s", exc)
+            log.warning("text_to_speech_failed", provider="elevenlabs", error=str(exc))
 
     # Estimate duration from word count (~150 wpm)
     words = len(text.split())
     duration = max(1.0, words / 150 * 60)
-    log.info("text_to_speech: stub silence %.1fs", duration)
+    log.info("text_to_speech_stub_silence", duration_seconds=duration)
     return _stub_silence_mp3(duration)
 
 
@@ -477,7 +478,7 @@ def _stub_silence_mp3(duration: float) -> bytes:
         tmp.unlink(missing_ok=True)
         return data
     except Exception as exc:
-        log.debug("stub silence MP3 failed: %s", exc)
+        log.debug("stub_silence_mp3_failed", error=str(exc))
         return b""
 
 
@@ -519,7 +520,7 @@ def vision_score(b64_a: str, b64_b: str) -> float:
             data = _extract_json(resp.choices[0].message.content)
             return float(data.get("similarity", 0.9))
         except Exception as exc:
-            log.debug("vision_score GPT-4.1: %s", exc)
+            log.debug("vision_score_failed", provider="gpt_4_1", error=str(exc))
 
     # Gemini Vision fallback
     model = _gemini()
@@ -535,7 +536,7 @@ def vision_score(b64_a: str, b64_b: str) -> float:
             data = _extract_json(resp.text)
             return float(data.get("similarity", 0.9))
         except Exception as exc:
-            log.debug("vision_score Gemini: %s", exc)
+            log.debug("vision_score_failed", provider="gemini", error=str(exc))
 
     return 0.9  # optimistic stub
 
@@ -559,7 +560,7 @@ def search_web(
     """
     key = os.getenv("BRAVE_API_KEY", "")
     if not key or "REPLACE_ME" in key:
-        log.debug("search_web: BRAVE_API_KEY not set — skipping")
+        log.debug("search_web_skipped", reason="BRAVE_API_KEY not set")
         return []
 
     try:
@@ -589,11 +590,11 @@ def search_web(
                 "snippet": item.get("description", ""),
             })
 
-        log.debug("search_web: Brave returned %d results for %r", len(results), query)
+        log.debug("search_web_success", result_count=len(results), query=query)
         return results
 
     except Exception as exc:
-        log.warning("search_web failed: %s", exc)
+        log.warning("search_web_failed", error=str(exc))
         return []
 
 
@@ -610,7 +611,7 @@ def search_web_context(
     """
     key = os.getenv("BRAVE_API_KEY", "")
     if not key or "REPLACE_ME" in key:
-        log.debug("search_web_context: BRAVE_API_KEY not set — skipping")
+        log.debug("search_web_context_skipped", reason="BRAVE_API_KEY not set")
         return ""
 
     try:
@@ -643,11 +644,11 @@ def search_web_context(
                 chunks.append(f"{header}{text}")
 
         result = "\n\n---\n\n".join(chunks)
-        log.debug("search_web_context: Brave returned %d chunks for %r", len(chunks), query)
+        log.debug("search_web_context_success", chunk_count=len(chunks), query=query)
         return result
 
     except Exception as exc:
-        log.warning("search_web_context failed: %s", exc)
+        log.warning("search_web_context_failed", error=str(exc))
         return ""
 
 
@@ -665,7 +666,7 @@ def generate_sound_effect(
     """
     el_key = os.getenv("ELEVENLABS_API_KEY", "")
     if not el_key or "REPLACE_ME" in el_key:
-        log.debug("generate_sound_effect: ELEVENLABS_API_KEY not set — skipping")
+        log.debug("generate_sound_effect_skipped", reason="ELEVENLABS_API_KEY not set")
         return b""
 
     try:
@@ -684,10 +685,10 @@ def generate_sound_effect(
             timeout=30,
         )
         resp.raise_for_status()
-        log.debug("generate_sound_effect: ElevenLabs ✓ (%d bytes)", len(resp.content))
+        log.debug("generate_sound_effect_success", provider="elevenlabs", bytes=len(resp.content))
         return resp.content
     except Exception as exc:
-        log.warning("generate_sound_effect failed: %s", exc)
+        log.warning("generate_sound_effect_failed", error=str(exc))
         return b""
 
 
@@ -706,7 +707,7 @@ def generate_music(
     """
     el_key = os.getenv("ELEVENLABS_API_KEY", "")
     if not el_key or "REPLACE_ME" in el_key:
-        log.debug("generate_music: ELEVENLABS_API_KEY not set — skipping")
+        log.debug("generate_music_skipped", reason="ELEVENLABS_API_KEY not set")
         return b""
 
     try:
@@ -723,10 +724,10 @@ def generate_music(
             timeout=120,
         )
         resp.raise_for_status()
-        log.debug("generate_music: ElevenLabs ✓ (%d bytes)", len(resp.content))
+        log.debug("generate_music_success", provider="elevenlabs", bytes=len(resp.content))
         return resp.content
     except Exception as exc:
-        log.warning("generate_music failed: %s", exc)
+        log.warning("generate_music_failed", error=str(exc))
         return b""
 
 
@@ -761,7 +762,7 @@ def descript_import_media(
     """
     headers = _descript_headers()
     if not headers:
-        log.debug("descript_import_media: DESCRIPT_API_KEY not set — skipping")
+        log.debug("descript_import_media_skipped", reason="DESCRIPT_API_KEY not set")
         return {}
 
     try:
@@ -778,10 +779,10 @@ def descript_import_media(
         )
         resp.raise_for_status()
         data = resp.json()
-        log.debug("descript_import_media: success — project %s", data.get("project_id", "?"))
+        log.debug("descript_import_media_success", project_id=data.get("project_id", "?"))
         return data
     except Exception as exc:
-        log.warning("descript_import_media failed: %s", exc)
+        log.warning("descript_import_media_failed", error=str(exc))
         return {}
 
 
@@ -802,7 +803,7 @@ def descript_agent_edit(
     """
     headers = _descript_headers()
     if not headers:
-        log.debug("descript_agent_edit: DESCRIPT_API_KEY not set — skipping")
+        log.debug("descript_agent_edit_skipped", reason="DESCRIPT_API_KEY not set")
         return {}
 
     try:
@@ -816,10 +817,10 @@ def descript_agent_edit(
         )
         resp.raise_for_status()
         data = resp.json()
-        log.debug("descript_agent_edit: job %s", data.get("job_id", "?"))
+        log.debug("descript_agent_edit_success", job_id=data.get("job_id", "?"))
         return data
     except Exception as exc:
-        log.warning("descript_agent_edit failed: %s", exc)
+        log.warning("descript_agent_edit_failed", error=str(exc))
         return {}
 
 
@@ -844,7 +845,7 @@ def descript_job_status(job_id: str) -> dict:
         resp.raise_for_status()
         return resp.json()
     except Exception as exc:
-        log.warning("descript_job_status failed: %s", exc)
+        log.warning("descript_job_status_failed", error=str(exc))
         return {}
 
 

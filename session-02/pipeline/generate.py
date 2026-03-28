@@ -26,14 +26,15 @@ Schema (v3)
 
 from __future__ import annotations
 
-import logging
 import os
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-log = logging.getLogger(__name__)
+import structlog
+
+log = structlog.get_logger(__name__)
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -110,7 +111,7 @@ def _stub_shot_video(shot: dict, out_path: Path) -> None:
         str(out_path),
     ]
     subprocess.run(cmd, check=True, capture_output=True)
-    log.debug("stub video → %s (%.1fs, #%02x%02x%02x)", out_path.name, duration, r, g, b)
+    log.debug("stub_video_created", file=out_path.name, duration_s=round(duration, 1), color=f"#{r:02x}{g:02x}{b:02x}")
 
 
 def _stub_audio(asset: dict, out_path: Path) -> None:
@@ -142,7 +143,7 @@ def _stub_audio(asset: dict, out_path: Path) -> None:
         ]
 
     subprocess.run(cmd, check=True, capture_output=True)
-    log.debug("stub audio → %s (%.1fs, type=%s)", out_path.name, duration, audio_type)
+    log.debug("stub_audio_created", file=out_path.name, duration_s=round(duration, 1), audio_type=audio_type)
 
 
 # ── real generators ───────────────────────────────────────────────────────────
@@ -166,16 +167,16 @@ def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
         "Content-Type": "application/json",
         "X-Runway-Version": "2024-11-06",
     }
-    log.debug("runway payload for %s: %s", _shot_id(shot), payload)
+    log.debug("runway_payload", shot_id=_shot_id(shot), payload=payload)
     resp = requests.post(
         "https://api.dev.runwayml.com/v1/text_to_video",
         json=payload, headers=headers, timeout=30,
     )
     if not resp.ok:
-        log.error("runway %d for %s: %s", resp.status_code, _shot_id(shot), resp.text)
+        log.error("runway_request_failed", status_code=resp.status_code, shot_id=_shot_id(shot), response=resp.text)
         resp.raise_for_status()
     task_id = resp.json()["id"]
-    log.info("runway task %s started for %s", task_id, _shot_id(shot))
+    log.info("runway_task_started", task_id=task_id, shot_id=_shot_id(shot))
 
     for _ in range(120):
         time.sleep(5)
@@ -201,7 +202,7 @@ def _runway_generate_shot(shot: dict, api_key: str, out_path: Path) -> None:
     video_resp = requests.get(video_url, timeout=120)
     video_resp.raise_for_status()
     out_path.write_bytes(video_resp.content)
-    log.info("runway → %s (%d bytes)", out_path.name, len(video_resp.content))
+    log.info("runway_video_downloaded", file=out_path.name, size_bytes=len(video_resp.content))
 
 
 def _veo_generate_shot(
@@ -238,14 +239,14 @@ def _veo_generate_shot(
     config = types.GenerateVideosConfig(aspect_ratio="16:9")
     if veo_refs:
         config.reference_images = veo_refs
-        log.info("veo 3.1: %d reference image(s) for %s", len(veo_refs), _shot_id(shot))
+        log.info("veo_reference_images_attached", count=len(veo_refs), shot_id=_shot_id(shot))
 
     operation = client.models.generate_videos(
         model="veo-3.1-generate-preview",
         prompt=prompt,
         config=config,
     )
-    log.info("veo 3.1 task started for %s", _shot_id(shot))
+    log.info("veo_task_started", shot_id=_shot_id(shot))
 
     # Poll until complete (max ~10 min)
     for _ in range(120):
@@ -276,7 +277,7 @@ def _veo_generate_shot(
     else:
         raise RuntimeError("Veo 3.1: no video_bytes or uri in response")
 
-    log.info("veo 3.1 → %s (%d bytes)", out_path.name, out_path.stat().st_size)
+    log.info("veo_video_downloaded", file=out_path.name, size_bytes=out_path.stat().st_size)
 
 
 def _elevenlabs_generate_audio(asset: dict, api_key: str, out_path: Path) -> None:
@@ -304,7 +305,7 @@ def _elevenlabs_generate_audio(asset: dict, api_key: str, out_path: Path) -> Non
     )
     resp.raise_for_status()
     out_path.write_bytes(resp.content)
-    log.info("elevenlabs → %s", out_path.name)
+    log.info("elevenlabs_audio_generated", file=out_path.name)
 
 
 def _suno_generate_music(asset: dict, cookie: str, out_path: Path) -> None:
@@ -332,7 +333,7 @@ def _suno_generate_music(asset: dict, cookie: str, out_path: Path) -> None:
     audio_resp = requests.get(audio_url, timeout=60)
     audio_resp.raise_for_status()
     out_path.write_bytes(audio_resp.content)
-    log.info("suno → %s", out_path.name)
+    log.info("suno_music_generated", file=out_path.name)
 
 
 # ── temporal bridge helper ────────────────────────────────────────────────────
@@ -572,7 +573,7 @@ def _generate_reference_images(
 
             if ref_path.exists():
                 lib.characters[char_lid][view_name] = ref_path.read_bytes()
-                log.info("[ref] cache hit: %s", ref_path.name)
+                log.info("ref_cache_hit", file=ref_path.name)
                 continue
 
             prompt = (
@@ -582,11 +583,11 @@ def _generate_reference_images(
                 f"Photorealistic, cinematic."
             )
 
-            log.info("[ref] generating %s/%s", char_name, view_name)
+            log.info("ref_generating", entity=char_name, view=view_name)
             img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
             ref_path.write_bytes(img_bytes)
             lib.characters[char_lid][view_name] = img_bytes
-            log.info("[ref] %s/%s → %s (%d bytes)", char_name, view_name, ref_path.name, len(img_bytes))
+            log.info("ref_generated", entity=char_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
 
     # ── S13 Step 3: Environment plates (2 views, NO characters) ───────────
     for env in production.get("environments", []):
@@ -600,7 +601,7 @@ def _generate_reference_images(
 
             if ref_path.exists():
                 lib.environments[env_lid][view_name] = ref_path.read_bytes()
-                log.info("[ref] cache hit: %s", ref_path.name)
+                log.info("ref_cache_hit", file=ref_path.name)
                 continue
 
             prompt = (
@@ -609,11 +610,11 @@ def _generate_reference_images(
                 f"Photorealistic, cinematic. Style: {preamble[:400]}"
             )
 
-            log.info("[ref] generating %s/%s", env_name, view_name)
+            log.info("ref_generating", entity=env_name, view=view_name)
             img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
             ref_path.write_bytes(img_bytes)
             lib.environments[env_lid][view_name] = img_bytes
-            log.info("[ref] %s/%s → %s (%d bytes)", env_name, view_name, ref_path.name, len(img_bytes))
+            log.info("ref_generated", entity=env_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
 
     # ── S13 Step 4: Prop sprite references (multi-angle, env lighting) ────
     # Find which environment each prop appears in via scenes
@@ -656,7 +657,7 @@ def _generate_reference_images(
 
             if ref_path.exists():
                 lib.props[prop_lid][view_name] = ref_path.read_bytes()
-                log.info("[ref] cache hit: %s", ref_path.name)
+                log.info("ref_cache_hit", file=ref_path.name)
                 continue
 
             prompt = (
@@ -666,11 +667,11 @@ def _generate_reference_images(
                 f"Photorealistic, cinematic."
             )
 
-            log.info("[ref] generating prop %s/%s", prop_name, view_name)
+            log.info("ref_generating_prop", entity=prop_name, view=view_name)
             img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
             ref_path.write_bytes(img_bytes)
             lib.props[prop_lid][view_name] = img_bytes
-            log.info("[ref] %s/%s → %s (%d bytes)", prop_name, view_name, ref_path.name, len(img_bytes))
+            log.info("ref_generated", entity=prop_name, view=view_name, file=ref_path.name, size_bytes=len(img_bytes))
 
     # ── S13 Step 3b: POV environment plates (per character × environment) ──
     # Find which characters appear in which environments via scenes
@@ -709,7 +710,7 @@ def _generate_reference_images(
 
         if ref_path.exists():
             lib.pov_plates[pov_key] = ref_path.read_bytes()
-            log.info("[ref] cache hit: %s", ref_path.name)
+            log.info("ref_cache_hit", file=ref_path.name)
             continue
 
         prompt = (
@@ -721,11 +722,11 @@ def _generate_reference_images(
             f"Photorealistic, cinematic. Style: {preamble[:400]}"
         )
 
-        log.info("[ref] generating POV plate: %s in %s (eye height %.2fm)", char_name, env_name, eye_height)
+        log.info("ref_generating_pov_plate", character=char_name, environment=env_name, eye_height_m=eye_height)
         img_bytes = generate_image(prompt, size="1024x1024", quality="hd")
         ref_path.write_bytes(img_bytes)
         lib.pov_plates[pov_key] = img_bytes
-        log.info("[ref] POV %s:%s → %s (%d bytes)", char_name, env_name, ref_path.name, len(img_bytes))
+        log.info("ref_pov_plate_generated", character=char_name, environment=env_name, file=ref_path.name, size_bytes=len(img_bytes))
 
     # ── Summary ───────────────────────────────────────────────────────────
     total_chars = sum(len(v) for v in lib.characters.values())
@@ -733,8 +734,11 @@ def _generate_reference_images(
     total_povs = len(lib.pov_plates)
     total_props = sum(len(v) for v in lib.props.values())
     log.info(
-        "[ref] S13 complete: %d character views, %d environment plates, %d POV plates, %d prop renders",
-        total_chars, total_envs, total_povs, total_props,
+        "ref_s13_complete",
+        character_views=total_chars,
+        environment_plates=total_envs,
+        pov_plates=total_povs,
+        prop_renders=total_props,
     )
 
     return lib
@@ -948,16 +952,16 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
     all_shots = _shots_in_order(instance)
 
     if not all_shots:
-        log.warning("generate_shots: no shots found in instance — nothing to generate")
+        log.warning("generate_shots_empty", msg="no shots found in instance")
         return {}
 
     # ── Step 1: Full S13 reference generation ────────────────────────────
-    log.info("─── S13: Reference image generation ─────────────────────────")
+    log.info("s13_reference_generation_start")
     ref_lib = _generate_reference_images(instance, output_dir)
 
     # ── Step 2: Build style preamble ──────────────────────────────────────
     preamble = _build_style_preamble(instance)
-    log.info("Style preamble: %d chars", len(preamble))
+    log.info("style_preamble_built", length_chars=len(preamble))
 
     # Build entity index for quick lookups
     production = instance.get("production") or {}
@@ -974,7 +978,7 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
         sid = _shot_id(shot)
         out_path = shots_dir / f"{sid}.mp4"
         if out_path.exists():
-            log.debug("cache hit: %s", out_path.name)
+            log.debug("cache_hit", file=out_path.name)
             return sid, out_path
 
         # Enrich the prompt with full context
@@ -1081,9 +1085,9 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                             frame_bytes = _extract_last_frame(prev_clip)
                             if frame_bytes:
                                 ref_bytes.append(frame_bytes)
-                                log.info("temporal bridge: %s → %s", bridge_ref, sid)
+                                log.info("temporal_bridge_attached", from_shot=bridge_ref, to_shot=sid)
                         except Exception as exc:
-                            log.debug("temporal bridge extraction failed: %s", exc)
+                            log.debug("temporal_bridge_extraction_failed", error=str(exc))
                     break
 
         # Try Runway first
@@ -1092,7 +1096,7 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                 _runway_generate_shot(shot, runway_key, out_path)
                 return sid, out_path
             except Exception as exc:
-                log.warning("Runway failed for %s (%s) — trying Veo fallback", sid, exc)
+                log.warning("runway_failed_veo_fallback", shot_id=sid, error=str(exc))
         # Try Veo 3.1 with reference images
         if gemini_key and "REPLACE_ME" not in gemini_key:
             try:
@@ -1103,7 +1107,7 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
                 )
                 return sid, out_path
             except Exception as exc:
-                log.warning("Veo 3.1 failed for %s (%s) — falling back to stub", sid, exc)
+                log.warning("veo_failed_stub_fallback", shot_id=sid, error=str(exc))
         _stub_shot_video(shot, out_path)
         return sid, out_path
 
@@ -1113,12 +1117,12 @@ def generate_shots(instance: dict, output_dir: Path) -> dict[str, Path]:
             try:
                 sid, path = fut.result()
                 results[sid] = path
-                log.info("[shot] %-52s → %s", sid, path.name)
+                log.info("shot_generated", shot_id=sid, file=path.name)
             except Exception as exc:
                 errors.append(f"{futures[fut]}: {exc}")
 
     if errors:
-        log.warning("%d shot generation error(s):\n  %s", len(errors), "\n  ".join(errors))
+        log.warning("shot_generation_errors", count=len(errors), details=errors)
 
     return results
 
@@ -1148,7 +1152,7 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
         key = _asset_id(asset)
         out_path = audio_dir / f"{key}.mp3"
         if out_path.exists():
-            log.debug("cache hit: %s", out_path.name)
+            log.debug("cache_hit", file=out_path.name)
             return key, out_path
 
         steps = asset.get("generation", {}).get("steps") or [{}]
@@ -1165,14 +1169,14 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
                 _elevenlabs_generate_audio(asset, elevenlabs_key, out_path)
                 return key, out_path
             except Exception as exc:
-                log.warning("ElevenLabs failed for %s (%s) — stub", key, exc)
+                log.warning("elevenlabs_failed_stub_fallback", asset_id=key, error=str(exc))
 
         if (tool in ("suno", "auto")) and suno_cookie and atype == "music":
             try:
                 _suno_generate_music(asset, suno_cookie, out_path)
                 return key, out_path
             except Exception as exc:
-                log.warning("Suno failed for %s (%s) — trying ElevenLabs", key, exc)
+                log.warning("suno_failed_elevenlabs_fallback", asset_id=key, error=str(exc))
 
         # ElevenLabs: SFX / ambient
         if elevenlabs_key and tool in ("elevenlabs", "auto") and atype in ("sfx", "ambient"):
@@ -1183,10 +1187,10 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
                 data = providers.generate_sound_effect(prompt, duration_seconds=duration)
                 if data:
                     out_path.write_bytes(data)
-                    log.info("[audio] ElevenLabs SFX ✓  %s", key)
+                    log.info("elevenlabs_sfx_generated", asset_id=key)
                     return key, out_path
             except Exception as exc:
-                log.warning("ElevenLabs SFX failed for %s (%s) — stub", key, exc)
+                log.warning("elevenlabs_sfx_failed_stub_fallback", asset_id=key, error=str(exc))
 
         # ElevenLabs: music (fallback when Suno unavailable)
         if elevenlabs_key and tool in ("elevenlabs", "suno", "auto") and atype == "music":
@@ -1197,10 +1201,10 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
                 data = providers.generate_music(prompt, duration_seconds=int(duration))
                 if data:
                     out_path.write_bytes(data)
-                    log.info("[audio] ElevenLabs Music ✓  %s", key)
+                    log.info("elevenlabs_music_generated", asset_id=key)
                     return key, out_path
             except Exception as exc:
-                log.warning("ElevenLabs Music failed for %s (%s) — stub", key, exc)
+                log.warning("elevenlabs_music_failed_stub_fallback", asset_id=key, error=str(exc))
 
         _stub_audio(asset, out_path)
         return key, out_path
@@ -1210,6 +1214,6 @@ def generate_audio(instance: dict, output_dir: Path) -> dict[str, Path]:
         for fut in as_completed(futures):
             key, path = fut.result()
             results[key] = path
-            log.info("[audio] %-52s → %s", key, path.name)
+            log.info("audio_generated", asset_id=key, file=path.name)
 
     return results

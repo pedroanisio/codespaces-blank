@@ -19,14 +19,15 @@ All intermediate files are written under output_dir/intermediate/.
 from __future__ import annotations
 
 import hashlib
-import logging
 import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-log = logging.getLogger(__name__)
+import structlog
+
+log = structlog.get_logger(__name__)
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ def check_approval(instance: dict, *, force: bool = False) -> None:
     edit_versions = (instance.get("assembly") or {}).get("editVersions") or []
     if not edit_versions:
         if force:
-            log.warning("No editVersions found — proceeding (--force)")
+            log.warning("no_edit_versions_found", msg="proceeding with --force")
             return
         raise ApprovalError(
             "No editVersions in assembly. "
@@ -70,8 +71,9 @@ def check_approval(instance: dict, *, force: bool = False) -> None:
         names = [ev.get("name", ev.get("id", "?")) for ev in edit_versions]
         if force:
             log.warning(
-                "No editVersion approved for render (found: %s) — proceeding (--force)",
-                ", ".join(names),
+                "no_edit_version_approved",
+                found=", ".join(names),
+                msg="proceeding with --force",
             )
             return
         raise ApprovalError(
@@ -79,7 +81,7 @@ def check_approval(instance: dict, *, force: bool = False) -> None:
             f"Found: {', '.join(names)}. Set approvedForRender: true or use force=True."
         )
 
-    log.info("✓ Approved editVersion: %s", approved[0].get("name", approved[0].get("id")))
+    log.info("approved_edit_version", version=approved[0].get("name", approved[0].get("id")))
 
 
 # ── Pre-flight: spatial consistency validation (#10) ──────────────────────────
@@ -486,7 +488,7 @@ def _resolve_clip_refs(
                         ordered.append(path)
                         break
             else:
-                log.warning("clipRef %s could not be resolved to a clip file", ref_id)
+                log.warning("clip_ref_unresolved", clip_ref=ref_id)
     return ordered
 
 
@@ -527,7 +529,7 @@ def _resolve_clip_refs_with_durations(
             ordered.append(clip)
             durations.append(shot_dur_map.get(ref_id, shot_dur_map.get(matched_id, 0.0)))
         else:
-            log.warning("clipRef %s could not be resolved to a clip file", ref_id)
+            log.warning("clip_ref_unresolved", clip_ref=ref_id)
     return ordered, durations
 
 
@@ -571,7 +573,7 @@ def _shots_in_scene_order(
                 durations.append(float(shot.get("targetDurationSec", 0)))
                 seen.add(logical)
             else:
-                log.warning("missing clip for shot %s — skipped", ref_id)
+                log.warning("missing_clip_for_shot", shot=ref_id, msg="skipped")
 
     if not ordered:
         for lid, path in shot_clips.items():
@@ -887,7 +889,7 @@ def _build_audio_mix_cmd(
     valid_tracks = 0
     for idx, (key, audio_path) in enumerate(audio_files.items()):
         if not audio_path or not audio_path.exists():
-            log.warning("audio file missing for %s — skipped", key)
+            log.warning("audio_file_missing", key=key, msg="skipped")
             continue
 
         asset = asset_by_key.get(key) or {}
@@ -1320,7 +1322,7 @@ def execute_operation_dag(
                 raise RuntimeError("No shot clips available to assemble")
             out = inter / f"{step_num:02d}_{op_id}.mp4"
             method = op.get("method", "chain")
-            log.info("▶ [%s] concat — %d clips (method=%s)", op_id, len(ordered_clips), method)
+            log.info("op_concat", op_id=op_id, clips=len(ordered_clips), method=method)
             if method == "compose":
                 _compose_clips_ffmpeg(ordered_clips, out)
             else:
@@ -1329,14 +1331,14 @@ def execute_operation_dag(
 
         elif op_type == "audioMix":
             if current_path is None:
-                log.warning("[%s] audioMix with no prior video — skipping", op_id)
+                log.warning("op_audio_mix_no_video", op_id=op_id, msg="skipping")
                 continue
             out = inter / f"{step_num:02d}_{op_id}.mp4"
-            log.info("▶ [%s] audioMix — %d tracks", op_id, len(audio_files))
+            log.info("op_audio_mix", op_id=op_id, tracks=len(audio_files))
             cmd = _build_audio_mix_cmd(current_path, audio_files, instance, out)
             result = subprocess.run(cmd, capture_output=True)
             if result.returncode != 0:
-                log.error("[%s] audioMix failed:\n%s", op_id, result.stderr.decode())
+                log.error("op_audio_mix_failed", op_id=op_id, stderr=result.stderr.decode())
                 shutil.copy(current_path, out)
             current_path = out
 
@@ -1350,11 +1352,11 @@ def execute_operation_dag(
                 _pick(instance, "canonicalDocuments.directorInstructions.colorDirection") or ""
             )
             out = inter / f"{step_num:02d}_{op_id}.mp4"
-            log.info("▶ [%s] colorGrade — strength=%.2f lut=%s", op_id, strength, lut_path)
+            log.info("op_color_grade", op_id=op_id, strength=strength, lut=lut_path)
             cmd = _color_grade_cmd(current_path, params, strength, out, lut_path=lut_path)
             result = subprocess.run(cmd, capture_output=True)
             if result.returncode != 0:
-                log.error("[%s] colorGrade failed:\n%s", op_id, result.stderr.decode())
+                log.error("op_color_grade_failed", op_id=op_id, stderr=result.stderr.decode())
                 shutil.copy(current_path, out)
             current_path = out
 
@@ -1367,12 +1369,12 @@ def execute_operation_dag(
             )
             out = output_dir / f"{project_name}.mp4"
             rp = {"operations": [op]}  # wrap single op for _encode_cmd
-            log.info("▶ [%s] encode → %s", op_id, out.name)
+            log.info("op_encode", op_id=op_id, output=out.name)
             cmd = _encode_cmd(current_path, qp, out, render_plan=rp,
                               audio_codec=audio_codec, audio_bitrate=audio_bitrate)
             result = subprocess.run(cmd, capture_output=True)
             if result.returncode != 0:
-                log.error("[%s] encode failed:\n%s", op_id, result.stderr.decode())
+                log.error("op_encode_failed", op_id=op_id, stderr=result.stderr.decode())
                 shutil.copy(current_path, out)
             current_path = out
 
@@ -1380,11 +1382,11 @@ def execute_operation_dag(
             if current_path is None:
                 continue
             out = inter / f"{step_num:02d}_{op_id}.mp4"
-            log.info("▶ [%s] filter — type=%s", op_id, op.get("filterType", "?"))
+            log.info("op_filter", op_id=op_id, filter_type=op.get("filterType", "?"))
             cmd = _exec_filter(op, current_path, out)
             result = subprocess.run(cmd, capture_output=True)
             if result.returncode != 0:
-                log.error("[%s] filter failed:\n%s", op_id, result.stderr.decode())
+                log.error("op_filter_failed", op_id=op_id, stderr=result.stderr.decode())
                 shutil.copy(current_path, out)
             current_path = out
 
@@ -1392,13 +1394,13 @@ def execute_operation_dag(
             if current_path is None:
                 continue
             out = inter / f"{step_num:02d}_{op_id}.mp4"
-            log.info("▶ [%s] retime — speed=%s%% reverse=%s", op_id,
-                     (op.get("retime") or {}).get("speedPercent", 100),
-                     (op.get("retime") or {}).get("reverse", False))
+            log.info("op_retime", op_id=op_id,
+                     speed_percent=(op.get("retime") or {}).get("speedPercent", 100),
+                     reverse=(op.get("retime") or {}).get("reverse", False))
             cmd = _exec_retime(op, current_path, out)
             result = subprocess.run(cmd, capture_output=True)
             if result.returncode != 0:
-                log.error("[%s] retime failed:\n%s", op_id, result.stderr.decode())
+                log.error("op_retime_failed", op_id=op_id, stderr=result.stderr.decode())
                 shutil.copy(current_path, out)
             current_path = out
 
@@ -1436,17 +1438,17 @@ def execute_operation_dag(
                     "-pix_fmt", "yuv420p", "-an",
                     str(out),
                 ]
-                log.info("▶ [%s] transition — %s (%s, %.1fs)", op_id, t_type, xfade_name, t_dur)
+                log.info("op_transition", op_id=op_id, type=t_type, xfade=xfade_name, duration_sec=t_dur)
                 result = subprocess.run(cmd, capture_output=True)
                 if result.returncode != 0:
-                    log.error("[%s] transition failed:\n%s", op_id, result.stderr.decode())
+                    log.error("op_transition_failed", op_id=op_id, stderr=result.stderr.decode())
                 else:
                     current_path = out
             else:
-                log.warning("[%s] transition: cannot resolve fromRef=%s or toRef=%s", op_id, from_ref, to_ref)
+                log.warning("op_transition_unresolved_refs", op_id=op_id, from_ref=from_ref, to_ref=to_ref)
 
         else:
-            log.warning("▶ [%s] unsupported opType '%s' — skipped", op_id, op_type)
+            log.warning("op_unsupported", op_id=op_id, op_type=op_type, msg="skipped")
 
     if current_path is None:
         raise RuntimeError("Operation DAG produced no output")
@@ -1478,10 +1480,10 @@ def assemble(
     check_approval(instance, force=force)
     spatial_warnings = validate_spatial_consistency(instance)
     for w in spatial_warnings:
-        log.warning("spatial: %s", w)
+        log.warning("spatial_consistency_warning", detail=w)
     # Fix C: warn if FFmpeg not in compatibleRuntimes
     for w in check_compatible_runtimes(instance):
-        log.warning("runtime: %s", w)
+        log.warning("compatible_runtimes_warning", detail=w)
 
     # ── Check for renderPlan operations ───────────────────────────────────────
     render_plans = (instance.get("assembly") or {}).get("renderPlans") or []
@@ -1489,7 +1491,7 @@ def assemble(
     operations = render_plan.get("operations") or []
 
     if operations:
-        log.info("Executing renderPlan DAG (%d operations)", len(operations))
+        log.info("executing_render_plan_dag", operations=len(operations))
         final_path = execute_operation_dag(
             operations, instance, output_dir, shot_clips, audio_files,
         )
@@ -1498,7 +1500,7 @@ def assemble(
         return final_path
 
     # ── Fallback: default 4-step pipeline ─────────────────────────────────────
-    log.info("No renderPlan operations — using default pipeline")
+    log.info("using_default_pipeline", msg="no renderPlan operations found")
 
     grade_params, grade_strength, lut_path = _resolve_color_grade_params(instance)
     quality_profiles = instance.get("qualityProfiles") or []
@@ -1521,31 +1523,35 @@ def assemble(
         raise RuntimeError("No shot clips available to assemble")
 
     concat_path = inter / "01_concat.mp4"
-    log.info("▶ concat — %d clips → %s", len(ordered_clips), concat_path.name)
+    log.info("default_concat", clips=len(ordered_clips), output=concat_path.name)
     _concat_clips_ffmpeg(ordered_clips, concat_path, scenes=scenes, target_durations=clip_targets)
 
     mixed_path = inter / "02_mixed.mp4"
-    log.info("▶ audio_mix — %d track(s) → %s", len(audio_files), mixed_path.name)
+    log.info("default_audio_mix", tracks=len(audio_files), output=mixed_path.name)
     cmd = _build_audio_mix_cmd(concat_path, audio_files, instance, mixed_path)
     result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
-        log.error("audio mix failed:\n%s", result.stderr.decode())
+        log.error("default_audio_mix_failed", stderr=result.stderr.decode())
         shutil.copy(concat_path, mixed_path)
 
     graded_path = inter / "03_graded.mp4"
     log.info(
-        "▶ color_grade — b=%.2f c=%.2f s=%.2f strength=%.2f lut=%s → %s",
-        grade_params["brightness"], grade_params["contrast"],
-        grade_params["saturation"], grade_strength, lut_path, graded_path.name,
+        "default_color_grade",
+        brightness=grade_params["brightness"],
+        contrast=grade_params["contrast"],
+        saturation=grade_params["saturation"],
+        strength=grade_strength,
+        lut=lut_path,
+        output=graded_path.name,
     )
     cmd = _color_grade_cmd(mixed_path, grade_params, grade_strength, graded_path, lut_path=lut_path)
     result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
-        log.error("color grade failed:\n%s", result.stderr.decode())
+        log.error("default_color_grade_failed", stderr=result.stderr.decode())
         shutil.copy(mixed_path, graded_path)
 
     final_path = output_dir / output_filename
-    log.info("▶ encode → %s", final_path.name)
+    log.info("default_encode", output=final_path.name)
     cmd = _encode_cmd(
         graded_path, qp, final_path,
         render_plan=render_plan,
@@ -1554,7 +1560,7 @@ def assemble(
     )
     result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
-        log.error("encode failed:\n%s", result.stderr.decode())
+        log.error("default_encode_failed", stderr=result.stderr.decode())
         shutil.copy(graded_path, final_path)
 
     if final_path.exists():

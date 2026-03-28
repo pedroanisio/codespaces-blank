@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
+import structlog
 import os
 import re
 import shutil
@@ -45,12 +45,9 @@ try:
 except ImportError:
     pass
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(levelname)-7s  %(message)s",
-    datefmt="%H:%M:%S",
-)
-log = logging.getLogger("pipeline.check")
+from pipeline.logging_config import configure_logging
+configure_logging()
+log = structlog.get_logger("pipeline.check")
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 _SESSION_DIR = Path(__file__).parent.parent
@@ -1008,7 +1005,10 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+        from pipeline.logging_config import _configured
+        import pipeline.logging_config as _logcfg
+        _logcfg._configured = False
+        configure_logging(verbose=True)
 
     output_dir = Path(args.output_dir)
     ev = Evidence(output_dir)

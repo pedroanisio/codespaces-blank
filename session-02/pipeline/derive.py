@@ -15,10 +15,11 @@ Public API
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
-log = logging.getLogger(__name__)
+import structlog
+
+log = structlog.get_logger(__name__)
 
 
 # ── chromatic arc ─────────────────────────────────────────────────────────────
@@ -243,7 +244,7 @@ def ensure_shots(instance: dict) -> dict:
 
     beats: list[dict] = _pick(instance, "canonicalDocuments.story.beats") or []
     if not beats:
-        log.warning("derive: no story beats found — production will remain empty")
+        log.warning("no_story_beats_found", note="production will remain empty")
         return instance
 
     director_inst: dict = _pick(instance, "canonicalDocuments.directorInstructions") or {}
@@ -319,15 +320,20 @@ def ensure_shots(instance: dict) -> dict:
         all_scenes.append(scene)
 
         log.info(
-            "derive: beat %d (%s) → %d shots, %.0f–%.0f s",
-            order, beat.get("name", ""), len(shot_refs), beat_start, beat_end,
+            "beat_derived",
+            order=order,
+            name=beat.get("name", ""),
+            shot_count=len(shot_refs),
+            beat_start=beat_start,
+            beat_end=beat_end,
         )
 
     production["shots"] = all_shots
     production["scenes"] = all_scenes
     log.info(
-        "derive: populated %d scenes / %d shots from story beats",
-        len(all_scenes), len(all_shots),
+        "shots_populated_from_story_beats",
+        scene_count=len(all_scenes),
+        shot_count=len(all_shots),
     )
     return instance
 
@@ -436,5 +442,5 @@ def ensure_audio(instance: dict) -> dict:
     ]
 
     asset_lib["audioAssets"] = audio_assets
-    log.info("derive: populated %d audio assets from director instructions", len(audio_assets))
+    log.info("audio_assets_populated_from_director_instructions", asset_count=len(audio_assets))
     return instance
