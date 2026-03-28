@@ -934,7 +934,23 @@ def _build_audio_mix_cmd(
     if not mix_inputs:
         return ["ffmpeg", "-y", "-i", str(video_path), "-c", "copy", str(out_path)]
 
-    mix_filter = "".join(mix_inputs) + f"amix=inputs={valid_tracks}:normalize=0[aout]"
+    # Mix all tracks (gain is author-controlled via gainDb), then apply
+    # loudness normalization to prevent clipping and hit broadcast target.
+    target_lufs = -14.0
+    target_tp = -1.0
+    for qp in instance.get("qualityProfiles") or []:
+        audio_profile = (qp.get("profile") or {}).get("audio") or {}
+        if audio_profile.get("loudnessIntegratedLUFS") is not None:
+            target_lufs = float(audio_profile["loudnessIntegratedLUFS"])
+        if audio_profile.get("truePeakDbTP") is not None:
+            target_tp = float(audio_profile["truePeakDbTP"])
+        break  # use first quality profile
+
+    mix_filter = (
+        "".join(mix_inputs)
+        + f"amix=inputs={valid_tracks}:normalize=0,"
+        + f"loudnorm=I={target_lufs}:TP={target_tp}:LRA=11[aout]"
+    )
     filter_parts.append(mix_filter)
 
     # Fix B: enforce channelLayout from schema
@@ -1776,7 +1792,11 @@ def _build_scene_audio_mix_cmd(
     if not mix_inputs:
         return ["ffmpeg", "-y", "-i", str(video_path), "-c", "copy", str(out_path)]
 
-    mix_filter = "".join(mix_inputs) + f"amix=inputs={valid_tracks}:normalize=0[aout]"
+    mix_filter = (
+        "".join(mix_inputs)
+        + f"amix=inputs={valid_tracks}:normalize=0,"
+        + f"loudnorm=I=-14:TP=-1:LRA=11[aout]"
+    )
     filter_parts.append(mix_filter)
 
     return [

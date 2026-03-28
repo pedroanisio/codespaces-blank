@@ -113,7 +113,7 @@
         "audio": {
           "sampleRateHz": 48000,
           "bitDepth": 24,
-          "channelLayout": "7.1",
+          "channelLayout": "stereo",
           "loudnessIntegratedLUFS": -14,
           "truePeakDbTP": -1
         }
@@ -1975,6 +1975,17 @@
           "sampleRateHz": 48000,
           "bitDepth": 24,
           "channelLayout": "7.1"
+        },
+        "generation": {
+          "steps": [
+            {
+              "tool": "suno",
+              "prompt": "Beats 1-2: tribal percussion — deep drums, no melody. Rhythm synced to footfall cadence, accelerating. Beat 3 silence: percussion drops completely for ~1s. Reveal: low brass swell — French horns and cellos — building through the 360° orbit. Cuts dead on smash to black. No melodic resolution. The audience must feel unfinished — they need to see more.. Mood: primal_to_heroic",
+              "durationSec": 15.0,
+              "stepId": "gen-aa-score-0",
+              "operationType": "audio_generation"
+            }
+          ]
         }
       },
       {
@@ -1996,6 +2007,27 @@
           },
           {
             "id": "scene-02"
+          }
+        ],
+        "generation": {
+          "steps": [
+            {
+              "tool": "elevenlabs",
+              "prompt": "Dense alien jungle ambience. Insect-like chirps (not Earth insects — slightly wrong frequencies), distant calls, canopy rustle. Oppressive, thick, alive. This ambience STOPS DEAD at the clearing silence.",
+              "durationSec": 9.0,
+              "stepId": "gen-aa-ambient-jungle-0",
+              "operationType": "audio_generation"
+            }
+          ]
+        },
+        "syncPoints": [
+          {
+            "label": "clip_start",
+            "time": {
+              "startSec": 0.0,
+              "endSec": 9.0,
+              "durationSec": 9.0
+            }
           }
         ]
       },
@@ -2022,6 +2054,27 @@
           {
             "id": "scene-03"
           }
+        ],
+        "generation": {
+          "steps": [
+            {
+              "tool": "elevenlabs",
+              "prompt": "Ragged, panicked breathing — close-mic, binaural. Accelerates through the chase. Catches and holds during the silence. The breathing is the audience's own.",
+              "durationSec": 11.0,
+              "stepId": "gen-aa-sfx-breathing-0",
+              "operationType": "audio_generation"
+            }
+          ]
+        },
+        "syncPoints": [
+          {
+            "label": "clip_start",
+            "time": {
+              "startSec": 0.0,
+              "endSec": 11.0,
+              "durationSec": 11.0
+            }
+          }
         ]
       },
       {
@@ -2044,6 +2097,27 @@
           {
             "id": "scene-02"
           }
+        ],
+        "generation": {
+          "steps": [
+            {
+              "tool": "elevenlabs",
+              "prompt": "Bare feet or light boots on jungle floor — leaves, roots, soft earth. Rapid, irregular cadence of someone running hard and panicking.",
+              "durationSec": 8.7,
+              "stepId": "gen-aa-sfx-footsteps-prey-0",
+              "operationType": "audio_generation"
+            }
+          ]
+        },
+        "syncPoints": [
+          {
+            "label": "clip_start",
+            "time": {
+              "startSec": 0.3,
+              "endSec": 9.0,
+              "durationSec": 8.7
+            }
+          }
         ]
       },
       {
@@ -2065,6 +2139,27 @@
           },
           {
             "id": "scene-02"
+          }
+        ],
+        "generation": {
+          "steps": [
+            {
+              "tool": "elevenlabs",
+              "prompt": "Branches snapping, ferns slapping against the camera/body, vines whipping. Continuous texture layered over the chase.",
+              "durationSec": 8.8,
+              "stepId": "gen-aa-sfx-foliage-0",
+              "operationType": "audio_generation"
+            }
+          ]
+        },
+        "syncPoints": [
+          {
+            "label": "clip_start",
+            "time": {
+              "startSec": 0.2,
+              "endSec": 9.0,
+              "durationSec": 8.8
+            }
           }
         ]
       },
@@ -2108,7 +2203,18 @@
             },
             "toleranceFrames": 4
           }
-        ]
+        ],
+        "generation": {
+          "steps": [
+            {
+              "tool": "elevenlabs",
+              "prompt": "Behind and flanking: heavy branch snaps (Lion-O's mass), a near-silent whoosh (Cheetara's speed), a deep sub-bass growl. These sounds are spatially placed — behind, then flanking left (Cheetara), then flanking right (Lion-O) — using the 7.1 field.",
+              "durationSec": 7.5,
+              "stepId": "gen-aa-sfx-pursuit-0",
+              "operationType": "audio_generation"
+            }
+          ]
+        }
       },
       {
         "id": "aa-sfx-heartbeat",
@@ -2145,7 +2251,18 @@
             },
             "toleranceFrames": 2
           }
-        ]
+        ],
+        "generation": {
+          "steps": [
+            {
+              "tool": "elevenlabs",
+              "prompt": "Deep, binaural heartbeat. Enters at the clearing silence — the only sound after the jungle ambience and percussion cut. Two beats: thud-thud... thud-thud. Then the brass enters and the heartbeat fades beneath it.",
+              "durationSec": 2.0,
+              "stepId": "gen-aa-sfx-heartbeat-0",
+              "operationType": "audio_generation"
+            }
+          ]
+        }
       },
       {
         "id": "aa-sfx-silence",
@@ -2163,6 +2280,27 @@
         "sceneRefs": [
           {
             "id": "scene-03"
+          }
+        ],
+        "generation": {
+          "steps": [
+            {
+              "tool": "elevenlabs",
+              "prompt": "Not true silence — a near-silent room tone with a very faint wind. The absence of the dense jungle ambience IS the event. The contrast is the point.",
+              "durationSec": 6.0,
+              "stepId": "gen-aa-sfx-silence-0",
+              "operationType": "audio_generation"
+            }
+          ]
+        },
+        "syncPoints": [
+          {
+            "label": "clip_start",
+            "time": {
+              "startSec": 9.0,
+              "endSec": 15.0,
+              "durationSec": 6.0
+            }
           }
         ]
       }
@@ -2525,7 +2663,8 @@
         },
         "changeList": [
           "Initial assembly of 8 shots across 3 scenes with 8-layer audio mix"
-        ]
+        ],
+        "approvedForRender": true
       }
     ],
     "renderPlans": [
@@ -2583,56 +2722,56 @@
                   "id": "aa-score"
                 },
                 "gainDb": -3.0,
-                "pan": 0
+                "pan": 0.0
               },
               {
                 "audioRef": {
                   "id": "aa-ambient-jungle"
                 },
                 "gainDb": -6.0,
-                "pan": 0
+                "pan": -0.15
               },
               {
                 "audioRef": {
                   "id": "aa-sfx-silence"
                 },
                 "gainDb": -20.0,
-                "pan": 0
+                "pan": 0.0
               },
               {
                 "audioRef": {
                   "id": "aa-sfx-breathing"
                 },
                 "gainDb": -4.0,
-                "pan": 0
+                "pan": -0.05
               },
               {
                 "audioRef": {
                   "id": "aa-sfx-footsteps-prey"
                 },
                 "gainDb": -8.0,
-                "pan": 0
+                "pan": 0.2
               },
               {
                 "audioRef": {
                   "id": "aa-sfx-foliage"
                 },
                 "gainDb": -10.0,
-                "pan": 0
+                "pan": -0.25
               },
               {
                 "audioRef": {
                   "id": "aa-sfx-pursuit"
                 },
                 "gainDb": -6.0,
-                "pan": 0
+                "pan": 0.35
               },
               {
                 "audioRef": {
                   "id": "aa-sfx-heartbeat"
                 },
                 "gainDb": -5.0,
-                "pan": 0
+                "pan": 0.0
               }
             ]
           },

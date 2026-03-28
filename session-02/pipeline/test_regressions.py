@@ -506,9 +506,11 @@ class TestRunwayEnrichedPrompt(unittest.TestCase):
         except Exception:
             pass  # We only care about the POST payload
 
-        # Check the payload sent to Runway
-        mock_post.assert_called_once()
-        payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
+        # Find the video generation call (text_to_video or image_to_video, not uploads)
+        video_calls = [c for c in mock_post.call_args_list
+                       if "video" in str(c.args[0] if c.args else c.kwargs.get("url", ""))]
+        self.assertTrue(video_calls, "Expected at least one video API call")
+        payload = video_calls[-1].kwargs.get("json") or video_calls[-1][1].get("json")
         self.assertIn("Spark robot", payload["promptText"])
         self.assertNotEqual(payload["promptText"], "cinematic shot")
         self.assertNotEqual(payload["promptText"], "fallback purpose")
@@ -529,8 +531,43 @@ class TestRunwayEnrichedPrompt(unittest.TestCase):
         except Exception:
             pass
 
-        payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
+        video_calls = [c for c in mock_post.call_args_list
+                       if "video" in str(c.args[0] if c.args else c.kwargs.get("url", ""))]
+        self.assertTrue(video_calls)
+        payload = video_calls[-1].kwargs.get("json") or video_calls[-1][1].get("json")
         self.assertEqual(payload["promptText"], "Establish desolation")
+
+    @patch("requests.post")
+    def test_reference_images_trigger_image_to_video(self, mock_post):
+        """When reference images are provided, Runway uses image_to_video endpoint."""
+        from pipeline.generate import _runway_generate_shot
+
+        # First call = upload (returns uri), second call = image_to_video
+        upload_resp = MagicMock()
+        upload_resp.ok = True
+        upload_resp.json.return_value = {"uri": "https://runway.dev/uploaded/img.png"}
+
+        video_resp = MagicMock()
+        video_resp.ok = True
+        video_resp.json.return_value = {"id": "task-789"}
+
+        mock_post.side_effect = [upload_resp, video_resp]
+
+        shot = {"id": "test-ref", "targetDurationSec": 3, "purpose": "test shot"}
+        ref_images = [b"\x89PNG" + b"\x00" * 200]  # fake PNG
+
+        try:
+            _runway_generate_shot(shot, "fake-key", Path("/tmp/test.mp4"),
+                                  reference_images=ref_images)
+        except Exception:
+            pass
+
+        # Verify image_to_video endpoint was called (not text_to_video)
+        video_calls = [c for c in mock_post.call_args_list
+                       if "video" in str(c.args[0] if c.args else "")]
+        self.assertTrue(video_calls)
+        url = video_calls[-1].args[0] if video_calls[-1].args else ""
+        self.assertIn("image_to_video", url)
 
 
 # ═════════════════════════════════════════════════════════════════════════════

@@ -119,21 +119,36 @@ def _stub_audio(asset: dict, out_path: Path) -> None:
     Silent (or soft-tone for music) MP3 matching the asset's sync window.
     Reads v3 syncPoints.timelineInSec / timelineOutSec.
     """
+    # Resolve duration: syncPoints → asset.durationSec → fallback 5s
     raw_sync = asset.get("syncPoints")
+    duration = 0.0
     if isinstance(raw_sync, list) and raw_sync:
         # v3 format: array of SyncPoint objects with time.startSec / time.endSec
         first = raw_sync[0].get("time") or {} if isinstance(raw_sync[0], dict) else {}
         last = raw_sync[-1].get("time") or {} if isinstance(raw_sync[-1], dict) else {}
         t_in = float(first.get("startSec", 0))
-        t_out = float(last.get("endSec", last.get("startSec", t_in + 5)))
+        t_out = float(last.get("endSec", last.get("startSec", 0)))
+        dur_field = float(first.get("durationSec", 0))
+        if t_out > t_in:
+            duration = t_out - t_in
+        elif dur_field > 0:
+            duration = dur_field
     elif isinstance(raw_sync, dict):
         # v2 compat: single object with timelineInSec / timelineOutSec
         t_in = float(raw_sync.get("timelineInSec", 0))
-        t_out = float(raw_sync.get("timelineOutSec", t_in + 5))
-    else:
-        t_in = 0
-        t_out = 5
-    duration = max(t_out - t_in, 0.5)
+        t_out = float(raw_sync.get("timelineOutSec", 0))
+        if t_out > t_in:
+            duration = t_out - t_in
+    if duration <= 0:
+        duration = float(asset.get("durationSec", 0))
+    if duration <= 0:
+        # Check generation.steps[0].durationSec
+        steps = (asset.get("generation") or {}).get("steps") or []
+        if steps:
+            duration = float(steps[0].get("durationSec", 0))
+    if duration <= 0:
+        duration = 5.0
+    duration = max(duration, 0.5)
     audio_type = asset.get("audioType") or "ambient"
 
     if audio_type == "music":
@@ -168,13 +183,14 @@ _VIDEO_PROVIDER_CONSTRAINTS = {
         "min_duration_sec": 2,
         "max_duration_sec": 10,
         "max_prompt_chars": 1000,
-        "supports_reference_images": False,
+        "supports_reference_images": True,
+        "max_reference_images": 5,
         "supported_ratios": ["1280:720", "720:1280", "1280:768"],
     },
     "veo": {
-        "min_duration_sec": 4,     # API rejects < 4
+        "min_duration_sec": 5,     # API rejects < 5 (preview model)
         "max_duration_sec": 8,
-        "max_prompt_chars": 8000,
+        "max_prompt_chars": 4000,  # lower limit to avoid policy filter on long prompts
         "supports_reference_images": True,
         "max_reference_images": 3,
         "supported_ratios": ["16:9", "9:16", "1:1"],
@@ -299,20 +315,55 @@ def _distill_prompt(prompt: str, max_chars: int, shot_id: str = "") -> str:
     return result[:max_chars]
 
 
+def _runway_upload_image(img_bytes: bytes, api_key: str) -> str | None:
+    """Upload an image to Runway and return its hosted URI.
+    Returns None if upload fails."""
+    import requests as _req  # noqa: PLC0415
+    import base64
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+    }
+    b64 = base64.b64encode(img_bytes).decode()
+    data_uri = f"data:image/png;base64,{b64}"
+
+    try:
+        resp = _req.post(
+            "https://api.dev.runwayml.com/v1/uploads",
+            json={"dataURI": data_uri},
+            headers=headers,
+            timeout=30,
+        )
+        if resp.ok:
+            uri = resp.json().get("uri") or resp.json().get("url") or resp.json().get("id")
+            if uri:
+                log.debug("runway_image_uploaded", uri=str(uri)[:80])
+                return uri
+    except Exception as exc:
+        log.debug("runway_upload_failed", error=str(exc))
+    return None
+
+
 def _runway_generate_shot(
     shot: dict,
     api_key: str,
     out_path: Path,
     *,
     enriched_prompt: str | None = None,
+    reference_images: list[bytes] | None = None,
 ) -> None:
-    """Generate a video clip via Runway Gen4.5 text-to-video REST API."""
+    """Generate a video clip via Runway Gen4.5 with optional reference images.
+
+    Uses image_to_video when a primary reference is available (character front),
+    falls back to text_to_video otherwise.
+    """
     import requests  # noqa: PLC0415
 
     gen_params = shot.get("genParams") or {}
     rc = _VIDEO_PROVIDER_CONSTRAINTS["runway"]
     raw_prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
-    # Distill prompt to fit Runway's limit (preserves narrative intent)
     prompt = _distill_prompt(raw_prompt, rc["max_prompt_chars"], shot_id=_shot_id(shot))
     duration = max(
         rc["min_duration_sec"],
@@ -320,20 +371,38 @@ def _runway_generate_shot(
             rc["max_duration_sec"]),
     )
 
-    payload = {
-        "promptText": prompt,
-        "model": "gen4.5",
-        "duration": duration,
-        "ratio": "1280:720",
-    }
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "X-Runway-Version": "2024-11-06",
     }
-    log.debug("runway_payload", shot_id=_shot_id(shot), payload=payload)
+
+    # ── Try image_to_video with primary reference as first frame ──────────
+    endpoint = "https://api.dev.runwayml.com/v1/text_to_video"
+    payload: dict = {
+        "promptText": prompt,
+        "model": "gen4.5",
+        "duration": duration,
+        "ratio": "1280:720",
+    }
+
+    if reference_images:
+        # Upload the primary reference (character front) as promptImage
+        primary = reference_images[0]
+        if primary and len(primary) > 100:
+            uri = _runway_upload_image(primary, api_key)
+            if uri:
+                endpoint = "https://api.dev.runwayml.com/v1/image_to_video"
+                payload["promptImage"] = uri
+                log.info("runway_using_image_to_video", shot_id=_shot_id(shot))
+
+    log.debug("runway_payload", shot_id=_shot_id(shot), payload={
+        **payload,
+        "promptText": payload["promptText"][:100] + "...",
+        "promptImage": payload.get("promptImage", "(none)")[:80] if payload.get("promptImage") else "(none)",
+    })
     resp = requests.post(
-        "https://api.dev.runwayml.com/v1/text_to_video",
+        endpoint,
         json=payload, headers=headers, timeout=30,
     )
     if not resp.ok:
@@ -369,6 +438,31 @@ def _runway_generate_shot(
     log.info("runway_video_downloaded", file=out_path.name, size_bytes=len(video_resp.content))
 
 
+def _sanitize_prompt_for_veo(prompt: str) -> str:
+    """Strip content patterns that trigger Veo's content safety filter.
+
+    Veo's policy filter is stricter than Runway's and rejects prompts with:
+    - Hex color codes (#RRGGBB)
+    - Highly technical camera specs (aperture, focal length values)
+    - Bracketed metadata tags ([locked], [CONTINUITY], etc.)
+    - Negative prompts (these aren't supported by Veo natively)
+    """
+    import re
+    # Strip hex colors: #1a1a2e, #7B8794, etc.
+    cleaned = re.sub(r"#[0-9A-Fa-f]{3,8}", "", prompt)
+    # Strip bracketed tags: [locked], [STYLE], etc.
+    cleaned = re.sub(r"\[[\w\s_-]+\]", "", cleaned)
+    # Strip negative prompt sections
+    cleaned = re.sub(r"(?i)(?:negative\s*prompt|AVOID)[:\s].*?(?:\n|$)", "", cleaned)
+    # Strip aperture/f-stop notation: f/1.8, f/2.8, etc.
+    cleaned = re.sub(r"f/\d+\.?\d*", "", cleaned)
+    # Strip focal length: 24mm, 85mm, etc. (keep the description but not raw numbers)
+    cleaned = re.sub(r"\d+mm", "", cleaned)
+    # Collapse whitespace
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+    return cleaned
+
+
 def _veo_generate_shot(
     shot: dict,
     api_key: str,
@@ -377,7 +471,13 @@ def _veo_generate_shot(
     enriched_prompt: str | None = None,
     reference_images: list[bytes] | None = None,
 ) -> None:
-    """Generate a video clip via Google Veo 3.1 (Gemini API) with reference images."""
+    """Generate a video clip via Google Veo 3.1 (Gemini API) with reference images.
+
+    Handles Veo's stricter content policy by:
+    1. Sanitizing the prompt to remove patterns that trigger the safety filter
+    2. Retrying without reference images if the first attempt is rejected
+    3. Retrying with a distilled prompt if the sanitized prompt is still rejected
+    """
     import requests as _req  # noqa: PLC0415
     from google import genai  # noqa: PLC0415
     from google.genai import types  # noqa: PLC0415
@@ -385,7 +485,10 @@ def _veo_generate_shot(
     gen_params = shot.get("genParams") or {}
     vc = _VIDEO_PROVIDER_CONSTRAINTS["veo"]
     raw_prompt = enriched_prompt or gen_params.get("prompt") or shot.get("purpose") or "cinematic shot"
-    prompt = _distill_prompt(raw_prompt, vc["max_prompt_chars"], shot_id=_shot_id(shot))
+
+    # Sanitize before distilling — removes hex codes, brackets, negative prompts
+    sanitized = _sanitize_prompt_for_veo(raw_prompt)
+    prompt = _distill_prompt(sanitized, vc["max_prompt_chars"], shot_id=_shot_id(shot))
 
     # Clamp duration to Veo's supported range
     target_duration = float(shot.get("targetDurationSec", 5))
@@ -393,12 +496,15 @@ def _veo_generate_shot(
 
     client = genai.Client(api_key=api_key)
 
-    # Build reference images for character/style consistency
+    # Build reference images with appropriate type per image role.
+    # The first ref (character front) uses STYLE to anchor the look;
+    # subsequent refs (environment, POV) also use STYLE.
+    # ASSET is the old default but triggers policy rejections more often.
     veo_refs: list[types.VideoGenerationReferenceImage] = []
     for i, img_bytes in enumerate(reference_images or []):
         if not img_bytes or len(img_bytes) < 100:
             continue  # skip stubs
-        ref_type = types.VideoGenerationReferenceType.ASSET
+        ref_type = types.VideoGenerationReferenceType.STYLE
         veo_refs.append(types.VideoGenerationReferenceImage(
             image=types.Image(image_bytes=img_bytes, mime_type="image/png"),
             reference_type=ref_type,
@@ -406,53 +512,91 @@ def _veo_generate_shot(
     # Veo supports max 3 reference images
     veo_refs = veo_refs[:3]
 
-    config = types.GenerateVideosConfig(
-        aspect_ratio="16:9",
-        number_of_videos=1,
-        duration_seconds=duration,
-    )
+    def _attempt(attempt_prompt: str, refs: list | None, attempt_label: str) -> bool:
+        """Try a single Veo generation. Returns True on success, raises on fatal error."""
+        config = types.GenerateVideosConfig(
+            aspect_ratio="16:9",
+            number_of_videos=1,
+            duration_seconds=duration,
+        )
+        if refs:
+            config.reference_images = refs
+            log.info("veo_reference_images_attached", count=len(refs),
+                     shot_id=_shot_id(shot), attempt=attempt_label)
+
+        log.info("veo_request", shot_id=_shot_id(shot), duration=duration,
+                 prompt_len=len(attempt_prompt), attempt=attempt_label)
+        try:
+            operation = client.models.generate_videos(
+                model="veo-3.1-generate-preview",
+                prompt=attempt_prompt,
+                config=config,
+            )
+        except Exception as exc:
+            error_str = str(exc)
+            # Policy rejection: "use case is currently not supported" or INVALID_ARGUMENT
+            if "INVALID_ARGUMENT" in error_str or "not supported" in error_str:
+                log.warning("veo_policy_rejected", shot_id=_shot_id(shot),
+                            attempt=attempt_label, error=error_str[:200])
+                return False
+            raise  # other errors are fatal
+
+        log.info("veo_task_started", shot_id=_shot_id(shot), attempt=attempt_label)
+
+        # Poll until complete (max ~10 min)
+        for _ in range(120):
+            time.sleep(5)
+            operation = client.operations.get(operation)
+            if operation.done:
+                break
+        else:
+            raise TimeoutError("Veo 3.1 video generation timed out")
+
+        if not operation.response or not operation.response.generated_videos:
+            raise RuntimeError("Veo 3.1 returned no video")
+
+        video = operation.response.generated_videos[0].video
+
+        # Video data may be in video_bytes or behind a download URI
+        if video.video_bytes:
+            out_path.write_bytes(video.video_bytes)
+        elif video.uri:
+            download_url = video.uri
+            if "generativelanguage.googleapis.com" in download_url:
+                sep = "&" if "?" in download_url else "?"
+                download_url = f"{download_url}{sep}key={api_key}"
+            resp = _req.get(download_url, timeout=120, allow_redirects=True)
+            resp.raise_for_status()
+            out_path.write_bytes(resp.content)
+        else:
+            raise RuntimeError("Veo 3.1: no video_bytes or uri in response")
+
+        log.info("veo_video_downloaded", file=out_path.name,
+                 size_bytes=out_path.stat().st_size, attempt=attempt_label)
+        return True
+
+    # Attempt 1: sanitized prompt + reference images
+    if _attempt(prompt, veo_refs if veo_refs else None, "full"):
+        return
+
+    # Attempt 2: sanitized prompt WITHOUT reference images
+    # (refs are the most common trigger for "use case not supported")
     if veo_refs:
-        config.reference_images = veo_refs
-        log.info("veo_reference_images_attached", count=len(veo_refs), shot_id=_shot_id(shot))
+        log.info("veo_retry_without_refs", shot_id=_shot_id(shot))
+        if _attempt(prompt, None, "no_refs"):
+            return
 
-    log.info("veo_request", shot_id=_shot_id(shot), duration=duration, prompt_len=len(prompt))
-    operation = client.models.generate_videos(
-        model="veo-3.1-generate-preview",
-        prompt=prompt,
-        config=config,
+    # Attempt 3: aggressively distilled prompt, no refs
+    short_prompt = _distill_prompt(prompt, 500, shot_id=_shot_id(shot))
+    log.info("veo_retry_short_prompt", shot_id=_shot_id(shot), prompt_len=len(short_prompt))
+    if _attempt(short_prompt, None, "short"):
+        return
+
+    # All attempts failed — raise so the provider fallback chain continues
+    raise RuntimeError(
+        f"Veo 3.1 rejected all 3 attempts for {_shot_id(shot)} "
+        f"(full+refs, sanitized, distilled). Falling back to next provider."
     )
-    log.info("veo_task_started", shot_id=_shot_id(shot))
-
-    # Poll until complete (max ~10 min)
-    for _ in range(120):
-        time.sleep(5)
-        operation = client.operations.get(operation)
-        if operation.done:
-            break
-    else:
-        raise TimeoutError("Veo 3.1 video generation timed out")
-
-    if not operation.response or not operation.response.generated_videos:
-        raise RuntimeError("Veo 3.1 returned no video")
-
-    video = operation.response.generated_videos[0].video
-
-    # Video data may be in video_bytes or behind a download URI
-    if video.video_bytes:
-        out_path.write_bytes(video.video_bytes)
-    elif video.uri:
-        # Gemini file URIs require the API key for auth
-        download_url = video.uri
-        if "generativelanguage.googleapis.com" in download_url:
-            sep = "&" if "?" in download_url else "?"
-            download_url = f"{download_url}{sep}key={api_key}"
-        resp = _req.get(download_url, timeout=120, allow_redirects=True)
-        resp.raise_for_status()
-        out_path.write_bytes(resp.content)
-    else:
-        raise RuntimeError("Veo 3.1: no video_bytes or uri in response")
-
-    log.info("veo_video_downloaded", file=out_path.name, size_bytes=out_path.stat().st_size)
 
 
 def _elevenlabs_generate_audio(asset: dict, api_key: str, out_path: Path) -> None:
@@ -1529,7 +1673,7 @@ def generate_shots(
         for provider in providers:
             try:
                 if provider == "runway":
-                    _runway_generate_shot(shot, runway_key, out_path, enriched_prompt=enriched_prompt)
+                    _runway_generate_shot(shot, runway_key, out_path, enriched_prompt=enriched_prompt, reference_images=ref_bytes)
                     return sid, out_path
                 elif provider == "veo":
                     _veo_generate_shot(
@@ -1652,10 +1796,10 @@ def generate_audio(
             except Exception as exc:
                 log.warning("suno_failed_elevenlabs_fallback", asset_id=key, error=str(exc))
 
-        # ElevenLabs: SFX / ambient
-        if elevenlabs_key and tool in ("elevenlabs", "auto") and atype in ("sfx", "ambient"):
+        # ElevenLabs: SFX / ambient / foley
+        if elevenlabs_key and tool in ("elevenlabs", "auto") and atype in ("sfx", "ambient", "foley"):
             prompt = steps[0].get("prompt") or asset.get("description") or asset.get("name") or atype
-            duration = asset.get("durationSec")
+            duration = asset.get("durationSec") or steps[0].get("durationSec")
             try:
                 from . import providers
                 data = providers.generate_sound_effect(prompt, duration_seconds=duration)
@@ -1669,7 +1813,7 @@ def generate_audio(
         # ElevenLabs: music (fallback when Suno unavailable)
         if elevenlabs_key and tool in ("elevenlabs", "suno", "auto") and atype == "music":
             prompt = steps[0].get("prompt") or asset.get("description") or asset.get("mood") or asset.get("name") or "cinematic score"
-            duration = asset.get("durationSec") or 30
+            duration = asset.get("durationSec") or steps[0].get("durationSec") or 30
             try:
                 from . import providers
                 data = providers.generate_music(prompt, duration_seconds=int(duration))

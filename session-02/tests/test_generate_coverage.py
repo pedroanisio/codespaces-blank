@@ -384,9 +384,10 @@ class TestVeoGenerator:
              patch("time.sleep"):
             _veo_generate_shot(minimal_shot, "key", out, reference_images=refs)
 
-        config = mock_client.models.generate_videos.call_args[1]["config"]
-        assert config.reference_images is not None
-        assert len(config.reference_images) == 2
+        # First attempt includes refs (succeeds on first try since mock doesn't raise)
+        first_call_config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        assert first_call_config.reference_images is not None
+        assert len(first_call_config.reference_images) == 2
 
     def test_skips_small_ref_images(self, minimal_shot, tmp_path):
         from pipeline.generate import _veo_generate_shot
@@ -399,8 +400,8 @@ class TestVeoGenerator:
              patch("time.sleep"):
             _veo_generate_shot(minimal_shot, "key", out, reference_images=refs)
 
-        config = mock_client.models.generate_videos.call_args[1]["config"]
-        assert len(config.reference_images) == 1
+        first_call_config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        assert len(first_call_config.reference_images) == 1
 
     def test_max_3_refs(self, minimal_shot, tmp_path):
         from pipeline.generate import _veo_generate_shot
@@ -413,8 +414,62 @@ class TestVeoGenerator:
              patch("time.sleep"):
             _veo_generate_shot(minimal_shot, "key", out, reference_images=refs)
 
-        config = mock_client.models.generate_videos.call_args[1]["config"]
-        assert len(config.reference_images) == 3
+        first_call_config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        assert len(first_call_config.reference_images) == 3
+
+    def test_reference_type_all_style(self, minimal_shot, tmp_path):
+        """All refs should use STYLE type (avoids Veo policy filter vs ASSET)."""
+        from pipeline.generate import _veo_generate_shot
+        from google.genai import types
+        out = tmp_path / "shot.mp4"
+        mock_client = self._mock_veo(video_bytes=b"\x00" * 100)
+
+        refs = [b"\x89PNG" + b"\x00" * 200, b"\x89PNG" + b"\x00" * 200, b"\x89PNG" + b"\x00" * 200]
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            _veo_generate_shot(minimal_shot, "key", out, reference_images=refs)
+
+        first_call_config = mock_client.models.generate_videos.call_args_list[0][1]["config"]
+        ref_types = [r.reference_type for r in first_call_config.reference_images]
+        assert all(t == types.VideoGenerationReferenceType.STYLE for t in ref_types)
+
+    def test_policy_rejection_retries_without_refs(self, minimal_shot, tmp_path):
+        """On INVALID_ARGUMENT, should retry without reference images."""
+        from pipeline.generate import _veo_generate_shot
+        out = tmp_path / "shot.mp4"
+
+        # First call raises policy error, second succeeds
+        mock_client = MagicMock()
+        mock_op_success = MagicMock()
+        mock_op_success.done = True
+        mock_video = MagicMock()
+        mock_video.video_bytes = b"\x00" * 2000
+        mock_video.uri = None
+        mock_generated = MagicMock()
+        mock_generated.video = mock_video
+        mock_op_success.response = MagicMock()
+        mock_op_success.response.generated_videos = [mock_generated]
+
+        mock_client.models.generate_videos.side_effect = [
+            Exception("400 INVALID_ARGUMENT: use case not supported"),
+            mock_op_success,
+        ]
+        mock_client.operations.get.return_value = mock_op_success
+
+        refs = [b"\x89PNG" + b"\x00" * 200]
+
+        with patch("google.genai.Client", return_value=mock_client), \
+             patch("time.sleep"):
+            _veo_generate_shot(minimal_shot, "key", out, reference_images=refs)
+
+        assert out.exists()
+        # Should have been called twice: once with refs (failed), once without
+        assert mock_client.models.generate_videos.call_count == 2
+        second_config = mock_client.models.generate_videos.call_args_list[1][1]["config"]
+        # Second attempt should have no reference images
+        has_refs = getattr(second_config, "reference_images", None)
+        assert not has_refs or len(has_refs) == 0
 
     def test_enriched_prompt_used(self, minimal_shot, tmp_path):
         from pipeline.generate import _veo_generate_shot
