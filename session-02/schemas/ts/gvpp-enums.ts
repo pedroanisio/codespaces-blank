@@ -202,7 +202,7 @@ export const VERSION_STATES = [
 export type VersionState = (typeof VERSION_STATES)[number];
 
 export const ENTITY_STATUSES = [
-  "draft", "in_progress", "review", "approved",
-  "published", "archived", "deprecated",
+  "draft", "in_progress", "generating", "review", "changes_requested",
+  "approved", "published", "archived", "deprecated",
 ] as const;
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];

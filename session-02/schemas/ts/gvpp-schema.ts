@@ -272,7 +272,7 @@ export const EulerAnglesDegSchema = z.strictObject({
   pitch: z.number().optional(),
   yaw: z.number().optional(),
   roll: z.number().optional(),
-  order: z.string().optional(),
+  order: z.enum(["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"]).optional(),
 });
 
 export const Scale3DSchema = z.strictObject({
@@ -292,7 +292,7 @@ export const Transform3DSchema = z.strictObject({
   position: Position3DSchema.optional(),
   orientation: Orientation3DSchema.optional(),
   scale: Scale3DSchema.optional(),
-  matrix4x4: z.array(z.number()).optional(),
+  matrix4x4: z.array(z.number()).min(16).max(16).optional(),
 });
 
 export const BoundingVolumeSchema = z.strictObject({
@@ -316,16 +316,16 @@ export const SpatialAnchorSchema = z.strictObject({
   name: z.string(),
   position: Position3DSchema,
   orientation: Orientation3DSchema.optional(),
-  radiusM: z.number().optional(),
+  radiusM: z.number().gte(0).optional(),
   anchorType: z.enum(["landmark", "action_line", "staging_mark", "entry_point", "sightline", "eyeline", "pov", "custom"]).optional(),
   linkedAnchorId: IdentifierSchema.optional(),
   persistAcrossShots: z.boolean().optional(),
 });
 
 export const PlacementKeyframeSchema = z.strictObject({
-  timeSec: z.number(),
+  timeSec: z.number().gte(0),
   transform: Transform3DSchema,
-  interpolation: z.string().optional(),
+  interpolation: z.enum(["linear", "bezier", "catmullRom", "step", "custom"]).optional(),
 });
 
 export const SpatialPlacementSchema = z.strictObject({
@@ -334,26 +334,26 @@ export const SpatialPlacementSchema = z.strictObject({
   transform: Transform3DSchema,
   bounds: BoundingVolumeSchema.optional(),
   motionPath: z.array(PlacementKeyframeSchema).optional(),
-  interactionZoneRadiusM: z.number().optional(),
+  interactionZoneRadiusM: z.number().gte(0).optional(),
   facingDirection: Position3DSchema.optional(),
   notes: z.string().optional(),
 });
 
 export const SpatialRuleSchema = z.strictObject({
-  ruleType: z.string(),
+  ruleType: z.enum(["proximity", "exclusion_zone", "facing_constraint", "camera_boundary", "relative_position", "sightline", "custom"]),
   subjectRef: EntityRefSchema.optional(),
   targetRef: EntityRefSchema.optional(),
-  distanceMinM: z.number().optional(),
-  distanceMaxM: z.number().optional(),
-  angleToleranceDeg: z.number().optional(),
-  severity: z.string().optional(),
+  distanceMinM: z.number().gte(0).optional(),
+  distanceMaxM: z.number().gte(0).optional(),
+  angleToleranceDeg: z.number().gte(0).lte(180).optional(),
+  severity: z.enum(["info", "warning", "error"]).optional(),
   notes: z.string().optional(),
 });
 
 export const SpatialConsistencySchema = z.strictObject({
   required: z.boolean(),
   rules: z.array(SpatialRuleSchema).optional(),
-  maxPositionDriftM: z.number().optional(),
+  maxPositionDriftM: z.number().gte(0).optional(),
   enforce180DegreeRule: z.boolean().optional(),
   enforceScreenDirection: z.boolean().optional(),
   anchorRefs: z.array(EntityRefSchema).optional(),
@@ -361,20 +361,20 @@ export const SpatialConsistencySchema = z.strictObject({
 });
 
 export const CameraKeyframeSchema = z.strictObject({
-  timeSec: z.number(),
+  timeSec: z.number().gte(0),
   transform: Transform3DSchema,
-  interpolation: z.string().optional(),
-  easeIn: z.number().optional(),
-  easeOut: z.number().optional(),
-  focalLengthMm: z.number().optional(),
-  focusDistanceM: z.number().optional(),
+  interpolation: z.enum(["linear", "bezier", "catmullRom", "step", "custom"]).optional(),
+  easeIn: z.number().gte(0).lte(1).optional(),
+  easeOut: z.number().gte(0).lte(1).optional(),
+  focalLengthMm: z.number().gte(0).optional(),
+  focusDistanceM: z.number().gte(0).optional(),
 });
 
 export const CameraExtrinsicsSchema = z.strictObject({
   transform: Transform3DSchema.optional(),
   motionPath: z.array(CameraKeyframeSchema).optional(),
   constraintTarget: EntityRefSchema.optional(),
-  constraintMode: z.string().optional(),
+  constraintMode: z.enum(["lookAt", "follow", "orbit", "rail", "custom"]).optional(),
   constraintOffsetM: Position3DSchema.optional(),
 });
 
@@ -469,15 +469,15 @@ export const QCResultSchema = z.strictObject({
 
 export const QaCheckSchema = z.strictObject({
   name: z.string(),
-  score: z.number().optional(),
+  score: z.number().gte(0).lte(1).optional(),
   pass: z.boolean(),
   notes: z.string().optional(),
   evidenceRefs: z.array(EntityRefSchema).optional(),
 });
 
 export const QaGateSchema = z.strictObject({
-  requiredChecks: z.array(z.string()),
-  passThreshold: z.number(),
+  requiredChecks: z.array(z.string()).min(1),
+  passThreshold: z.number().gte(0).lte(1),
   checks: z.array(QaCheckSchema).optional(),
   overallPass: z.boolean().optional(),
   evaluatedAt: ISOTimestampSchema.optional(),
@@ -490,11 +490,11 @@ export const QualityProfileSchema = z.strictObject({
       resolution: ResolutionSchema.optional(),
       aspectRatio: AspectRatioSchema.optional(),
       frameRate: FrameRateSchema.optional(),
-      scanType: z.string().optional(),
+      scanType: z.enum(["progressive", "interlaced"]).optional(),
       bitDepth: z.number().int().gte(1).optional(),
       colorSpace: z.string().optional(),
-      dynamicRange: z.string().optional(),
-      runtimeTargetSec: z.number().gt(0).optional(),
+      dynamicRange: z.enum(["SDR", "HDR10", "HLG", "Dolby Vision", "custom"]).optional(),
+      runtimeTargetSec: z.number().gt(0).lte(1800).optional(),
       runtimeToleranceSec: z.number().gte(0).optional(),
       temporalConsistency: TemporalConsistencySchema.optional(),
       characterCoherence: CharacterCoherenceSchema.optional(),
@@ -510,7 +510,7 @@ export const QualityProfileSchema = z.strictObject({
 });
 
 export const AccessibilityConfigSchema = z.strictObject({
-  wcagLevel: z.string().optional(),
+  wcagLevel: z.enum(["A", "AA", "AAA"]).optional(),
   closedCaptions: z.boolean().optional(),
   openCaptions: z.boolean().optional(),
   audioDescriptionRef: EntityRefSchema.optional(),
@@ -527,12 +527,12 @@ export const LocalizationConfigSchema = z.strictObject({
 });
 
 export const PlatformDeliverySchema = z.strictObject({
-  platform: z.string(),
+  platform: z.enum(["youtube", "instagram", "tiktok", "vimeo", "broadcast", "theatrical", "streaming", "custom"]),
   format: z.string().optional(),
   aspectRatio: AspectRatioSchema.optional(),
   resolution: ResolutionSchema.optional(),
   frameRate: FrameRateSchema.optional(),
-  maxDurationSec: z.number().optional(),
+  maxDurationSec: z.number().gte(0).lte(1800).optional(),
   publishSchedule: FuzzyDateSchema.optional(),
   metadata: StringMapSchema.optional(),
 });
@@ -585,7 +585,7 @@ export const ConsistencyAnchorSchema = z.strictObject({
 });
 
 export const AdapterInputSchema = z.strictObject({
-  adapterType: z.string(),
+  adapterType: z.enum(["LoRA", "ControlNet", "IP-Adapter", "T2I-Adapter", "custom"]),
   ref: EntityRefSchema.optional(),
   weight: z.number().gte(0).optional(),
   parameters: z.looseObject({}).optional(),
@@ -593,16 +593,16 @@ export const AdapterInputSchema = z.strictObject({
 
 export const LogEntrySchema = z.strictObject({
   timestamp: ISOTimestampSchema.optional(),
-  level: z.string().optional(),
+  level: z.enum(["debug", "info", "warn", "error"]).optional(),
   message: z.string(),
   data: z.looseObject({}).optional(),
 });
 
 export const PromptFragmentSchema = z.strictObject({
   fragment: z.string(),
-  weight: z.number().optional(),
-  insertionOrder: z.number().int().optional(),
-  category: z.string().optional(),
+  weight: z.number().gte(0).optional(),
+  insertionOrder: z.number().int().gte(0).optional(),
+  category: z.enum(["appearance", "style", "action", "environment", "mood", "constraint", "custom"]).optional(),
   locked: z.boolean().optional(),
 });
 
@@ -617,27 +617,27 @@ export const PromptRecordSchema = z.strictObject({
 
 export const GenerationCostSchema = z.strictObject({
   currency: z.string(),
-  amount: z.number(),
+  amount: z.number().gte(0),
   provider: z.string().optional(),
   units: z.string().optional(),
-  unitCount: z.number().optional(),
+  unitCount: z.number().gte(0).optional(),
   billedAt: ISOTimestampSchema.optional(),
 });
 
 export const RetryConfigSchema = z.strictObject({
-  maxAttempts: z.number().int(),
-  backoffStrategy: z.string().optional(),
-  initialDelayMs: z.number().int().optional(),
-  maxDelayMs: z.number().int().optional(),
+  maxAttempts: z.number().int().gte(1),
+  backoffStrategy: z.enum(["fixed", "exponential", "linear"]).optional(),
+  initialDelayMs: z.number().int().gte(0).optional(),
+  maxDelayMs: z.number().int().gte(0).optional(),
   fallbackTool: z.string().optional(),
   retryOnStatuses: z.array(z.string()).optional(),
 });
 
 export const AsyncConfigSchema = z.strictObject({
-  mode: z.string(),
-  pollingIntervalMs: z.number().int().optional(),
+  mode: z.enum(["polling", "webhook", "callback"]),
+  pollingIntervalMs: z.number().int().gte(100).optional(),
   webhookUrl: z.string().optional(),
-  timeoutMs: z.number().int().optional(),
+  timeoutMs: z.number().int().gte(0).optional(),
 });
 
 export const GenerationStepSchema = z.strictObject({
@@ -713,12 +713,12 @@ export const FileObjectSchema = z.strictObject({
   storageProvider: z.string().optional(),
   mediaType: z.string(),
   fileRole: z.string().optional(),
-  byteSize: z.number().int().gte(0).optional(),
+  byteSizeB: z.number().int().gte(0).optional(),
   checksum: ChecksumSchema.optional(),
   containerFormat: z.string().optional(),
   codec: z.string().optional(),
-  width: z.number().int().gte(1).optional(),
-  height: z.number().int().gte(1).optional(),
+  widthPx: z.number().int().gte(1).optional(),
+  heightPx: z.number().int().gte(1).optional(),
   durationSec: z.number().gte(0).optional(),
   frameRate: FrameRateSchema.optional(),
   sampleRateHz: z.number().int().gte(1).optional(),
@@ -750,7 +750,9 @@ export const BaseEntityShape = {
     .enum([
       "draft",
       "in_progress",
+      "generating",
       "review",
+      "changes_requested",
       "approved",
       "published",
       "archived",
@@ -831,7 +833,7 @@ export const AudioMixOpSchema = OperationBaseObject.extend({
 }).strict();
 
 export const TransitionSpecSchema = z.strictObject({
-  type: z.string().optional(),
+  type: z.enum(["cut", "dissolve", "fade", "wipe", "push", "zoom", "custom"]).optional(),
   durationSec: z.number().gte(0).optional(),
   parameters: z.looseObject({}).optional(),
 });
@@ -862,8 +864,8 @@ export const EncodeOpSchema = OperationBaseObject.extend({
 
 export const ManimConfigSchema = z.strictObject({
   sceneClass: z.string().optional(),
-  rendererBackend: z.string().optional(),
-  outputFormat: z.string().optional(),
+  rendererBackend: z.enum(["cairo", "opengl", "webgl"]).optional(),
+  outputFormat: z.enum(["mp4", "gif", "png_sequence"]).optional(),
   parameters: z.looseObject({}).optional(),
 });
 
@@ -877,7 +879,7 @@ export const ManimOpSchema = OperationBaseObject.extend({
 export const RetimeSpecSchema = z.strictObject({
   speedPercent: z.number().gt(0).optional(),
   reverse: z.boolean().optional(),
-  frameInterpolation: z.string().optional(),
+  frameInterpolation: z.enum(["none", "blend", "optical_flow", "custom"]).optional(),
   freezeFrames: z.array(z.number().gte(0)).optional(),
 });
 
@@ -1021,8 +1023,8 @@ export const OrchestrationSchema = z.strictObject({
 
 export const NamingConventionsSchema = z.strictObject({
   idPrefix: z.string().optional(),
-  separator: z.string().optional(),
-  caseStyle: z.string().optional(),
+  separator: z.enum(["-", "_", "."]).optional(),
+  caseStyle: z.enum(["camelCase", "snake_case", "kebab-case", "PascalCase"]).optional(),
   fileNameTemplate: z.string().optional(),
   versionSuffix: z.boolean().optional(),
   extensions: ExtensionsSchema.optional(),
@@ -1056,16 +1058,16 @@ export const GovernanceSchema = z.strictObject({
 
 export const BudgetSchema = z.strictObject({
   currency: z.string().optional(),
-  totalAmount: z.number().optional(),
-  spentAmount: z.number().optional(),
-  breakdown: z.looseObject({}).optional(),
+  totalAmount: z.number().gte(0).optional(),
+  spentAmount: z.number().gte(0).optional(),
+  breakdown: z.record(z.string(), z.number()).optional(),
 });
 
 export const TeamMemberSchema = z.strictObject({
   memberId: IdentifierSchema,
   name: z.string(),
-  role: z.string(),
-  permissions: z.array(z.string()).optional(),
+  role: z.enum(["producer", "director", "writer", "art-director", "cinematographer", "editor", "sound-designer", "qa-lead", "developer", "viewer", "custom"]),
+  permissions: z.array(z.enum(["read", "write", "approve", "publish", "admin"])).optional(),
   contact: z.string().optional(),
   organization: z.string().optional(),
 });
@@ -1096,7 +1098,7 @@ export const ProjectEntitySchema = BaseEntityObject.extend({
   languages: z.array(z.string()).optional(),
   genres: z.array(z.string()).optional(),
   audiences: z.array(z.string()).optional(),
-  targetRuntimeSec: z.number().gt(0),
+  targetRuntimeSec: z.number().gt(0).lte(1800),
   defaultQualityProfileRef: EntityRefSchema,
   globalCharacterRefs: z.array(EntityRefSchema).optional(),
   globalEnvironmentRefs: z.array(EntityRefSchema).optional(),
@@ -1178,7 +1180,7 @@ export const ScriptSegmentSchema = z.strictObject({
 
 export const ScriptEntitySchema = BaseEntityObject.extend({
   entityType: z.literal("script"),
-  format: z.string().optional(),
+  format: z.enum(["fountain", "fdx", "pdf", "markdown", "custom"]).optional(),
   segments: z.array(ScriptSegmentSchema),
   sceneRefs: z.array(EntityRefSchema).optional(),
   language: z.string().optional(),
@@ -1229,12 +1231,12 @@ export const CharacterEntitySchema = BaseEntityObject.extend({
   referenceAssetRefs: z.array(EntityRefSchema).optional(),
   coherenceRequirements: CharacterCoherenceSchema.optional(),
   defaultBounds: BoundingVolumeSchema.optional(),
-  heightM: z.number().optional(),
+  heightM: z.number().gt(0).optional(),
 }).strict();
 
 export const EnvironmentEntitySchema = BaseEntityObject.extend({
   entityType: z.literal("environment"),
-  locationType: z.string().optional(),
+  locationType: z.enum(["interior", "exterior", "mixed", "virtual", "abstract"]).optional(),
   architectureStyle: z.string().optional(),
   timeOfDayDefaults: z.array(z.string()).optional(),
   weatherDefaults: z.array(z.string()).optional(),
@@ -1260,15 +1262,15 @@ export const PropEntitySchema = BaseEntityObject.extend({
  */
 export const CinematicSpecSchema = z.strictObject({
   shotType: z.string().optional(),
-  cameraAngle: z.string().optional(),
-  cameraMovement: z.string().optional(),
+  cameraAngle: z.enum(["eye_level", "low", "high", "dutch", "over_the_shoulder", "bird_eye", "worm_eye", "custom"]).optional(),
+  cameraMovement: z.enum(["static", "pan", "tilt", "dolly", "crane", "orbit", "handheld", "zoom", "truck", "pedestal", "custom"]).optional(),
   focalLengthMm: z.number().gte(0).optional(),
   aperture: z.number().gt(0).optional(),
   sensorFormat: z.string().optional(),
-  depthOfField: z.string().optional(),
-  hyperfocalDistanceM: z.number().optional(),
-  fieldOfViewDeg: z.number().optional(),
-  stabilization: z.string().optional(),
+  depthOfField: z.enum(["shallow", "medium", "deep"]).optional(),
+  hyperfocalDistanceM: z.number().gte(0).optional(),
+  fieldOfViewDeg: z.number().gte(0).lte(180).optional(),
+  stabilization: z.enum(["locked", "fluid_head", "gimbal", "handheld", "drone", "custom"]).optional(),
   focusMode: z.string().optional(),
   focusDistanceM: z.number().gte(0).optional(),
   whiteBalanceKelvin: z.number().int().gte(1000).optional(),
@@ -1353,7 +1355,7 @@ export const ShotEntitySchema = BaseEntityObject.extend({
 
 export const StyleGuideEntitySchema = BaseEntityObject.extend({
   entityType: z.literal("styleGuide"),
-  scope: z.string().optional(),
+  scope: z.enum(["project", "act", "scene", "shot", "character"]).optional(),
   guidelines: StyleGuidelinesSchema.optional(),
   negativeStylePrompt: z.string().optional(),
   appliesTo: z.array(EntityRefSchema).optional(),
@@ -1384,6 +1386,7 @@ export const VisualAssetEntitySchema = BaseEntityObject.extend({
     "depth",
     "mask",
     "alpha",
+    "storyboard",
     "document",
     "other",
   ]),
@@ -1403,16 +1406,16 @@ export const AudioTechnicalSpecSchema = z.strictObject({
   sampleRateHz: z.number().int().gte(1).optional(),
   bitDepth: z.number().int().gte(1).optional(),
   channelLayout: z.string().optional(),
-  loudnessLUFS: z.number().optional(),
+  loudnessIntegratedLUFS: z.number().optional(),
   truePeakDbTP: z.number().optional(),
-  tempoBpm: z.number().gte(0).optional(),
-  musicalKey: z.string().optional(),
-  timeSignature: z.string().optional(),
+  codec: z.string().optional(),
+  containerFormat: z.string().optional(),
+  dynamicsProcessing: z.string().optional(),
 });
 
 export const AudioAssetEntitySchema = BaseEntityObject.extend({
   entityType: z.literal("audioAsset"),
-  audioType: z.string(),
+  audioType: z.enum(["voice_over", "dialogue", "music", "sfx", "ambient", "foley", "stem", "custom"]),
   purpose: z.string().optional(),
   language: z.string().optional(),
   speakerRef: EntityRefSchema.optional(),
@@ -1474,8 +1477,8 @@ export const GenericAssetEntitySchema = BaseEntityObject.extend({
 export const TransformSchema = z.strictObject({
   position: z
     .strictObject({
-      x: z.number().optional(),
-      y: z.number().optional(),
+      xPx: z.number().optional(),
+      yPx: z.number().optional(),
     })
     .optional(),
   scale: z
@@ -1486,7 +1489,12 @@ export const TransformSchema = z.strictObject({
     .optional(),
   rotationDeg: z.number().optional(),
   opacity: z.number().gte(0).lte(1).optional(),
-  crop: z.record(z.string(), z.number()).optional(),
+  crop: z.strictObject({
+    topPx: z.number().optional(),
+    bottomPx: z.number().optional(),
+    leftPx: z.number().optional(),
+    rightPx: z.number().optional(),
+  }).optional(),
   blendMode: z.string().optional(),
   maskRef: EntityRefSchema.optional(),
 });
@@ -1508,11 +1516,11 @@ export const TimelineClipSchema = z.strictObject({
 });
 
 export const StreamBindingSchema = z.strictObject({
-  streamType: z.string(),
-  streamIndex: z.number().int().optional(),
+  streamType: z.enum(["video", "audio", "subtitle", "data"]),
+  streamIndex: z.number().int().gte(0).optional(),
   codec: z.string().optional(),
-  timebaseNumerator: z.number().int().optional(),
-  timebaseDenominator: z.number().int().optional(),
+  timebaseNumerator: z.number().int().gte(1).optional(),
+  timebaseDenominator: z.number().int().gte(1).optional(),
   parameters: z.looseObject({}).optional(),
 });
 
@@ -1525,7 +1533,7 @@ export const StreamBindingSchema = z.strictObject({
  */
 export const TimelineEntitySchema = BaseEntityObject.extend({
   entityType: z.literal("timeline"),
-  durationSec: z.number().gte(0),
+  durationSec: z.number().gte(0).lte(1800),
   frameRate: FrameRateSchema.optional(),
   resolution: ResolutionSchema.optional(),
   aspectRatio: AspectRatioSchema.optional(),
@@ -1548,7 +1556,7 @@ export const RenderPlanEntitySchema = BaseEntityObject.extend({
   entityType: z.literal("renderPlan"),
   sourceTimelineRef: EntityRefSchema,
   targetOutputRefs: z.array(EntityRefSchema).optional(),
-  compatibleRuntimes: z.array(z.string()).optional(),
+  compatibleRuntimes: z.array(z.enum(["moviepy", "movis", "opencv", "pyav", "manim", "ffmpeg", "custom"])).optional(),
   operations: z.array(OperationSchema),
   colorPipeline: z.looseObject({}).optional(),
   runtimeHints: z.looseObject({}).optional(),
@@ -1569,7 +1577,7 @@ export const FinalOutputEntitySchema = BaseEntityObject.extend({
   outputType: z.string(),
   platform: z.string().optional(),
   releaseChannel: z.string().optional(),
-  runtimeSec: z.number().gt(0),
+  runtimeSec: z.number().gt(0).lte(1800),
   sourceTimelineRef: EntityRefSchema,
   sourceEditRef: EntityRefSchema.optional(),
   renderPlanRef: EntityRefSchema,
@@ -1595,7 +1603,7 @@ export const DependencyEdgeSchema = z.strictObject({
   edgeId: IdentifierSchema,
   fromRef: EntityRefSchema,
   toRef: EntityRefSchema,
-  dependencyType: z.string(),
+  dependencyType: z.enum(["requires", "blocks", "derives_from", "supersedes", "references", "syncs_with", "custom"]),
   required: z.boolean().optional(),
   notes: z.string().optional(),
 });
@@ -1627,7 +1635,7 @@ export const UnifiedVideoProjectPackageSchema = z.strictObject({
     props: z.array(PropEntitySchema),
     scenes: z.array(SceneEntitySchema),
     shots: z.array(ShotEntitySchema),
-    styleGuides: z.array(StyleGuideEntitySchema),
+    styleGuides: z.array(StyleGuideEntitySchema).optional(),
   }),
 
   assetLibrary: z.strictObject({
