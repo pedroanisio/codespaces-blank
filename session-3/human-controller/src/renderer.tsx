@@ -19,7 +19,6 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { csgTreeToGeometry, type CSGNode } from "./renderer-csg";
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1420,16 +1419,6 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
     return bonePos.clone().add(new THREE.Vector3(0, -bone.length, 0));
   }
 
-  // GLTFLoader for external_asset bone meshes
-  const gltfLoader = new GLTFLoader();
-
-  // Resolve asset:// URIs to relative paths served by the web server
-  const resolveAssetUri = (uri: string): string => {
-    if (uri.startsWith("asset:///")) return `/assets/${uri.slice(9)}`;
-    if (uri.startsWith("asset://")) return `/assets/${uri.slice(8)}`;
-    return uri;
-  };
-
   // Helper: build inline geometry from indexed_mesh or parametric_csg
   const buildInlineGeometry = (
     geometryEntry: BoneGeometryData | undefined,
@@ -1484,51 +1473,16 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
       }
     }
 
-    // Build mesh — try external_asset first, then inline, then fallback
-    let mesh: THREE.Mesh;
-
-    if (geometryEntry?.geometryType === "external_asset" && "uri" in geometryEntry) {
-      // External GLB: place a small placeholder immediately, async-load the real mesh
-      const placeholder = new THREE.SphereGeometry(0.5, 4, 3);
-      mesh = new THREE.Mesh(placeholder, mat);
-      mesh.position.copy(meshPos);
-      if (meshQuat) mesh.quaternion.copy(meshQuat);
-      if (meshEuler) mesh.rotation.copy(meshEuler);
-
-      // Async load
-      const extGeo = geometryEntry as ExternalAssetGeometryData;
-      const url = resolveAssetUri(extGeo.uri);
-      const capturedMesh = mesh;
-      const capturedSpanLen = spanLen;
-      gltfLoader.load(
-        url,
-        (gltf) => {
-          // Replace placeholder geometry with loaded mesh
-          gltf.scene.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              capturedMesh.geometry.dispose();
-              capturedMesh.geometry = child.geometry;
-              // Apply bone material (ignore embedded materials from GLB)
-              capturedMesh.material = mat;
-            }
-          });
-        },
-        undefined,
-        () => {
-          // Load failed — replace with inline fallback
-          const fallbackGeo = buildInlineGeometry(undefined, bone, capturedSpanLen);
-          capturedMesh.geometry.dispose();
-          capturedMesh.geometry = fallbackGeo;
-        },
-      );
-    } else {
-      // Inline geometry (indexed_mesh, parametric_csg, or procedural fallback)
-      const geo = buildInlineGeometry(geometryEntry, bone, spanLen);
-      mesh = new THREE.Mesh(geo, mat);
-      mesh.position.copy(meshPos);
-      if (meshQuat) mesh.quaternion.copy(meshQuat);
-      if (meshEuler) mesh.rotation.copy(meshEuler);
-    }
+    // Build mesh — use inline geometry (indexed_mesh, parametric_csg, or procedural).
+    // External GLB assets are skipped: the available GLBs are procedural placeholders
+    // with inverted normals and coordinate-space mismatches. The inline procedural
+    // generators produce correct geometry with proper normals and placement.
+    const inlineEntry = geometryEntry?.geometryType === "external_asset" ? undefined : geometryEntry;
+    const geo = buildInlineGeometry(inlineEntry, bone, spanLen);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(meshPos);
+    if (meshQuat) mesh.quaternion.copy(meshQuat);
+    if (meshEuler) mesh.rotation.copy(meshEuler);
 
     mesh.castShadow = true;
     mesh.receiveShadow = true;

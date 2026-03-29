@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import random
 from pathlib import Path
 
@@ -10,6 +11,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import numpy as np
+import trimesh
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from human_body.entry import generate_human_body
@@ -31,6 +33,7 @@ _FOUR_VIEW_PANELS = (
     ("Sagittal", 0, 0),
     ("Axial", 90, -90),
 )
+_DEFAULT_ASSETS_DIR = Path("session-3/human-controller/public/assets/bones")
 
 
 def _rotation_matrix_xyz(rotation_deg: dict) -> np.ndarray:
@@ -89,6 +92,81 @@ def _skull_mesh_triangles(body: dict) -> tuple[list[np.ndarray], list[str]]:
     return triangles, colors
 
 
+def _external_skull_mesh_triangles(body: dict, assets_dir: str | Path) -> tuple[list[np.ndarray], list[str]]:
+    assets_path = Path(assets_dir)
+    manifest_path = assets_path / "manifest.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+
+    manifest = json.loads(manifest_path.read_text())
+    triangles: list[np.ndarray] = []
+    colors: list[str] = []
+
+    for bone in body["skeleton"]:
+        if bone["region"] not in _SKULL_REGIONS:
+            continue
+        entry = manifest.get(bone["name"])
+        if not entry:
+            continue
+        mesh_path = assets_path / entry["file"]
+        if not mesh_path.exists():
+            continue
+
+        mesh = trimesh.load(mesh_path, force="mesh")
+        if not isinstance(mesh, trimesh.Trimesh):
+            continue
+
+        positions = np.asarray(mesh.vertices, dtype=float)
+        indices = np.asarray(mesh.faces, dtype=int)
+        rotation = _rotation_matrix_xyz(bone["transform"]["rotation"])
+        translation = np.array(
+            [
+                bone["transform"]["position"]["x"],
+                bone["transform"]["position"]["y"],
+                bone["transform"]["position"]["z"],
+            ],
+            dtype=float,
+        )
+        scale = np.array(
+            [
+                bone["transform"]["scale"]["x"],
+                bone["transform"]["scale"]["y"],
+                bone["transform"]["scale"]["z"],
+            ],
+            dtype=float,
+        )
+        transformed = (positions * scale) @ rotation.T + translation
+        triangles.extend(transformed[indices])
+        colors.extend([_REGION_COLORS.get(bone["region"], "#e6d5b8")] * len(indices))
+
+    return triangles, colors
+
+
+def _external_source_space_skull_triangles(assets_dir: str | Path) -> tuple[list[np.ndarray], list[str]]:
+    assets_path = Path(assets_dir)
+    manifest_path = assets_path / "manifest.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+
+    manifest = json.loads(manifest_path.read_text())
+    triangles: list[np.ndarray] = []
+    colors: list[str] = []
+    for bone_name, entry in manifest.items():
+        mesh_path = assets_path / entry["file"]
+        if not mesh_path.exists():
+            continue
+        mesh = trimesh.load(mesh_path, force="mesh")
+        if not isinstance(mesh, trimesh.Trimesh):
+            continue
+        offset = np.asarray(entry.get("normalization", {}).get("centroidOffsetCm", [0.0, 0.0, 0.0]), dtype=float)
+        positions = np.asarray(mesh.vertices, dtype=float) + offset
+        indices = np.asarray(mesh.faces, dtype=int)
+        region = "axial_face" if any(token in bone_name for token in ["Maxilla", "Palatine", "Zygomatic", "Nasal", "Lacrimal", "concha", "Vomer", "Mandible"]) else "axial_cranium"
+        triangles.extend(positions[indices])
+        colors.extend([_REGION_COLORS.get(region, "#e6d5b8")] * len(indices))
+    return triangles, colors
+
+
 def _configure_anatomical_axis(
     ax,
     *,
@@ -117,14 +195,22 @@ def render_skull_png(
     variation: int = 0,
     dpi: int = 220,
     layout: str = "hero",
+    source: str = "procedural",
+    assets_dir: str | Path = _DEFAULT_ASSETS_DIR,
 ) -> Path:
     random.seed(seed)
+    include = {"skeleton", "geometry"} if source == "procedural" else {"skeleton"}
     body = generate_human_body(
         variation=variation,
         bone_geometry_format="indexed_mesh",
-        include={"skeleton", "geometry"},
+        include=include,
     )
-    triangles, colors = _skull_mesh_triangles(body)
+    if source == "procedural":
+        triangles, colors = _skull_mesh_triangles(body)
+    elif source == "external":
+        triangles, colors = _external_skull_mesh_triangles(body, assets_dir)
+    else:
+        triangles, colors = _external_source_space_skull_triangles(assets_dir)
     if not triangles:
         raise ValueError("No skull geometry triangles were generated")
 
@@ -195,6 +281,8 @@ def main() -> None:
     parser.add_argument("--variation", type=int, default=0)
     parser.add_argument("--dpi", type=int, default=220)
     parser.add_argument("--layout", choices=["hero", "three_planes", "four_views"], default="hero")
+    parser.add_argument("--source", choices=["procedural", "external", "external_source"], default="procedural")
+    parser.add_argument("--assets-dir", default=str(_DEFAULT_ASSETS_DIR))
     args = parser.parse_args()
 
     path = render_skull_png(
@@ -203,6 +291,8 @@ def main() -> None:
         variation=args.variation,
         dpi=args.dpi,
         layout=args.layout,
+        source=args.source,
+        assets_dir=args.assets_dir,
     )
     print(path)
 

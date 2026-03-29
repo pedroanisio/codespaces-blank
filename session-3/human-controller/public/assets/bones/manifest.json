@@ -1,405 +1,574 @@
 {
-  "Hip bone (R)": {
-    "file": "hip_bone_r.glb",
-    "hash": "9f1fe557b69cbb1bc56fed7e7b6f0911eab7feb55bc0dce66e1b958fec9c55b6",
-    "byteSize": 6816,
+  "Ethmoid bone": {
+    "file": "ethmoid_bone.glb",
+    "hash": "7f0be711bfada78664b53451b836af6944645c100264c77c0d0b37fdd750fa75",
+    "byteSize": 490684,
     "lods": [
       {
         "level": 0,
-        "triangles": 332,
-        "vertices": 170
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Hip bone (L)": {
-    "file": "hip_bone_l.glb",
-    "hash": "9f1fe557b69cbb1bc56fed7e7b6f0911eab7feb55bc0dce66e1b958fec9c55b6",
-    "byteSize": 6816,
-    "lods": [
+        "triangles": 27204,
+        "vertices": 13608
+      },
       {
-        "level": 0,
-        "triangles": 332,
-        "vertices": 170
+        "level": 1,
+        "triangles": 27204,
+        "vertices": 13608
       }
     ],
-    "source": "procedural_placeholder"
-  },
-  "Sacrum": {
-    "file": "sacrum.glb",
-    "hash": "335cd1cb39b6eb92d17a53cd91ca84e52f538dde7abba8a1ddea1b8924fa8c4c",
-    "byteSize": 960,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 12,
-        "vertices": 8
-      }
-    ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -0.4484903761486091,
+        -147.09306912729113,
+        1512.267594462514
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
   "Frontal bone": {
     "file": "frontal_bone.glb",
-    "hash": "3d6b3c2ccfdd414898745b4dc5484b8b2def95ebc085040c58b81b1401363d56",
-    "byteSize": 20336,
+    "hash": "4615456cefdaeaffe13113318d47f139206b8b968e34ee904f104a39ad1ff662",
+    "byteSize": 261132,
     "lods": [
       {
         "level": 0,
-        "triangles": 1280,
-        "vertices": 353
+        "triangles": 14448,
+        "vertices": 7226
+      },
+      {
+        "level": 1,
+        "triangles": 14448,
+        "vertices": 7226
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -0.04318013876136188,
+        157.32439706250182,
+        14.708432880446038
+      ],
+      "unitScale": 0.1,
+      "rotatedXDeg": -90
+    }
+  },
+  "Maxilla (R)": {
+    "file": "maxilla_r.glb",
+    "hash": "0b9e572893b1c818893d43be82911e1685c602b12b203fef3679d3e005a517b6",
+    "byteSize": 97340,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 5358,
+        "vertices": 2673
+      },
+      {
+        "level": 1,
+        "triangles": 5358,
+        "vertices": 2673
+      }
+    ],
+    "normalization": {
+      "centroidOffsetCm": [
+        -19.82159144835772,
+        -155.83501432106323,
+        1487.4405215420811
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
+  },
+  "Maxilla (L)": {
+    "file": "maxilla_l.glb",
+    "hash": "d96371805f3657d18575fddad27d67b78af7ef94666a7f956c441517ff1d40c3",
+    "byteSize": 92372,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 5086,
+        "vertices": 2531
+      },
+      {
+        "level": 1,
+        "triangles": 5086,
+        "vertices": 2531
+      }
+    ],
+    "normalization": {
+      "centroidOffsetCm": [
+        18.13664012094724,
+        -155.47176348058665,
+        1487.2477141771299
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
   "Parietal bone (R)": {
     "file": "parietal_bone_r.glb",
-    "hash": "45596663120e8aba5ff36541105c433574dcfb27fe54f6f3e463ae5106180584",
-    "byteSize": 20336,
+    "hash": "73faec9b93fd5c8999a8ece8a827829585b44e294bc48418e14949a3b27b12f9",
+    "byteSize": 234008,
     "lods": [
       {
         "level": 0,
-        "triangles": 1280,
-        "vertices": 353
+        "triangles": 12944,
+        "vertices": 6474
+      },
+      {
+        "level": 1,
+        "triangles": 12944,
+        "vertices": 6474
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -4.608470543732582,
+        -5.236882544986722,
+        158.8984507355126
+      ],
+      "unitScale": 0.1,
+      "rotatedXDeg": 0
+    }
   },
   "Parietal bone (L)": {
     "file": "parietal_bone_l.glb",
-    "hash": "45596663120e8aba5ff36541105c433574dcfb27fe54f6f3e463ae5106180584",
-    "byteSize": 20336,
+    "hash": "2c7cd4890f85ba759379baa42951a5fc44281b759dfa83c8ffdd092b5d734d0f",
+    "byteSize": 237548,
     "lods": [
       {
         "level": 0,
-        "triangles": 1280,
-        "vertices": 353
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Occipital bone": {
-    "file": "occipital_bone.glb",
-    "hash": "edc05c60589e1b1616fecd2ebfdd711383d301a1a7cd6ee2fb783bd17768062a",
-    "byteSize": 20336,
-    "lods": [
+        "triangles": 13152,
+        "vertices": 6578
+      },
       {
-        "level": 0,
-        "triangles": 1280,
-        "vertices": 353
+        "level": 1,
+        "triangles": 13152,
+        "vertices": 6578
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        4.404030774971354,
+        -5.293414962627264,
+        158.9409006009896
+      ],
+      "unitScale": 0.1,
+      "rotatedXDeg": 0
+    }
   },
   "Mandible": {
     "file": "mandible.glb",
-    "hash": "e22bcdc5d5aee162150d37e053f680b2ecbaa2b100c973851c1332c79cca704f",
-    "byteSize": 1480,
+    "hash": "104b5d80d2d4d5b6658c3e3fc0895ac006d50ca763ca3fe0241018de53a629b8",
+    "byteSize": 415664,
     "lods": [
       {
         "level": 0,
-        "triangles": 36,
-        "vertices": 24
+        "triangles": 23020,
+        "vertices": 11540
+      },
+      {
+        "level": 1,
+        "triangles": 23020,
+        "vertices": 11540
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -0.0646239667502508,
+        -13.750392064215658,
+        145.4738404709484
+      ],
+      "unitScale": 0.1,
+      "rotatedXDeg": 0
+    }
   },
-  "Sternum": {
-    "file": "sternum.glb",
-    "hash": "68c93742836860c15784f6508d09c731afdeac63b7fd9bc2f07598adf05fbc14",
-    "byteSize": 960,
+  "Occipital bone": {
+    "file": "occipital_bone.glb",
+    "hash": "5f2b83159b0fdf4fce200dabc02b68161321bee7da5c087203f2489c4fa2a485",
+    "byteSize": 223840,
     "lods": [
       {
         "level": 0,
-        "triangles": 12,
-        "vertices": 8
+        "triangles": 12382,
+        "vertices": 6191
+      },
+      {
+        "level": 1,
+        "triangles": 12382,
+        "vertices": 6191
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -0.06611100874116377,
+        -2.2740396828882594,
+        151.2899832244118
+      ],
+      "unitScale": 0.1,
+      "rotatedXDeg": 0
+    }
   },
-  "Scapula (R)": {
-    "file": "scapula_r.glb",
-    "hash": "83bc2a0bc06077b321d88bfa0ca2566a1df3e9fb9b606bdb32acc1367588ff19",
-    "byteSize": 864,
+  "Palatine bone (R)": {
+    "file": "palatine_bone_r.glb",
+    "hash": "130d0a6de8bf125d241702228a57111ba290692de098aa30922e4d3f89b3228d",
+    "byteSize": 34636,
     "lods": [
       {
         "level": 0,
-        "triangles": 8,
-        "vertices": 6
+        "triangles": 1868,
+        "vertices": 936
+      },
+      {
+        "level": 1,
+        "triangles": 1868,
+        "vertices": 936
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -13.155365414860583,
+        -130.8284859142577,
+        1490.5032698162227
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Scapula (L)": {
-    "file": "scapula_l.glb",
-    "hash": "83bc2a0bc06077b321d88bfa0ca2566a1df3e9fb9b606bdb32acc1367588ff19",
-    "byteSize": 864,
+  "Palatine bone (L)": {
+    "file": "palatine_bone_l.glb",
+    "hash": "7e5e8530705d4f8d300e89cc1995a9eed9a2ea6c30c16f8b6c0c5fe4dd5bf1f2",
+    "byteSize": 34204,
     "lods": [
       {
         "level": 0,
-        "triangles": 8,
-        "vertices": 6
+        "triangles": 1844,
+        "vertices": 924
+      },
+      {
+        "level": 1,
+        "triangles": 1844,
+        "vertices": 924
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        11.645611463402801,
+        -130.5526097532021,
+        1490.2664405683204
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Clavicle (R)": {
-    "file": "clavicle_r.glb",
-    "hash": "e8c47d45c8fab1c8ee8a4f78313096edfcd2bf8b13b082a9ae5777aeb810995a",
-    "byteSize": 5400,
+  "Temporal bone (R)": {
+    "file": "temporal_bone_r.glb",
+    "hash": "98f7bdec2b3df243529264b2214c90eb2b42bf900dc0c3cb5cee63e28c45062b",
+    "byteSize": 89288,
     "lods": [
       {
         "level": 0,
-        "triangles": 256,
-        "vertices": 130
+        "triangles": 4904,
+        "vertices": 2454
+      },
+      {
+        "level": 1,
+        "triangles": 4904,
+        "vertices": 2454
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -52.553107410476386,
+        -82.6240642813258,
+        1513.3858587784746
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Clavicle (L)": {
-    "file": "clavicle_l.glb",
-    "hash": "e8c47d45c8fab1c8ee8a4f78313096edfcd2bf8b13b082a9ae5777aeb810995a",
-    "byteSize": 5400,
+  "Temporal bone (L)": {
+    "file": "temporal_bone_l.glb",
+    "hash": "10f094787088478f534be8c16b3069639be95499169adc0d9f42d01d892a9aea",
+    "byteSize": 89356,
     "lods": [
       {
         "level": 0,
-        "triangles": 256,
-        "vertices": 130
+        "triangles": 4908,
+        "vertices": 2456
+      },
+      {
+        "level": 1,
+        "triangles": 4908,
+        "vertices": 2456
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        51.222983708324165,
+        -82.56956684926864,
+        1513.37116658868
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Humerus (R)": {
-    "file": "humerus_r.glb",
-    "hash": "b008a0a69bff1dceead04e4f96b435a2f514e3585262e2394b317380e962cead",
-    "byteSize": 14620,
+  "Zygomatic bone (R)": {
+    "file": "zygomatic_bone_r.glb",
+    "hash": "10089e95fbcbb7885c20b8e30e3251127ab2816eebe6845d6baff530d0c387c0",
+    "byteSize": 28160,
     "lods": [
       {
         "level": 0,
-        "triangles": 768,
-        "vertices": 386
+        "triangles": 1508,
+        "vertices": 756
+      },
+      {
+        "level": 1,
+        "triangles": 1508,
+        "vertices": 756
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -48.781776409010924,
+        -144.3692923264788,
+        1506.0364414641986
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Humerus (L)": {
-    "file": "humerus_l.glb",
-    "hash": "b008a0a69bff1dceead04e4f96b435a2f514e3585262e2394b317380e962cead",
-    "byteSize": 14620,
+  "Zygomatic bone (L)": {
+    "file": "zygomatic_bone_l.glb",
+    "hash": "d59fa3aa5f2ffab6b3c9b6f99dc993fda09097c1b8e92ecd6bb00938b9639b56",
+    "byteSize": 29996,
     "lods": [
       {
         "level": 0,
-        "triangles": 768,
-        "vertices": 386
+        "triangles": 1610,
+        "vertices": 807
+      },
+      {
+        "level": 1,
+        "triangles": 1610,
+        "vertices": 807
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        47.55020198128199,
+        -144.59063263631424,
+        1505.8436094490319
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Radius (R)": {
-    "file": "radius_r.glb",
-    "hash": "551ea7de61e6f0d1ad8d5f26f0a75e17c7cc80ad4f47115d4b466da3561d7ec5",
-    "byteSize": 9388,
+  "Sphenoid bone": {
+    "file": "sphenoid_bone.glb",
+    "hash": "3fe92a90cc0ddefa1922897b7f9331807f56ab3e1270fdf99783ca80205743ad",
+    "byteSize": 145432,
     "lods": [
       {
         "level": 0,
-        "triangles": 480,
-        "vertices": 242
+        "triangles": 8034,
+        "vertices": 4005
+      },
+      {
+        "level": 1,
+        "triangles": 8034,
+        "vertices": 4005
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -0.0520006832414619,
+        -11.808301405799886,
+        151.74845243190464
+      ],
+      "unitScale": 0.1,
+      "rotatedXDeg": 0
+    }
   },
-  "Radius (L)": {
-    "file": "radius_l.glb",
-    "hash": "551ea7de61e6f0d1ad8d5f26f0a75e17c7cc80ad4f47115d4b466da3561d7ec5",
-    "byteSize": 9388,
+  "Vomer": {
+    "file": "vomer.glb",
+    "hash": "9a6e1767fdd151fc129efdd691da9863338e3ccaaf71c89de16d21061aff6f9d",
+    "byteSize": 128788,
     "lods": [
       {
         "level": 0,
-        "triangles": 480,
-        "vertices": 242
+        "triangles": 7102,
+        "vertices": 3553
+      },
+      {
+        "level": 1,
+        "triangles": 7102,
+        "vertices": 3553
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -0.5123163317109645,
+        -140.91568335315642,
+        1496.0379146308996
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Ulna (R)": {
-    "file": "ulna_r.glb",
-    "hash": "4702ffbeeeb79243d21dd4e5bd1d559553373559d6d966e57baf1e970a172f68",
-    "byteSize": 9436,
+  "Inferior nasal concha (R)": {
+    "file": "inferior_nasal_concha_r.glb",
+    "hash": "e6446feda55c5e23bad4470b46fdc59fec04c0f2989a7214ff8f0673d68910ad",
+    "byteSize": 13760,
     "lods": [
       {
         "level": 0,
-        "triangles": 480,
-        "vertices": 242
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Ulna (L)": {
-    "file": "ulna_l.glb",
-    "hash": "4702ffbeeeb79243d21dd4e5bd1d559553373559d6d966e57baf1e970a172f68",
-    "byteSize": 9436,
-    "lods": [
+        "triangles": 714,
+        "vertices": 353
+      },
       {
-        "level": 0,
-        "triangles": 480,
-        "vertices": 242
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Femur (R)": {
-    "file": "femur_r.glb",
-    "hash": "82cea3c93001ff14d983ba61a311934728adbfc17574294dc790dc059bcee0f1",
-    "byteSize": 14568,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 768,
-        "vertices": 386
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Femur (L)": {
-    "file": "femur_l.glb",
-    "hash": "82cea3c93001ff14d983ba61a311934728adbfc17574294dc790dc059bcee0f1",
-    "byteSize": 14568,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 768,
-        "vertices": 386
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Patella (R)": {
-    "file": "patella_r.glb",
-    "hash": "36f49b68c7f1b11d42dd6aaeb9ddff4b287626282910e26c120163f8c70f994b",
-    "byteSize": 4872,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 224,
-        "vertices": 114
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Patella (L)": {
-    "file": "patella_l.glb",
-    "hash": "36f49b68c7f1b11d42dd6aaeb9ddff4b287626282910e26c120163f8c70f994b",
-    "byteSize": 4872,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 224,
-        "vertices": 114
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Tibia (R)": {
-    "file": "tibia_r.glb",
-    "hash": "b8c2f07276acd39b54442840933b1b097996f7bf1904f02d3b0c80d73553d65c",
-    "byteSize": 14620,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 768,
-        "vertices": 386
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Tibia (L)": {
-    "file": "tibia_l.glb",
-    "hash": "b8c2f07276acd39b54442840933b1b097996f7bf1904f02d3b0c80d73553d65c",
-    "byteSize": 14620,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 768,
-        "vertices": 386
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Fibula (R)": {
-    "file": "fibula_r.glb",
-    "hash": "ebe1f210522bd64e59b98b41ee1de1a8a5e01988e1a92c0efe42988e65367784",
-    "byteSize": 5400,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 256,
-        "vertices": 130
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Fibula (L)": {
-    "file": "fibula_l.glb",
-    "hash": "ebe1f210522bd64e59b98b41ee1de1a8a5e01988e1a92c0efe42988e65367784",
-    "byteSize": 5400,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 256,
-        "vertices": 130
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Calcaneus (R)": {
-    "file": "calcaneus_r.glb",
-    "hash": "7800abe2ab85426fcae5fd1503fa42bd0a73e2d622805b4dec268f8d416b1e26",
-    "byteSize": 960,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 12,
-        "vertices": 8
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Calcaneus (L)": {
-    "file": "calcaneus_l.glb",
-    "hash": "7800abe2ab85426fcae5fd1503fa42bd0a73e2d622805b4dec268f8d416b1e26",
-    "byteSize": 960,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 12,
-        "vertices": 8
-      }
-    ],
-    "source": "procedural_placeholder"
-  },
-  "Talus (R)": {
-    "file": "talus_r.glb",
-    "hash": "b7bec0191b67ef41e08ca97dac7d410e6c99ae5a0d46334640db0ac4f3587550",
-    "byteSize": 20336,
-    "lods": [
-      {
-        "level": 0,
-        "triangles": 1280,
+        "level": 1,
+        "triangles": 714,
         "vertices": 353
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        -11.04511830469671,
+        -149.11525717695756,
+        1487.9450521398744
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   },
-  "Talus (L)": {
-    "file": "talus_l.glb",
-    "hash": "b7bec0191b67ef41e08ca97dac7d410e6c99ae5a0d46334640db0ac4f3587550",
-    "byteSize": 20336,
+  "Inferior nasal concha (L)": {
+    "file": "inferior_nasal_concha_l.glb",
+    "hash": "0930e8b8773aee62921ec5a5c320205e4737e92f7981e6be64b1506f3c26940f",
+    "byteSize": 14268,
     "lods": [
       {
         "level": 0,
-        "triangles": 1280,
-        "vertices": 353
+        "triangles": 738,
+        "vertices": 371
+      },
+      {
+        "level": 1,
+        "triangles": 738,
+        "vertices": 371
       }
     ],
-    "source": "procedural_placeholder"
+    "normalization": {
+      "centroidOffsetCm": [
+        8.808159794511317,
+        -153.51391284466814,
+        1489.450029991534
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
+  },
+  "Lacrimal bone (R)": {
+    "file": "lacrimal_bone_r.glb",
+    "hash": "665a4ef3e4ce1fd45801923fe6508d78f16bd458a6160d391e8fc413f5f67a4d",
+    "byteSize": 10920,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 554,
+        "vertices": 279
+      },
+      {
+        "level": 1,
+        "triangles": 554,
+        "vertices": 279
+      }
+    ],
+    "normalization": {
+      "centroidOffsetCm": [
+        -13.025282590865919,
+        1512.3327563302464,
+        158.51047423485494
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": -90
+    }
+  },
+  "Lacrimal bone (L)": {
+    "file": "lacrimal_bone_l.glb",
+    "hash": "eef678fac68b208590411bd694bcc6bb058d723a9dcbddf5435fdea6b467ed0b",
+    "byteSize": 12360,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 634,
+        "vertices": 319
+      },
+      {
+        "level": 1,
+        "triangles": 634,
+        "vertices": 319
+      }
+    ],
+    "normalization": {
+      "centroidOffsetCm": [
+        11.912467734846919,
+        1511.2113275212207,
+        158.76759443684566
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": -90
+    }
+  },
+  "Nasal bone (R)": {
+    "file": "nasal_bone_r.glb",
+    "hash": "803c920ddbcd27c977fc3771470022c28e9fd2523e0ac3fdd00b2b6c2bf0d239",
+    "byteSize": 9352,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 468,
+        "vertices": 236
+      },
+      {
+        "level": 1,
+        "triangles": 468,
+        "vertices": 236
+      }
+    ],
+    "normalization": {
+      "centroidOffsetCm": [
+        -3.8791044215148474,
+        1516.149413867523,
+        180.17750865943216
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": -90
+    }
+  },
+  "Nasal bone (L)": {
+    "file": "nasal_bone_l.glb",
+    "hash": "56100b13f09080eb37fef94aa99acae0198b3d6b52eb8d83e2f09a8f33b53939",
+    "byteSize": 9936,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 500,
+        "vertices": 252
+      },
+      {
+        "level": 1,
+        "triangles": 500,
+        "vertices": 252
+      }
+    ],
+    "normalization": {
+      "centroidOffsetCm": [
+        2.8021326646745734,
+        -180.31179523960284,
+        1516.9166844717
+      ],
+      "unitScale": 1.0,
+      "rotatedXDeg": 0
+    }
   }
 }

@@ -54,6 +54,42 @@ def test_render_skull_png_supports_four_views_layout(tmp_path):
     assert output_path.stat().st_size > 25_000
 
 
+def test_render_skull_png_supports_external_assets(tmp_path):
+    assets_dir = ROOT / "session-3" / "human-controller" / "public" / "assets" / "bones"
+    output_path = tmp_path / "skull_external.png"
+
+    result = render_skull_png(
+        output_path,
+        seed=73,
+        layout="four_views",
+        source="external",
+        assets_dir=assets_dir,
+    )
+
+    assert result == output_path
+    assert output_path.exists()
+    assert output_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    assert output_path.stat().st_size > 25_000
+
+
+def test_render_skull_png_supports_external_source_space(tmp_path):
+    assets_dir = ROOT / "session-3" / "human-controller" / "public" / "assets" / "bones"
+    output_path = tmp_path / "skull_external_source.png"
+
+    result = render_skull_png(
+        output_path,
+        seed=73,
+        layout="four_views",
+        source="external_source",
+        assets_dir=assets_dir,
+    )
+
+    assert result == output_path
+    assert output_path.exists()
+    assert output_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    assert output_path.stat().st_size > 25_000
+
+
 def test_configure_anatomical_axis_uses_orthographic_projection():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
