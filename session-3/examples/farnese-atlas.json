@@ -6554,13 +6554,19 @@
         "c6ab5cb2-15a8-481d-8ae3-09cf8a9890be",
         "9005aa9e-22b0-4660-8258-8e0208531273",
         "ff2fbbd5-c145-40b0-af73-f9febb22a6a1",
-        "614756a9-7b17-4c1e-8e86-50a3cd3f2617"
+        "614756a9-7b17-4c1e-8e86-50a3cd3f2617",
+        "022f1c9d-b32b-456e-933e-cacf5cae4828",
+        "7b9f96d0-ab83-43a7-a120-591bb8133efe",
+        "981f3a5e-0ccd-4f81-8ece-ce7a428bdf4f",
+        "7f4332dc-f9fb-4e43-86ce-d63370e26679"
       ],
       "proximalJointId": "c5455690-eb1b-4dab-b9dd-143d325ff938",
       "distalJointIds": [
         "c1285188-046d-4c15-8916-1abf733dd2bf",
         "d9d11645-416d-472f-bbe9-ae641b50991f",
-        "2c4b510c-9f2b-49fd-bc4d-bcd51c72655c"
+        "2c4b510c-9f2b-49fd-bc4d-bcd51c72655c",
+        "dbbf196d-6f44-4c86-925d-cafb18d05dbf",
+        "c5edaa34-0974-45ee-b405-d7b892cad35e"
       ],
       "mass": 15.96,
       "centerOfMass": {
@@ -6815,7 +6821,8 @@
       "id": "23c25552-9466-446d-a128-1bdff0664548",
       "name": "thigh_left",
       "boneIds": [
-        "77b77e7f-429a-4266-a4be-9038f158279c"
+        "77b77e7f-429a-4266-a4be-9038f158279c",
+        "20d6e089-3973-42e1-afb4-86f82752d6bb"
       ],
       "proximalJointId": "95618325-d13f-42bf-a0dd-89e2faac8960",
       "distalJointIds": [
@@ -6847,7 +6854,8 @@
       "id": "51613f3e-5744-4036-b40e-7117f57ee41e",
       "name": "thigh_right",
       "boneIds": [
-        "5d119758-410a-4811-ad0c-8f9063a21010"
+        "5d119758-410a-4811-ad0c-8f9063a21010",
+        "a04a93cb-70f9-4195-b856-2363d2e57da6"
       ],
       "proximalJointId": "5c8fa8cb-9e41-4157-b1c3-3919e0730b79",
       "distalJointIds": [

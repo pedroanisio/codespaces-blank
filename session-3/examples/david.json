@@ -2716,7 +2716,7 @@
     {
       "id": "f873aead-21cf-493a-b3eb-382c12288e88",
       "name": "Latissimus dorsi origin",
-      "attachedBoneId": "dd92aff4-e38a-4862-b4d5-ff97337e2901",
+      "attachedBoneId": "90102a9d-9ef7-4554-a86b-10c109ceebf2",
       "localPosition": {
         "x": 0,
         "y": -10,
@@ -3981,8 +3981,8 @@
       "fascicleArchitecture": "multipennate",
       "pennationAngle": 15,
       "fiberDirection": {
-        "x": -0.71,
-        "y": -0.71,
+        "x": -0.707107,
+        "y": -0.707107,
         "z": 0
       },
       "fiberComposition": "mixed",
@@ -4028,8 +4028,8 @@
       "fascicleArchitecture": "multipennate",
       "pennationAngle": 15,
       "fiberDirection": {
-        "x": 0.71,
-        "y": -0.71,
+        "x": 0.707107,
+        "y": -0.707107,
         "z": 0
       },
       "fiberComposition": "mixed",
@@ -4124,8 +4124,8 @@
       },
       "fascicleArchitecture": "convergent",
       "fiberDirection": {
-        "x": -0.5,
-        "y": 0.5,
+        "x": -0.707107,
+        "y": 0.707107,
         "z": 0
       },
       "fiberComposition": "type_I",
@@ -4172,8 +4172,8 @@
       },
       "fascicleArchitecture": "convergent",
       "fiberDirection": {
-        "x": 0.5,
-        "y": 0.5,
+        "x": 0.707107,
+        "y": 0.707107,
         "z": 0
       },
       "fiberComposition": "type_I",
@@ -7187,7 +7187,11 @@
         "8117408c-eafd-4ebd-b4e2-9d04ab8ebdac",
         "8d923c8d-3364-4c98-b87d-b69b413d2e2d",
         "54e2b36b-915d-41e9-8e6a-9ffd59d0636e",
-        "70177120-b4c1-4eac-9a5d-13ae68cdf41b"
+        "70177120-b4c1-4eac-9a5d-13ae68cdf41b",
+        "4b032f6e-ff92-4d23-8d21-786e448bcc7a",
+        "f6f935b1-7fd1-4549-ac21-1fc6379d834d",
+        "cbab2f0c-8f65-4699-ba39-2fcea08bcfe3",
+        "24fce21f-4ec0-4ff5-8df1-443038396717"
       ],
       "proximalJointId": null,
       "distalJointIds": [
@@ -8367,5 +8371,661 @@
         "residualMomentMagnitude": 1
       }
     }
-  ]
+  ],
+  "referenceFrames": [
+    {
+      "id": "443cd12e-87f9-4018-a71d-15da977d469c",
+      "name": "global_ISB",
+      "type": "global",
+      "parentFrameId": null,
+      "poseInParent": {
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "orientation": {
+          "w": 1,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "axisLabels": {
+        "x": "anterior",
+        "y": "superior",
+        "z": "right_lateral"
+      }
+    }
+  ],
+  "derivationGraph": {
+    "version": "1.0.0",
+    "rules": [
+      {
+        "id": "3c2c8f79-9268-4ebf-8292-0ed22500cb04",
+        "name": "muscle_pcsa",
+        "law": {
+          "name": "PCSA definition",
+          "equation": "PCSA = V / L_opt",
+          "reference": "Lieber & Fridén, Muscle Nerve 23(12):1647–1666, 2000",
+          "domain": "definition"
+        },
+        "inputFields": [
+          "muscles[*].volume",
+          "muscles[*].optimalFiberLength"
+        ],
+        "outputField": "muscles[*].pcsa",
+        "invertible": false,
+        "consistencyTolerance": {
+          "absolute": 0.01
+        }
+      },
+      {
+        "id": "97c6e303-84da-4497-a125-f614f9c8dec0",
+        "name": "forward_kinematics",
+        "law": {
+          "name": "Forward kinematics",
+          "equation": "T_global(i) = T_parent(i) × R(q_i)",
+          "reference": "Craig, 'Introduction to Robotics', 3rd ed., Ch. 3",
+          "domain": "kinematics"
+        },
+        "inputFields": [
+          "currentPose.rootPose",
+          "currentPose.jointStates[*].angles",
+          "segments[*].proximalJointId",
+          "joints[*].axes"
+        ],
+        "outputField": "currentPose.segmentStates[*].globalPose",
+        "invertible": true
+      },
+      {
+        "id": "1e21d61d-8254-44c3-8d27-15d38c4fe322",
+        "name": "segment_global_com",
+        "law": {
+          "name": "Coordinate transformation",
+          "equation": "r_global = R × r_local + p",
+          "domain": "kinematics"
+        },
+        "inputFields": [
+          "currentPose.segmentStates[*].globalPose",
+          "segments[*].centerOfMass"
+        ],
+        "outputField": "currentPose.segmentStates[*].globalCenterOfMass",
+        "invertible": false,
+        "dependsOn": [
+          "97c6e303-84da-4497-a125-f614f9c8dec0"
+        ]
+      },
+      {
+        "id": "54c10a40-80ee-4b21-9f8b-f2ece6c2a342",
+        "name": "whole_body_com",
+        "law": {
+          "name": "Center of mass definition",
+          "equation": "r_com = Σ(mᵢ × rᵢ) / Σ(mᵢ)",
+          "domain": "definition"
+        },
+        "inputFields": [
+          "currentPose.segmentStates[*].globalCenterOfMass",
+          "segments[*].mass"
+        ],
+        "outputField": "currentPose.wholeBodyCenterOfMass",
+        "invertible": false,
+        "dependsOn": [
+          "1e21d61d-8254-44c3-8d27-15d38c4fe322"
+        ]
+      },
+      {
+        "id": "50b7227c-b55f-4a6d-a246-e9404c573aa3",
+        "name": "gravitational_force_magnitude",
+        "law": {
+          "name": "Newton's law of gravitation (uniform field)",
+          "equation": "F = m × g",
+          "domain": "rigid_body_dynamics"
+        },
+        "inputFields": [
+          "segments[*].mass",
+          "loadingConditions[*].forces[type=gravitational].gravitationalAcceleration"
+        ],
+        "outputField": "loadingConditions[*].forces[type=gravitational].magnitude",
+        "invertible": false
+      },
+      {
+        "id": "4c15d250-95e3-4c0b-bd4d-3c517e094503",
+        "name": "equilibrium_net_force",
+        "law": {
+          "name": "Force equilibrium",
+          "equation": "F_net = Σ(Fᵢ × d̂ᵢ)",
+          "reference": "Newton's Second Law (static case: F_net = 0)",
+          "domain": "rigid_body_dynamics"
+        },
+        "inputFields": [
+          "loadingConditions[*].forces[*].magnitude",
+          "loadingConditions[*].forces[*].direction"
+        ],
+        "outputField": "loadingConditions[*].equilibrium.netForce",
+        "invertible": false,
+        "consistencyTolerance": {
+          "absolute": 1
+        }
+      },
+      {
+        "id": "4475dd7b-7de5-4e1b-972a-665e282a318e",
+        "name": "equilibrium_residual_magnitude",
+        "law": {
+          "name": "Vector magnitude",
+          "equation": "|F_net| = √(Fx² + Fy² + Fz²)",
+          "domain": "definition"
+        },
+        "inputFields": [
+          "loadingConditions[*].equilibrium.netForce"
+        ],
+        "outputField": "loadingConditions[*].equilibrium.residualForceMagnitude",
+        "invertible": false,
+        "dependsOn": [
+          "4c15d250-95e3-4c0b-bd4d-3c517e094503"
+        ]
+      },
+      {
+        "id": "19a8934f-3bf7-4d43-8e3d-340d932c8796",
+        "name": "equilibrium_static_check",
+        "law": {
+          "name": "Static equilibrium criterion",
+          "equation": "isStatic = (|F_net| < ε_F) ∧ (|M_net| < ε_M)",
+          "domain": "rigid_body_dynamics"
+        },
+        "inputFields": [
+          "loadingConditions[*].equilibrium.residualForceMagnitude",
+          "loadingConditions[*].equilibrium.residualMomentMagnitude"
+        ],
+        "outputField": "loadingConditions[*].equilibrium.isStatic",
+        "invertible": false,
+        "dependsOn": [
+          "4475dd7b-7de5-4e1b-972a-665e282a318e"
+        ],
+        "consistencyTolerance": {
+          "absolute": 0
+        }
+      },
+      {
+        "id": "9aee78bd-b9e2-4fa2-806f-a2d9e3bbfd42",
+        "name": "fbd_translational_residual",
+        "law": {
+          "name": "Newton's second law",
+          "equation": "residual = ΣF - m·a",
+          "domain": "rigid_body_dynamics"
+        },
+        "inputFields": [
+          "freeBodyDiagrams[*].forces[*].magnitude",
+          "freeBodyDiagrams[*].forces[*].direction",
+          "segments[matched].mass",
+          "currentPose.segmentStates[matched].linearAcceleration"
+        ],
+        "outputField": "freeBodyDiagrams[*].translationalResidual",
+        "invertible": false,
+        "dependsOn": [
+          "97c6e303-84da-4497-a125-f614f9c8dec0"
+        ]
+      },
+      {
+        "id": "1aa45ccb-b215-4678-9c72-ddc6b32ab618",
+        "name": "fbd_rotational_residual",
+        "law": {
+          "name": "Euler's equation of rotation",
+          "equation": "residual = ΣM - I·α",
+          "reference": "Goldstein, 'Classical Mechanics', 3rd ed., Ch. 5",
+          "domain": "rigid_body_dynamics"
+        },
+        "inputFields": [
+          "freeBodyDiagrams[*].moments[*]",
+          "segments[matched].inertiaTensor",
+          "currentPose.segmentStates[matched].angularAcceleration"
+        ],
+        "outputField": "freeBodyDiagrams[*].rotationalResidual",
+        "invertible": false,
+        "dependsOn": [
+          "97c6e303-84da-4497-a125-f614f9c8dec0"
+        ]
+      }
+    ]
+  },
+  "constitutiveLaws": {
+    "version": "1.0.0",
+    "laws": [
+      {
+        "lawType": "hill_muscle_model",
+        "id": "20a07b34-383e-4eb4-9536-4b49446581a8",
+        "name": "hill_model_rectus_femoris_r_",
+        "constrainedFields": {
+          "muscleForce": "loadingConditions[*].forces[muscleId=4519f559-4352-46db-92b9-07064000a5af].magnitude",
+          "activation": "loadingConditions[*].forces[muscleId=4519f559-4352-46db-92b9-07064000a5af].activationLevel",
+          "currentLength": "loadingConditions[*].forces[muscleId=4519f559-4352-46db-92b9-07064000a5af].currentLength",
+          "contractionVelocity": "loadingConditions[*].forces[muscleId=4519f559-4352-46db-92b9-07064000a5af].contractionVelocity",
+          "maxIsometricForce": "muscles[id=4519f559-4352-46db-92b9-07064000a5af].maxIsometricForce",
+          "optimalFiberLength": "muscles[id=4519f559-4352-46db-92b9-07064000a5af].optimalFiberLength",
+          "maxContractionVelocity": "muscles[id=4519f559-4352-46db-92b9-07064000a5af].maxContractionVelocity"
+        },
+        "forceLength": {
+          "widthParameter": 0.56,
+          "minActiveForceLengthRatio": 0.5,
+          "maxActiveForceLengthRatio": 1.5
+        },
+        "forceVelocity": {
+          "concentricCurveShape": 0.25,
+          "eccentricForceMax": 1.4,
+          "eccentricCurveShape": 0.15
+        },
+        "passiveElement": {
+          "strainAtMaxForce": 0.6,
+          "exponentialShape": 4
+        },
+        "constraint": {
+          "equation": "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]",
+          "violationSeverity": "error",
+          "toleranceFraction": 0.1
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Hill three-element muscle model",
+            "validWhen": "Muscle activation is voluntary; contraction velocity < V_max; fiber length within 0.5–1.5 × L_opt",
+            "violatedWhen": "Electrical stimulation at supramaximal frequency; extreme stretch beyond 1.5 × L_opt; muscle damage or fatigue failure",
+            "consequence": "Force predictions unreliable; actual force may exceed or fall below the Hill envelope",
+            "reference": "Zajac, CRC Crit Rev Biomed Eng 17(4):359–411, 1989"
+          }
+        ]
+      },
+      {
+        "lawType": "hill_muscle_model",
+        "id": "fd3b284e-42ce-4f30-9b5b-001c59530ce0",
+        "name": "hill_model_biceps_femoris_r_",
+        "constrainedFields": {
+          "muscleForce": "loadingConditions[*].forces[muscleId=4f1425e0-b596-4415-97ae-47e334d6264d].magnitude",
+          "activation": "loadingConditions[*].forces[muscleId=4f1425e0-b596-4415-97ae-47e334d6264d].activationLevel",
+          "currentLength": "loadingConditions[*].forces[muscleId=4f1425e0-b596-4415-97ae-47e334d6264d].currentLength",
+          "contractionVelocity": "loadingConditions[*].forces[muscleId=4f1425e0-b596-4415-97ae-47e334d6264d].contractionVelocity",
+          "maxIsometricForce": "muscles[id=4f1425e0-b596-4415-97ae-47e334d6264d].maxIsometricForce",
+          "optimalFiberLength": "muscles[id=4f1425e0-b596-4415-97ae-47e334d6264d].optimalFiberLength",
+          "maxContractionVelocity": "muscles[id=4f1425e0-b596-4415-97ae-47e334d6264d].maxContractionVelocity"
+        },
+        "forceLength": {
+          "widthParameter": 0.56,
+          "minActiveForceLengthRatio": 0.5,
+          "maxActiveForceLengthRatio": 1.5
+        },
+        "forceVelocity": {
+          "concentricCurveShape": 0.25,
+          "eccentricForceMax": 1.4,
+          "eccentricCurveShape": 0.15
+        },
+        "passiveElement": {
+          "strainAtMaxForce": 0.6,
+          "exponentialShape": 4
+        },
+        "constraint": {
+          "equation": "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]",
+          "violationSeverity": "error",
+          "toleranceFraction": 0.1
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Hill three-element muscle model",
+            "validWhen": "Muscle activation is voluntary; contraction velocity < V_max; fiber length within 0.5–1.5 × L_opt",
+            "violatedWhen": "Electrical stimulation at supramaximal frequency; extreme stretch beyond 1.5 × L_opt; muscle damage or fatigue failure",
+            "consequence": "Force predictions unreliable; actual force may exceed or fall below the Hill envelope",
+            "reference": "Zajac, CRC Crit Rev Biomed Eng 17(4):359–411, 1989"
+          }
+        ]
+      },
+      {
+        "lawType": "hill_muscle_model",
+        "id": "31192422-b352-49af-8e94-332a38bc4475",
+        "name": "hill_model_biceps_brachii_r_",
+        "constrainedFields": {
+          "muscleForce": "loadingConditions[*].forces[muscleId=322acbad-2b70-4b7f-9ea1-c3ec7ee01197].magnitude",
+          "activation": "loadingConditions[*].forces[muscleId=322acbad-2b70-4b7f-9ea1-c3ec7ee01197].activationLevel",
+          "currentLength": "loadingConditions[*].forces[muscleId=322acbad-2b70-4b7f-9ea1-c3ec7ee01197].currentLength",
+          "contractionVelocity": "loadingConditions[*].forces[muscleId=322acbad-2b70-4b7f-9ea1-c3ec7ee01197].contractionVelocity",
+          "maxIsometricForce": "muscles[id=322acbad-2b70-4b7f-9ea1-c3ec7ee01197].maxIsometricForce",
+          "optimalFiberLength": "muscles[id=322acbad-2b70-4b7f-9ea1-c3ec7ee01197].optimalFiberLength",
+          "maxContractionVelocity": "muscles[id=322acbad-2b70-4b7f-9ea1-c3ec7ee01197].maxContractionVelocity"
+        },
+        "forceLength": {
+          "widthParameter": 0.56,
+          "minActiveForceLengthRatio": 0.5,
+          "maxActiveForceLengthRatio": 1.5
+        },
+        "forceVelocity": {
+          "concentricCurveShape": 0.25,
+          "eccentricForceMax": 1.4,
+          "eccentricCurveShape": 0.15
+        },
+        "passiveElement": {
+          "strainAtMaxForce": 0.6,
+          "exponentialShape": 4
+        },
+        "constraint": {
+          "equation": "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]",
+          "violationSeverity": "error",
+          "toleranceFraction": 0.1
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Hill three-element muscle model",
+            "validWhen": "Muscle activation is voluntary; contraction velocity < V_max; fiber length within 0.5–1.5 × L_opt",
+            "violatedWhen": "Electrical stimulation at supramaximal frequency; extreme stretch beyond 1.5 × L_opt; muscle damage or fatigue failure",
+            "consequence": "Force predictions unreliable; actual force may exceed or fall below the Hill envelope",
+            "reference": "Zajac, CRC Crit Rev Biomed Eng 17(4):359–411, 1989"
+          }
+        ]
+      },
+      {
+        "lawType": "hill_muscle_model",
+        "id": "938bce04-5bc0-4391-bd0d-4cc55e84e356",
+        "name": "hill_model_triceps_brachii_r_",
+        "constrainedFields": {
+          "muscleForce": "loadingConditions[*].forces[muscleId=20ff2a8e-a2f1-4780-982f-18bd938e69da].magnitude",
+          "activation": "loadingConditions[*].forces[muscleId=20ff2a8e-a2f1-4780-982f-18bd938e69da].activationLevel",
+          "currentLength": "loadingConditions[*].forces[muscleId=20ff2a8e-a2f1-4780-982f-18bd938e69da].currentLength",
+          "contractionVelocity": "loadingConditions[*].forces[muscleId=20ff2a8e-a2f1-4780-982f-18bd938e69da].contractionVelocity",
+          "maxIsometricForce": "muscles[id=20ff2a8e-a2f1-4780-982f-18bd938e69da].maxIsometricForce",
+          "optimalFiberLength": "muscles[id=20ff2a8e-a2f1-4780-982f-18bd938e69da].optimalFiberLength",
+          "maxContractionVelocity": "muscles[id=20ff2a8e-a2f1-4780-982f-18bd938e69da].maxContractionVelocity"
+        },
+        "forceLength": {
+          "widthParameter": 0.56,
+          "minActiveForceLengthRatio": 0.5,
+          "maxActiveForceLengthRatio": 1.5
+        },
+        "forceVelocity": {
+          "concentricCurveShape": 0.25,
+          "eccentricForceMax": 1.4,
+          "eccentricCurveShape": 0.15
+        },
+        "passiveElement": {
+          "strainAtMaxForce": 0.6,
+          "exponentialShape": 4
+        },
+        "constraint": {
+          "equation": "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]",
+          "violationSeverity": "error",
+          "toleranceFraction": 0.1
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Hill three-element muscle model",
+            "validWhen": "Muscle activation is voluntary; contraction velocity < V_max; fiber length within 0.5–1.5 × L_opt",
+            "violatedWhen": "Electrical stimulation at supramaximal frequency; extreme stretch beyond 1.5 × L_opt; muscle damage or fatigue failure",
+            "consequence": "Force predictions unreliable; actual force may exceed or fall below the Hill envelope",
+            "reference": "Zajac, CRC Crit Rev Biomed Eng 17(4):359–411, 1989"
+          }
+        ]
+      },
+      {
+        "lawType": "hill_muscle_model",
+        "id": "1504a292-b91e-4f72-b7dc-e5910da0e26c",
+        "name": "hill_model_pectoralis_major_r_",
+        "constrainedFields": {
+          "muscleForce": "loadingConditions[*].forces[muscleId=9b99209d-ad88-4b20-a44b-eb2510d066c3].magnitude",
+          "activation": "loadingConditions[*].forces[muscleId=9b99209d-ad88-4b20-a44b-eb2510d066c3].activationLevel",
+          "currentLength": "loadingConditions[*].forces[muscleId=9b99209d-ad88-4b20-a44b-eb2510d066c3].currentLength",
+          "contractionVelocity": "loadingConditions[*].forces[muscleId=9b99209d-ad88-4b20-a44b-eb2510d066c3].contractionVelocity",
+          "maxIsometricForce": "muscles[id=9b99209d-ad88-4b20-a44b-eb2510d066c3].maxIsometricForce",
+          "optimalFiberLength": "muscles[id=9b99209d-ad88-4b20-a44b-eb2510d066c3].optimalFiberLength",
+          "maxContractionVelocity": "muscles[id=9b99209d-ad88-4b20-a44b-eb2510d066c3].maxContractionVelocity"
+        },
+        "forceLength": {
+          "widthParameter": 0.56,
+          "minActiveForceLengthRatio": 0.5,
+          "maxActiveForceLengthRatio": 1.5
+        },
+        "forceVelocity": {
+          "concentricCurveShape": 0.25,
+          "eccentricForceMax": 1.4,
+          "eccentricCurveShape": 0.15
+        },
+        "passiveElement": {
+          "strainAtMaxForce": 0.6,
+          "exponentialShape": 4
+        },
+        "constraint": {
+          "equation": "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]",
+          "violationSeverity": "error",
+          "toleranceFraction": 0.1
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Hill three-element muscle model",
+            "validWhen": "Muscle activation is voluntary; contraction velocity < V_max; fiber length within 0.5–1.5 × L_opt",
+            "violatedWhen": "Electrical stimulation at supramaximal frequency; extreme stretch beyond 1.5 × L_opt; muscle damage or fatigue failure",
+            "consequence": "Force predictions unreliable; actual force may exceed or fall below the Hill envelope",
+            "reference": "Zajac, CRC Crit Rev Biomed Eng 17(4):359–411, 1989"
+          }
+        ]
+      },
+      {
+        "lawType": "hill_muscle_model",
+        "id": "c471b8b9-2a77-4dfa-935c-dde353e9eea8",
+        "name": "hill_model_deltoid_r_",
+        "constrainedFields": {
+          "muscleForce": "loadingConditions[*].forces[muscleId=08c989f1-03b6-48f7-b0b5-9ed7ed8f6115].magnitude",
+          "activation": "loadingConditions[*].forces[muscleId=08c989f1-03b6-48f7-b0b5-9ed7ed8f6115].activationLevel",
+          "currentLength": "loadingConditions[*].forces[muscleId=08c989f1-03b6-48f7-b0b5-9ed7ed8f6115].currentLength",
+          "contractionVelocity": "loadingConditions[*].forces[muscleId=08c989f1-03b6-48f7-b0b5-9ed7ed8f6115].contractionVelocity",
+          "maxIsometricForce": "muscles[id=08c989f1-03b6-48f7-b0b5-9ed7ed8f6115].maxIsometricForce",
+          "optimalFiberLength": "muscles[id=08c989f1-03b6-48f7-b0b5-9ed7ed8f6115].optimalFiberLength",
+          "maxContractionVelocity": "muscles[id=08c989f1-03b6-48f7-b0b5-9ed7ed8f6115].maxContractionVelocity"
+        },
+        "forceLength": {
+          "widthParameter": 0.56,
+          "minActiveForceLengthRatio": 0.5,
+          "maxActiveForceLengthRatio": 1.5
+        },
+        "forceVelocity": {
+          "concentricCurveShape": 0.25,
+          "eccentricForceMax": 1.4,
+          "eccentricCurveShape": 0.15
+        },
+        "passiveElement": {
+          "strainAtMaxForce": 0.6,
+          "exponentialShape": 4
+        },
+        "constraint": {
+          "equation": "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]",
+          "violationSeverity": "error",
+          "toleranceFraction": 0.1
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Hill three-element muscle model",
+            "validWhen": "Muscle activation is voluntary; contraction velocity < V_max; fiber length within 0.5–1.5 × L_opt",
+            "violatedWhen": "Electrical stimulation at supramaximal frequency; extreme stretch beyond 1.5 × L_opt; muscle damage or fatigue failure",
+            "consequence": "Force predictions unreliable; actual force may exceed or fall below the Hill envelope",
+            "reference": "Zajac, CRC Crit Rev Biomed Eng 17(4):359–411, 1989"
+          }
+        ]
+      },
+      {
+        "lawType": "ligament_force_strain",
+        "id": "ba7d40f2-95ba-41b9-9a32-c4f51046aa89",
+        "name": "force_strain_anterior_cruciate_ligament_r_",
+        "constrainedFields": {
+          "ligamentForce": "loadingConditions[*].forces[ligamentId=84a46b2c-f7bd-4dcc-8fbc-0e6752a581ce].magnitude",
+          "strain": "loadingConditions[*].forces[ligamentId=84a46b2c-f7bd-4dcc-8fbc-0e6752a581ce].strain",
+          "stiffness": "ligaments[id=84a46b2c-f7bd-4dcc-8fbc-0e6752a581ce].linearStiffness",
+          "restingLength": "ligaments[id=84a46b2c-f7bd-4dcc-8fbc-0e6752a581ce].restingLength",
+          "referenceStrain": "ligaments[id=84a46b2c-f7bd-4dcc-8fbc-0e6752a581ce].referenceStrain"
+        },
+        "toeRegion": {
+          "maxStrain": 0.04,
+          "curveExponent": 2
+        },
+        "linearRegion": {
+          "stiffness": 182,
+          "interceptStrain": 0.02
+        },
+        "failure": {
+          "ultimateStrain": 0.12,
+          "ultimateLoad": 2160,
+          "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+        },
+        "constraint": {
+          "equation": "F_lig = piecewise(ε ≤ 0: 0, ε ≤ ε_toe: k_toe×ε^n, ε ≤ ε_fail: k×(ε-ε₀), ε > ε_fail: FAILURE)",
+          "violationSeverity": "error",
+          "strainTolerance": 0.005
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Piecewise linear ligament model",
+            "validWhen": "Quasi-static loading; strain < ultimate strain; intact ligament",
+            "violatedWhen": "Impact loading (strain rate > 100%/s); partial or complete rupture; viscoelastic creep under sustained load",
+            "consequence": "Force-strain relationship is rate-dependent; model underestimates force at high strain rates",
+            "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+          }
+        ]
+      },
+      {
+        "lawType": "ligament_force_strain",
+        "id": "3f12e765-e716-43f5-b6b6-7988454c0179",
+        "name": "force_strain_posterior_cruciate_ligament_r_",
+        "constrainedFields": {
+          "ligamentForce": "loadingConditions[*].forces[ligamentId=b7ff1b88-17c9-49a6-9f7b-de69e74e88ec].magnitude",
+          "strain": "loadingConditions[*].forces[ligamentId=b7ff1b88-17c9-49a6-9f7b-de69e74e88ec].strain",
+          "stiffness": "ligaments[id=b7ff1b88-17c9-49a6-9f7b-de69e74e88ec].linearStiffness",
+          "restingLength": "ligaments[id=b7ff1b88-17c9-49a6-9f7b-de69e74e88ec].restingLength",
+          "referenceStrain": "ligaments[id=b7ff1b88-17c9-49a6-9f7b-de69e74e88ec].referenceStrain"
+        },
+        "toeRegion": {
+          "maxStrain": 0.05,
+          "curveExponent": 2
+        },
+        "linearRegion": {
+          "stiffness": 204,
+          "interceptStrain": 0.025
+        },
+        "failure": {
+          "ultimateStrain": 0.15,
+          "ultimateLoad": 2500,
+          "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+        },
+        "constraint": {
+          "equation": "F_lig = piecewise(ε ≤ 0: 0, ε ≤ ε_toe: k_toe×ε^n, ε ≤ ε_fail: k×(ε-ε₀), ε > ε_fail: FAILURE)",
+          "violationSeverity": "error",
+          "strainTolerance": 0.005
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Piecewise linear ligament model",
+            "validWhen": "Quasi-static loading; strain < ultimate strain; intact ligament",
+            "violatedWhen": "Impact loading (strain rate > 100%/s); partial or complete rupture; viscoelastic creep under sustained load",
+            "consequence": "Force-strain relationship is rate-dependent; model underestimates force at high strain rates",
+            "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+          }
+        ]
+      },
+      {
+        "lawType": "ligament_force_strain",
+        "id": "24c633ec-0029-43f0-a43f-cb7a924e28b2",
+        "name": "force_strain_medial_collateral_ligament_r_",
+        "constrainedFields": {
+          "ligamentForce": "loadingConditions[*].forces[ligamentId=149557fd-d5ed-49a7-8439-ab5c64927a38].magnitude",
+          "strain": "loadingConditions[*].forces[ligamentId=149557fd-d5ed-49a7-8439-ab5c64927a38].strain",
+          "stiffness": "ligaments[id=149557fd-d5ed-49a7-8439-ab5c64927a38].linearStiffness",
+          "restingLength": "ligaments[id=149557fd-d5ed-49a7-8439-ab5c64927a38].restingLength",
+          "referenceStrain": "ligaments[id=149557fd-d5ed-49a7-8439-ab5c64927a38].referenceStrain"
+        },
+        "toeRegion": {
+          "maxStrain": 0.04,
+          "curveExponent": 2
+        },
+        "linearRegion": {
+          "stiffness": 78,
+          "interceptStrain": 0.02
+        },
+        "failure": {
+          "ultimateStrain": 0.14,
+          "ultimateLoad": 800,
+          "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+        },
+        "constraint": {
+          "equation": "F_lig = piecewise(ε ≤ 0: 0, ε ≤ ε_toe: k_toe×ε^n, ε ≤ ε_fail: k×(ε-ε₀), ε > ε_fail: FAILURE)",
+          "violationSeverity": "error",
+          "strainTolerance": 0.005
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Piecewise linear ligament model",
+            "validWhen": "Quasi-static loading; strain < ultimate strain; intact ligament",
+            "violatedWhen": "Impact loading (strain rate > 100%/s); partial or complete rupture; viscoelastic creep under sustained load",
+            "consequence": "Force-strain relationship is rate-dependent; model underestimates force at high strain rates",
+            "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+          }
+        ]
+      },
+      {
+        "lawType": "ligament_force_strain",
+        "id": "2ff0a39a-05ab-42b7-a041-1d56415c72f8",
+        "name": "force_strain_lateral_collateral_ligament_r_",
+        "constrainedFields": {
+          "ligamentForce": "loadingConditions[*].forces[ligamentId=52705567-4d11-4f22-9035-959349f2ab9a].magnitude",
+          "strain": "loadingConditions[*].forces[ligamentId=52705567-4d11-4f22-9035-959349f2ab9a].strain",
+          "stiffness": "ligaments[id=52705567-4d11-4f22-9035-959349f2ab9a].linearStiffness",
+          "restingLength": "ligaments[id=52705567-4d11-4f22-9035-959349f2ab9a].restingLength",
+          "referenceStrain": "ligaments[id=52705567-4d11-4f22-9035-959349f2ab9a].referenceStrain"
+        },
+        "toeRegion": {
+          "maxStrain": 0.04,
+          "curveExponent": 2
+        },
+        "linearRegion": {
+          "stiffness": 59,
+          "interceptStrain": 0.02
+        },
+        "failure": {
+          "ultimateStrain": 0.11,
+          "ultimateLoad": 425,
+          "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+        },
+        "constraint": {
+          "equation": "F_lig = piecewise(ε ≤ 0: 0, ε ≤ ε_toe: k_toe×ε^n, ε ≤ ε_fail: k×(ε-ε₀), ε > ε_fail: FAILURE)",
+          "violationSeverity": "error",
+          "strainTolerance": 0.005
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Piecewise linear ligament model",
+            "validWhen": "Quasi-static loading; strain < ultimate strain; intact ligament",
+            "violatedWhen": "Impact loading (strain rate > 100%/s); partial or complete rupture; viscoelastic creep under sustained load",
+            "consequence": "Force-strain relationship is rate-dependent; model underestimates force at high strain rates",
+            "reference": "Woo et al., Am J Sports Med 27(4):533–543, 1999"
+          }
+        ]
+      },
+      {
+        "lawType": "bone_yield_criterion",
+        "id": "32a6c824-f5c9-4aea-9235-102f9a04c3f0",
+        "name": "rigid_body_yield_check",
+        "constrainedFields": {
+          "jointReactionForce": "loadingConditions[*].forces[forceType=joint_reaction].magnitude"
+        },
+        "parameters": {
+          "corticalTensileYield": 130,
+          "corticalCompressiveYield": 190,
+          "trabecularCompressiveYield": 5,
+          "fatigueReductionFactor": 0.6
+        },
+        "constraint": {
+          "equation": "σ_bone = F / A ≤ σ_yield (rigid body assumption valid when σ_bone << σ_yield)",
+          "violationSeverity": "error"
+        },
+        "validityBoundaries": [
+          {
+            "assumption": "Bones are rigid bodies",
+            "validWhen": "Bone stress << yield stress; strain rate < 0.01/s; no fracture or plastic deformation",
+            "violatedWhen": "Impact loading (strain rate > 1/s), stress approaching yield (~130 MPa cortical), pathological bone (osteoporosis)",
+            "consequence": "Rigid body dynamics underestimates deformation and energy absorption; joint forces may be overestimated",
+            "reference": "Reilly & Burstein, J Bone Joint Surg Am 56(5):1001–1022, 1974"
+          }
+        ]
+      }
+    ]
+  }
 }

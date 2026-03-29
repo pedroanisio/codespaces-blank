@@ -1,0 +1,5113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/human-body-v3.schema.json",
+  "title": "Human Body Schema",
+  "description": "Comprehensive anatomical data schema for human body modeling. Covers skeletal, muscular, connective, nervous, vascular, organ, appearance, kinematics, dynamics, derivation, constitutive, and geometry subsystems. Generated from Zod v3 TypeScript source via dedup post-processor. Schema version 3.0.0.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "3.0.0",
+      "description": "Must match the schema version this instance was created against"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "string"
+    },
+    "proportions": {
+      "$ref": "#/$defs/Proportions"
+    },
+    "skeleton": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (BoneId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "classification": {
+            "$ref": "#/$defs/BoneClass"
+          },
+          "region": {
+            "$ref": "#/$defs/BoneRegion"
+          },
+          "transform": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false,
+                "description": "Position in 3D space (cm)"
+              },
+              "rotation": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                  },
+                  "y": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                  },
+                  "z": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false,
+                "description": "Rotation as Euler angles (degrees, XYZ intrinsic order)"
+              },
+              "scale": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                  },
+                  "y": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                  },
+                  "z": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false,
+                "description": "Per-axis scale multiplier (1.0 = identity)"
+              }
+            },
+            "required": [
+              "position",
+              "rotation",
+              "scale"
+            ],
+            "additionalProperties": false
+          },
+          "length": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Length in cm"
+          },
+          "width": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Maximum width in cm"
+          },
+          "depth": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Maximum depth in cm (for non-cylindrical bones)"
+          },
+          "mass": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Mass in grams"
+          },
+          "centerOfMass": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+              },
+              "y": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+              },
+              "z": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false,
+            "description": "Center of mass position in the bone's local frame (cm). Typically expressed as a fraction of segment length from proximal end. [Authority: subordinate to BodySegment.centerOfMass for dynamics — segment-level values are authoritative for multibody analysis; bone-level values are anatomical detail for single-bone models.]"
+          },
+          "inertiaTensor": {
+            "type": "object",
+            "properties": {
+              "xx": {
+                "type": "number",
+                "description": "Diagonal component (row 1, col 1)"
+              },
+              "yy": {
+                "type": "number",
+                "description": "Diagonal component (row 2, col 2)"
+              },
+              "zz": {
+                "type": "number",
+                "description": "Diagonal component (row 3, col 3)"
+              },
+              "xy": {
+                "type": "number",
+                "description": "Off-diagonal (row 1, col 2) = (row 2, col 1)"
+              },
+              "xz": {
+                "type": "number",
+                "description": "Off-diagonal (row 1, col 3) = (row 3, col 1)"
+              },
+              "yz": {
+                "type": "number",
+                "description": "Off-diagonal (row 2, col 3) = (row 3, col 2)"
+              }
+            },
+            "required": [
+              "xx",
+              "yy",
+              "zz",
+              "xy",
+              "xz",
+              "yz"
+            ],
+            "additionalProperties": false,
+            "description": "Moment of inertia tensor about the center of mass in the bone's local frame (g·cm²). [Authority: subordinate to BodySegment.inertiaTensor for dynamics — a segment may aggregate multiple bones into a single rigid body.]"
+          },
+          "parentBoneId": {
+            "anyOf": [
+              {
+                "$ref": "#/properties/skeleton/items/properties/id"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent bone in the skeletal hierarchy; null for root (e.g. pelvis)"
+          },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Namespaced extension metadata (vendor:key → value)"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "classification",
+          "region",
+          "transform",
+          "length",
+          "width",
+          "mass",
+          "parentBoneId"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "joints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (JointId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "$ref": "#/$defs/JointType"
+          },
+          "transform": {
+            "$ref": "#/properties/skeleton/items/properties/transform"
+          },
+          "connectedBoneIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/skeleton/items/properties/id"
+            },
+            "minItems": 2,
+            "maxItems": 4,
+            "description": "IDs of bones articulated by this joint (2–4, ordered: proximal first)"
+          },
+          "degreesOfFreedom": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6,
+            "description": "0 = fixed (synarthrosis), 1–3 typical, up to 6 theoretical"
+          },
+          "axes": {
+            "type": "object",
+            "properties": {
+              "primary": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              },
+              "secondary": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              },
+              "tertiary": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Joint coordinate system axes per Grood-Suntay convention"
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "flexionExtension": {
+                "type": "object",
+                "properties": {
+                  "min": {
+                    "type": "number",
+                    "description": "Minimum angle in degrees"
+                  },
+                  "max": {
+                    "type": "number",
+                    "description": "Maximum angle in degrees"
+                  }
+                },
+                "required": [
+                  "min",
+                  "max"
+                ],
+                "additionalProperties": false,
+                "description": "Sagittal plane"
+              },
+              "abductionAdduction": {
+                "$ref": "#/properties/joints/items/properties/limits/properties/flexionExtension"
+              },
+              "internalExternalRotation": {
+                "$ref": "#/properties/joints/items/properties/limits/properties/flexionExtension"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Range of motion limits by anatomical plane"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "transform",
+          "connectedBoneIds",
+          "degreesOfFreedom"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tendons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (TendonId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attachedBoneId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Bone this tendon connects to"
+          },
+          "localPosition": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+              },
+              "y": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+              },
+              "z": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false,
+            "description": "Local position on the bone surface (cm)"
+          },
+          "surfaceArea": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Surface area of attachment in cm²"
+          },
+          "length": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Tendon length in cm"
+          },
+          "crossSectionalArea": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Cross-sectional area in cm²"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "attachedBoneId",
+          "localPosition",
+          "length"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "muscles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (MuscleId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "region": {
+            "$ref": "#/$defs/MuscleRegion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "skeletal",
+              "smooth",
+              "cardiac"
+            ],
+            "default": "skeletal"
+          },
+          "origin": {
+            "type": "object",
+            "properties": {
+              "tendonId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Tendon at the origin (stationary end)"
+              },
+              "description": {
+                "type": "string",
+                "description": "Anatomical description, e.g. 'lateral epicondyle of humerus'"
+              }
+            },
+            "required": [
+              "tendonId"
+            ],
+            "additionalProperties": false,
+            "description": "Where the muscle originates — typically the proximal, more stable attachment"
+          },
+          "insertion": {
+            "type": "object",
+            "properties": {
+              "tendonId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Tendon at the insertion (mobile end)"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "tendonId"
+            ],
+            "additionalProperties": false,
+            "description": "Where the muscle inserts — typically the distal, more mobile attachment"
+          },
+          "fascicleArchitecture": {
+            "$ref": "#/$defs/FascicleArchitecture"
+          },
+          "pennationAngle": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 90,
+            "description": "Angle of fibers relative to the force-generating axis (degrees). 0 = parallel."
+          },
+          "fiberDirection": {
+            "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+          },
+          "fiberComposition": {
+            "type": "string",
+            "enum": [
+              "type_I",
+              "type_IIa",
+              "type_IIx",
+              "mixed"
+            ],
+            "default": "mixed"
+          },
+          "restingLength": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Resting length in cm"
+          },
+          "optimalFiberLength": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Optimal sarcomere length for max force in cm"
+          },
+          "volume": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Volume in cm³"
+          },
+          "mass": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Mass in grams"
+          },
+          "pcsa": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Physiological cross-sectional area in cm² (computed: volume / optimalFiberLength)"
+          },
+          "maxIsometricForce": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Peak isometric force in Newtons"
+          },
+          "maxContractionVelocity": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "V_max in optimal fiber lengths per second (L₀/s)"
+          },
+          "innervation": {
+            "$ref": "#/$defs/Innervation"
+          },
+          "bloodSupply": {
+            "type": "object",
+            "properties": {
+              "primaryArteryId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Primary arterial supply if vascular system is modeled"
+              },
+              "primaryArteryName": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Anatomical name of primary artery"
+              },
+              "secondaryArteries": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "primaryArteryName"
+            ],
+            "additionalProperties": false
+          },
+          "primaryActions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/MuscleAction"
+            },
+            "minItems": 1,
+            "description": "Primary actions this muscle produces"
+          },
+          "secondaryActions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/muscles/items/properties/primaryActions/items"
+            }
+          },
+          "antagonistIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/muscles/items/properties/id"
+            },
+            "description": "Muscles opposing this muscle's primary action"
+          },
+          "synergistIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/muscles/items/properties/id"
+            },
+            "description": "Muscles assisting this muscle's primary action"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "region",
+          "origin",
+          "insertion",
+          "fascicleArchitecture",
+          "restingLength",
+          "volume",
+          "mass",
+          "innervation",
+          "bloodSupply",
+          "primaryActions"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "organs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (OrganId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "system": {
+            "$ref": "#/$defs/OrganSystem"
+          },
+          "transform": {
+            "$ref": "#/properties/skeleton/items/properties/transform"
+          },
+          "volume": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Volume in cm³"
+          },
+          "mass": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Mass in grams"
+          },
+          "isVital": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether destruction of this organ is immediately life-threatening"
+          },
+          "pairedOrgan": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this organ exists bilaterally (e.g. kidneys, lungs)"
+          },
+          "laterality": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right",
+              "midline"
+            ],
+            "description": "Anatomical side; required when pairedOrgan is true"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "system",
+          "transform",
+          "volume",
+          "mass"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "vascularSystem": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/properties/muscles/items/properties/bloodSupply/properties/primaryArteryId"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+                },
+                "minItems": 2,
+                "description": "Centerline path as ordered control points (cm)"
+              },
+              "averageLumenRadius": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "description": "Average inner radius in mm"
+              },
+              "wallThickness": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "description": "Vessel wall thickness in mm"
+              },
+              "parentVesselId": {
+                "anyOf": [
+                  {
+                    "$ref": "#/properties/muscles/items/properties/bloodSupply/properties/primaryArteryId"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Upstream vessel this branches from; null for aorta/vena cava"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              },
+              "vesselType": {
+                "type": "string",
+                "const": "artery"
+              },
+              "systolicPressure": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "description": "Typical systolic pressure in mmHg"
+              },
+              "diastolicPressure": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "description": "Typical diastolic pressure in mmHg"
+              },
+              "oxygenSaturation": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "O₂ saturation percentage (typically 95–100%)"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "path",
+              "averageLumenRadius",
+              "vesselType"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/properties/muscles/items/properties/bloodSupply/properties/primaryArteryId"
+              },
+              "name": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/name"
+              },
+              "path": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/path"
+              },
+              "averageLumenRadius": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/averageLumenRadius"
+              },
+              "wallThickness": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/wallThickness"
+              },
+              "parentVesselId": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/parentVesselId"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              },
+              "vesselType": {
+                "type": "string",
+                "const": "vein"
+              },
+              "hasValves": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether the vein has anti-reflux valves"
+              },
+              "oxygenSaturation": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "O₂ saturation percentage (typically 60–80%)"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "path",
+              "averageLumenRadius",
+              "vesselType"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/properties/muscles/items/properties/bloodSupply/properties/primaryArteryId"
+              },
+              "name": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/name"
+              },
+              "path": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/path"
+              },
+              "averageLumenRadius": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/averageLumenRadius"
+              },
+              "wallThickness": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/wallThickness"
+              },
+              "parentVesselId": {
+                "$ref": "#/properties/vascularSystem/items/anyOf/0/properties/parentVesselId"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              },
+              "vesselType": {
+                "type": "string",
+                "const": "capillary"
+              },
+              "density": {
+                "type": "number",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "description": "Capillary density in vessels per mm²"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "path",
+              "averageLumenRadius",
+              "vesselType"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "ligaments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (LigamentId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Anatomical name (e.g. 'anterior cruciate ligament', 'medial collateral ligament')"
+          },
+          "originBoneId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Bone at the origin attachment"
+          },
+          "originPosition": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+              },
+              "y": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+              },
+              "z": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false,
+            "description": "Attachment point on the origin bone in its local frame (cm)"
+          },
+          "insertionBoneId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Bone at the insertion attachment"
+          },
+          "insertionPosition": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+              },
+              "y": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+              },
+              "z": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false,
+            "description": "Attachment point on the insertion bone in its local frame (cm)"
+          },
+          "jointId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Joint this ligament spans and stabilizes"
+          },
+          "restingLength": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Resting (slack) length in cm"
+          },
+          "crossSectionalArea": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Mid-substance cross-sectional area in mm²"
+          },
+          "fiberDirection": {
+            "$ref": "#/properties/muscles/items/properties/fiberDirection"
+          },
+          "linearStiffness": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Linear region stiffness in N/mm (slope of the force-displacement curve past the toe region)"
+          },
+          "toeRegionStrain": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 0.1,
+            "description": "Strain at which the toe region ends and linear region begins (dimensionless, typically 0.03–0.06)"
+          },
+          "ultimateLoad": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Load at failure in N"
+          },
+          "ultimateStrain": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Strain at failure (dimensionless, typically 0.10–0.15 for healthy ligament)"
+          },
+          "referenceStrain": {
+            "type": "number",
+            "description": "Strain at the reference pose (anatomical position). Negative = slack, positive = pre-tensioned."
+          },
+          "primaryRestraint": {
+            "type": "string",
+            "enum": [
+              "anterior_translation",
+              "posterior_translation",
+              "medial_translation",
+              "lateral_translation",
+              "varus",
+              "valgus",
+              "internal_rotation",
+              "external_rotation",
+              "distraction",
+              "hyperextension",
+              "hyperflexion"
+            ],
+            "description": "Primary motion this ligament resists"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "originBoneId",
+          "originPosition",
+          "insertionBoneId",
+          "insertionPosition",
+          "jointId",
+          "restingLength"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Joint ligaments — passive restraints connecting bone to bone"
+    },
+    "cartilage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (CartilageId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Anatomical name (e.g. 'femoral condyle articular cartilage', 'medial meniscus')"
+          },
+          "type": {
+            "$ref": "#/$defs/CartilageType"
+          },
+          "boneId": {
+            "$ref": "#/properties/skeleton/items/properties/id"
+          },
+          "jointId": {
+            "$ref": "#/properties/joints/items/properties/id"
+          },
+          "thickness": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Average thickness in mm (articular cartilage: typically 1–7 mm)"
+          },
+          "surfaceArea": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Contact surface area in cm²"
+          },
+          "youngsModulus": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Equilibrium aggregate modulus in MPa (articular cartilage: 0.5–1.5 MPa)"
+          },
+          "poissonRatio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 0.5,
+            "description": "Poisson's ratio (articular cartilage: ~0.1–0.4)"
+          },
+          "permeability": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Hydraulic permeability in mm⁴/(N·s) (articular cartilage: ~10⁻¹⁵)"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Articular cartilage and fibrocartilage (menisci, labra, discs)"
+    },
+    "nerves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/properties/muscles/items/properties/innervation/properties/nerveId"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Anatomical name (e.g. 'musculocutaneous nerve', 'femoral nerve')"
+          },
+          "type": {
+            "$ref": "#/$defs/NerveType"
+          },
+          "plexus": {
+            "type": "string",
+            "enum": [
+              "cervical",
+              "brachial",
+              "lumbar",
+              "sacral",
+              "none"
+            ],
+            "default": "none"
+          },
+          "spinalRoots": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[CTLS]\\d{1,2}$"
+            },
+            "minItems": 1,
+            "description": "Contributing spinal nerve roots (e.g. ['C5', 'C6'] for musculocutaneous nerve)"
+          },
+          "parentNerveId": {
+            "anyOf": [
+              {
+                "$ref": "#/properties/muscles/items/properties/innervation/properties/nerveId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent nerve this branches from; null for roots/trunks (e.g. sciatic)"
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+            },
+            "minItems": 2,
+            "description": "Centerline path of the nerve as ordered control points (cm, global frame at anatomical position)"
+          },
+          "diameter": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Average diameter in mm"
+          },
+          "conductionVelocity": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Motor conduction velocity in m/s (normal: 40–80 m/s for motor, varies by fiber type)"
+          },
+          "dermatome": {
+            "type": "string",
+            "description": "Skin region innervated for sensation (e.g. 'lateral forearm' for musculocutaneous)"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "spinalRoots",
+          "parentNerveId"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Peripheral nerves — motor, sensory, mixed, autonomic"
+    },
+    "hair": {
+      "type": "object",
+      "properties": {
+        "style": {
+          "type": "string",
+          "minLength": 1
+        },
+        "color": {
+          "$ref": "#/$defs/Color"
+        },
+        "length": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Hair length in cm"
+        },
+        "density": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Hair density (0 = absent, 1 = very thick)"
+        },
+        "transform": {
+          "$ref": "#/properties/skeleton/items/properties/transform"
+        },
+        "extensions": {
+          "$ref": "#/properties/skeleton/items/properties/extensions"
+        }
+      },
+      "required": [
+        "style",
+        "color",
+        "length",
+        "density",
+        "transform"
+      ],
+      "additionalProperties": false
+    },
+    "clothing": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (ClothingId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "$ref": "#/$defs/ClothingType"
+          },
+          "color": {
+            "$ref": "#/properties/hair/properties/color"
+          },
+          "transform": {
+            "$ref": "#/properties/skeleton/items/properties/transform"
+          },
+          "fabric": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fit": {
+            "type": "string",
+            "enum": [
+              "tight",
+              "regular",
+              "loose",
+              "oversized"
+            ]
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "color",
+          "transform",
+          "fabric",
+          "fit"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "rendering": {
+      "type": "object",
+      "properties": {
+        "muscleOverrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entityId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "ID of the anatomical entity"
+              },
+              "color": {
+                "$ref": "#/properties/hair/properties/color"
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "visible": {
+                "type": "boolean",
+                "default": true
+              },
+              "skinningWeights": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/SkinningWeight"
+                },
+                "description": "Vertex weights for mesh deformation"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              }
+            },
+            "required": [
+              "entityId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "boneOverrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/rendering/properties/muscleOverrides/items"
+          }
+        },
+        "organOverrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/rendering/properties/muscleOverrides/items"
+          }
+        },
+        "vesselOverrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/rendering/properties/muscleOverrides/items"
+          }
+        },
+        "globalOpacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        },
+        "extensions": {
+          "$ref": "#/properties/skeleton/items/properties/extensions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "boneGeometries": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "geometryType": {
+                "type": "string",
+                "const": "parametric_csg"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Opaque unique identifier (GeometryId)"
+              },
+              "boneId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Bone this geometry represents"
+              },
+              "csgTree": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "nodeType": {
+                        "type": "string",
+                        "const": "primitive"
+                      },
+                      "primitive": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "primitiveType": {
+                                "type": "string",
+                                "const": "cylinder"
+                              },
+                              "radiusTop": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Top radius in cm (0 = cone apex)"
+                              },
+                              "radiusBottom": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Bottom radius in cm"
+                              },
+                              "height": {
+                                "type": "number",
+                                "exclusiveMinimum": true,
+                                "minimum": 0,
+                                "description": "Height along local Y axis in cm"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Center position in bone-local frame (cm)"
+                              },
+                              "orientation": {
+                                "type": "object",
+                                "properties": {
+                                  "w": {
+                                    "type": "number",
+                                    "description": "Scalar (real) component"
+                                  },
+                                  "x": {
+                                    "type": "number",
+                                    "description": "i component"
+                                  },
+                                  "y": {
+                                    "type": "number",
+                                    "description": "j component"
+                                  },
+                                  "z": {
+                                    "type": "number",
+                                    "description": "k component"
+                                  }
+                                },
+                                "required": [
+                                  "w",
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Orientation in bone-local frame (identity = Y-up)"
+                              }
+                            },
+                            "required": [
+                              "primitiveType",
+                              "radiusTop",
+                              "radiusBottom",
+                              "height",
+                              "position"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "primitiveType": {
+                                "type": "string",
+                                "const": "sphere"
+                              },
+                              "radius": {
+                                "type": "number",
+                                "exclusiveMinimum": true,
+                                "minimum": 0,
+                                "description": "Radius in cm"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Center position in bone-local frame (cm)"
+                              }
+                            },
+                            "required": [
+                              "primitiveType",
+                              "radius",
+                              "position"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "primitiveType": {
+                                "type": "string",
+                                "const": "ellipsoid"
+                              },
+                              "radii": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Semi-axis radii (x, y, z) in cm"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Center position in bone-local frame (cm)"
+                              },
+                              "orientation": {
+                                "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/0/properties/primitive/anyOf/0/properties/orientation"
+                              }
+                            },
+                            "required": [
+                              "primitiveType",
+                              "radii",
+                              "position"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "primitiveType": {
+                                "type": "string",
+                                "const": "box"
+                              },
+                              "halfExtents": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Half-widths along each axis in cm"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Center position in bone-local frame (cm)"
+                              },
+                              "orientation": {
+                                "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/0/properties/primitive/anyOf/0/properties/orientation"
+                              }
+                            },
+                            "required": [
+                              "primitiveType",
+                              "halfExtents",
+                              "position"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "primitiveType": {
+                                "type": "string",
+                                "const": "capsule"
+                              },
+                              "radius": {
+                                "type": "number",
+                                "exclusiveMinimum": true,
+                                "minimum": 0,
+                                "description": "Cylinder and hemisphere radius in cm"
+                              },
+                              "height": {
+                                "type": "number",
+                                "exclusiveMinimum": true,
+                                "minimum": 0,
+                                "description": "Total height including caps in cm"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Center position in bone-local frame (cm)"
+                              },
+                              "orientation": {
+                                "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/0/properties/primitive/anyOf/0/properties/orientation"
+                              }
+                            },
+                            "required": [
+                              "primitiveType",
+                              "radius",
+                              "height",
+                              "position"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "primitiveType": {
+                                "type": "string",
+                                "const": "torus"
+                              },
+                              "majorRadius": {
+                                "type": "number",
+                                "exclusiveMinimum": true,
+                                "minimum": 0,
+                                "description": "Distance from center to tube center in cm"
+                              },
+                              "minorRadius": {
+                                "type": "number",
+                                "exclusiveMinimum": true,
+                                "minimum": 0,
+                                "description": "Tube cross-section radius in cm"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                                  },
+                                  "y": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                                  },
+                                  "z": {
+                                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "z"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Center position in bone-local frame (cm)"
+                              },
+                              "orientation": {
+                                "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/0/properties/primitive/anyOf/0/properties/orientation"
+                              }
+                            },
+                            "required": [
+                              "primitiveType",
+                              "majorRadius",
+                              "minorRadius",
+                              "position"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "nodeType",
+                      "primitive"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "nodeType": {
+                        "type": "string",
+                        "const": "operation"
+                      },
+                      "operation": {
+                        "$ref": "#/$defs/CSGOperation"
+                      },
+                      "children": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "nodeType": {
+                                  "type": "string",
+                                  "const": "primitive"
+                                },
+                                "primitive": {
+                                  "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/0/properties/primitive"
+                                }
+                              },
+                              "required": [
+                                "nodeType",
+                                "primitive"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "nodeType": {
+                                  "type": "string",
+                                  "const": "operation"
+                                },
+                                "operation": {
+                                  "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/1/properties/operation"
+                                },
+                                "children": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/1/properties/children/items"
+                                  },
+                                  "minItems": 2,
+                                  "maxItems": 8,
+                                  "description": "Operands. For 'subtract': children[0] is the base, children[1..n] are subtracted."
+                                }
+                              },
+                              "required": [
+                                "nodeType",
+                                "operation",
+                                "children"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "minItems": 2,
+                        "maxItems": 8,
+                        "description": "Operands. For 'subtract': children[0] is the base, children[1..n] are subtracted."
+                      }
+                    },
+                    "required": [
+                      "nodeType",
+                      "operation",
+                      "children"
+                    ],
+                    "additionalProperties": false
+                  }
+                ],
+                "description": "Root of the CSG tree defining the bone shape"
+              },
+              "collisionHull": {
+                "type": "string",
+                "enum": [
+                  "aabb",
+                  "obb",
+                  "convex_hull",
+                  "sphere"
+                ],
+                "description": "Preferred broad-phase collision shape (computed from CSG tree if absent)"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              }
+            },
+            "required": [
+              "geometryType",
+              "id",
+              "boneId",
+              "csgTree"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "geometryType": {
+                "type": "string",
+                "const": "indexed_mesh"
+              },
+              "id": {
+                "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/id"
+              },
+              "boneId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Bone this geometry represents"
+              },
+              "lods": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/MeshLOD"
+                },
+                "minItems": 1,
+                "description": "Level-of-detail meshes. lods[0] is the highest resolution."
+              },
+              "landmarks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Standard anatomical name (e.g., 'lateral_epicondyle', 'greater_trochanter', 'medial_malleolus'). Use snake_case ISB terminology."
+                    },
+                    "position": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Position in bone-local frame (cm)"
+                    },
+                    "nearestVertexByLOD": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "description": "Map from LOD level (as string key '0', '1', ...) to nearest vertex index in that LOD. Allows snapping the landmark to the mesh surface at any resolution."
+                    },
+                    "surfaceNormal": {
+                      "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "position"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Named anatomical landmarks on the bone surface"
+              },
+              "surfaceRegions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/SurfaceRegion"
+                },
+                "description": "Semantically labeled surface regions"
+              },
+              "isClosed": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether the mesh is a closed (watertight) manifold — required for volume calculation"
+              },
+              "isManifold": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether the mesh is 2-manifold (every edge shared by exactly 2 triangles)"
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "ct_segmentation",
+                      "mri_segmentation",
+                      "photogrammetry",
+                      "statistical_shape_model",
+                      "manual_modeling",
+                      "procedural",
+                      "literature",
+                      "unknown"
+                    ],
+                    "description": "How the mesh geometry was obtained"
+                  },
+                  "resolution": {
+                    "type": "number",
+                    "exclusiveMinimum": true,
+                    "minimum": 0,
+                    "description": "Source voxel/scan resolution in mm (for imaging-derived meshes)"
+                  },
+                  "datasetId": {
+                    "type": "string",
+                    "description": "Identifier of the source dataset (e.g., 'visible_human_male', 'TCIA_LCTSC')"
+                  },
+                  "citation": {
+                    "type": "string",
+                    "description": "Bibliographic reference for the source data"
+                  }
+                },
+                "required": [
+                  "method"
+                ],
+                "additionalProperties": false,
+                "description": "Provenance of the mesh data"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              }
+            },
+            "required": [
+              "geometryType",
+              "id",
+              "boneId",
+              "lods"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "geometryType": {
+                "type": "string",
+                "const": "external_asset"
+              },
+              "id": {
+                "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/id"
+              },
+              "boneId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Bone this geometry represents"
+              },
+              "uri": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^(https?:\\/\\/|file:\\/\\/|asset:\\/\\/)",
+                "description": "URI to the mesh file (HTTPS, file://, or asset:// scheme)"
+              },
+              "format": {
+                "type": "string",
+                "enum": [
+                  "gltf2",
+                  "glb",
+                  "obj",
+                  "stl_binary",
+                  "stl_ascii",
+                  "ply",
+                  "fbx",
+                  "usdz"
+                ],
+                "description": "Expected file format"
+              },
+              "byteSize": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "description": "Expected file size in bytes (for progress indication and cache validation)"
+              },
+              "contentHash": {
+                "type": "string",
+                "description": "SHA-256 hex digest of the file content (for integrity verification)"
+              },
+              "lodVariants": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "level": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "LOD level (1 = first reduction from base)"
+                    },
+                    "uri": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "format": {
+                      "$ref": "#/$defs/MeshFormat"
+                    },
+                    "approximateTriangleCount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "level",
+                    "uri",
+                    "format"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Lower-resolution variants for distance-based LOD switching"
+              },
+              "coordinateSpace": {
+                "type": "object",
+                "properties": {
+                  "upAxis": {
+                    "type": "string",
+                    "enum": [
+                      "Y",
+                      "Z"
+                    ],
+                    "default": "Y",
+                    "description": "Which axis is 'up' in the file (Y = glTF/OpenGL, Z = Blender/3ds Max)"
+                  },
+                  "units": {
+                    "type": "string",
+                    "enum": [
+                      "cm",
+                      "mm",
+                      "m",
+                      "inches"
+                    ],
+                    "default": "cm",
+                    "description": "Length unit of the vertex coordinates"
+                  },
+                  "handedness": {
+                    "type": "string",
+                    "enum": [
+                      "right",
+                      "left"
+                    ],
+                    "default": "right"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Coordinate space metadata — consumer must transform to match schema convention (Y-up, cm, right-handed)"
+              },
+              "landmarks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/properties/boneGeometries/items/anyOf/1/properties/landmarks/items"
+                },
+                "description": "Anatomical landmarks (positions in bone-local frame, independent of mesh resolution)"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              }
+            },
+            "required": [
+              "geometryType",
+              "id",
+              "boneId",
+              "uri",
+              "format"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Geometric shape data for bones. Each entry references a bone via boneId. Supports three representations: parametric_csg (compact procedural), indexed_mesh (inline triangles), or external_asset (URI reference)."
+    },
+    "referenceFrames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "$ref": "#/$defs/ReferenceFrameType"
+          },
+          "parentFrameId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent frame ID; null = this IS the global frame"
+          },
+          "poseInParent": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                  },
+                  "y": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                  },
+                  "z": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false,
+                "description": "Translation from the parent frame origin (cm)"
+              },
+              "orientation": {
+                "$ref": "#/properties/boneGeometries/items/anyOf/0/properties/csgTree/anyOf/0/properties/primitive/anyOf/0/properties/orientation"
+              }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ],
+            "additionalProperties": false,
+            "description": "Pose (position + orientation) of this frame's origin in the parent frame"
+          },
+          "axisLabels": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "string",
+                "default": "anterior",
+                "description": "Semantic label for +X"
+              },
+              "y": {
+                "type": "string",
+                "default": "superior",
+                "description": "Semantic label for +Y"
+              },
+              "z": {
+                "type": "string",
+                "default": "right_lateral",
+                "description": "Semantic label for +Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "attachedBoneId": {
+            "$ref": "#/properties/skeleton/items/properties/id"
+          },
+          "attachedJointId": {
+            "$ref": "#/properties/joints/items/properties/id"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "parentFrameId",
+          "poseInParent"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Defined coordinate frames (global, segment, joint). At least the global frame should be present for kinematic analysis."
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (SegmentId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Anatomical name (e.g. 'thigh', 'shank', 'foot', 'head-neck')"
+          },
+          "boneIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/skeleton/items/properties/id"
+            },
+            "minItems": 1,
+            "description": "Bones that compose this rigid segment (ordered: proximal first)"
+          },
+          "proximalJointId": {
+            "anyOf": [
+              {
+                "$ref": "#/properties/joints/items/properties/id"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Joint at the proximal end; null for root segment (pelvis)"
+          },
+          "distalJointIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/joints/items/properties/id"
+            },
+            "description": "Joints at the distal end(s). Usually 1, but pelvis has 2 (L/R hip) + spine."
+          },
+          "coordinateFrame": {
+            "$ref": "#/properties/referenceFrames/items"
+          },
+          "mass": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Segment mass in kg"
+          },
+          "centerOfMass": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+              },
+              "y": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+              },
+              "z": {
+                "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false,
+            "description": "Center of mass in the segment's local frame (cm). Convention: expressed as offset from proximal joint center. [Authority: authoritative for multibody dynamics — overrides per-bone centerOfMass when a segment aggregates multiple bones.]"
+          },
+          "centerOfMassRatio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "CoM position as fraction of segment length from proximal end (0 = proximal, 1 = distal). De Leva (1996) tables provide standard values per segment."
+          },
+          "inertiaTensor": {
+            "type": "object",
+            "properties": {
+              "xx": {
+                "$ref": "#/properties/skeleton/items/properties/inertiaTensor/properties/xx"
+              },
+              "yy": {
+                "$ref": "#/properties/skeleton/items/properties/inertiaTensor/properties/yy"
+              },
+              "zz": {
+                "$ref": "#/properties/skeleton/items/properties/inertiaTensor/properties/zz"
+              },
+              "xy": {
+                "$ref": "#/properties/skeleton/items/properties/inertiaTensor/properties/xy"
+              },
+              "xz": {
+                "$ref": "#/properties/skeleton/items/properties/inertiaTensor/properties/xz"
+              },
+              "yz": {
+                "$ref": "#/properties/skeleton/items/properties/inertiaTensor/properties/yz"
+              }
+            },
+            "required": [
+              "xx",
+              "yy",
+              "zz",
+              "xy",
+              "xz",
+              "yz"
+            ],
+            "additionalProperties": false,
+            "description": "Moment of inertia tensor about the CoM in the segment's local frame (kg·cm²). [Authority: authoritative for multibody dynamics — overrides per-bone inertiaTensor when a segment aggregates multiple bones.]"
+          },
+          "segmentLength": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Length from proximal to distal joint center (cm)"
+          },
+          "gyrationRatios": {
+            "type": "object",
+            "properties": {
+              "sagittal": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "ρ about the mediolateral axis (sagittal plane motion)"
+              },
+              "frontal": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "ρ about the anteroposterior axis (frontal plane motion)"
+              },
+              "transverse": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "ρ about the longitudinal axis (transverse plane rotation)"
+              }
+            },
+            "required": [
+              "sagittal",
+              "frontal",
+              "transverse"
+            ],
+            "additionalProperties": false,
+            "description": "Normalized radii of gyration (k/L). See De Leva 1996, Table 4."
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "boneIds",
+          "proximalJointId",
+          "distalJointIds",
+          "mass",
+          "centerOfMass",
+          "inertiaTensor",
+          "segmentLength"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Rigid body segments (thigh, shank, foot, etc.). Required for kinematics/dynamics analysis."
+    },
+    "currentPose": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opaque unique identifier (PoseId)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable label (e.g. 'anatomical_position', 'mid_stance', 'seated_relaxed')"
+        },
+        "timestamp": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Time in seconds from the start of a recording or sequence"
+        },
+        "rootSegmentId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Which segment is the kinematic root (usually pelvis)"
+        },
+        "rootPose": {
+          "type": "object",
+          "properties": {
+            "position": {
+              "$ref": "#/properties/referenceFrames/items/properties/poseInParent/properties/position"
+            },
+            "orientation": {
+              "$ref": "#/properties/referenceFrames/items/properties/poseInParent/properties/orientation"
+            }
+          },
+          "required": [
+            "position",
+            "orientation"
+          ],
+          "additionalProperties": false,
+          "description": "Position and orientation of the root segment in the global frame. This anchors the entire kinematic chain in world space."
+        },
+        "jointStates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "jointId": {
+                "$ref": "#/properties/joints/items/properties/id"
+              },
+              "angles": {
+                "type": "object",
+                "properties": {
+                  "flexionExtension": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "Angle about primary axis (degrees)"
+                  },
+                  "abductionAdduction": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "Angle about floating axis (degrees)"
+                  },
+                  "internalExternalRotation": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "Angle about distal axis (degrees)"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "angularVelocity": {
+                "type": "object",
+                "properties": {
+                  "flexionExtension": {
+                    "type": "number",
+                    "description": "deg/s"
+                  },
+                  "abductionAdduction": {
+                    "type": "number",
+                    "description": "deg/s"
+                  },
+                  "internalExternalRotation": {
+                    "type": "number",
+                    "description": "deg/s"
+                  }
+                },
+                "required": [
+                  "flexionExtension",
+                  "abductionAdduction",
+                  "internalExternalRotation"
+                ],
+                "additionalProperties": false,
+                "description": "Joint angular velocity per DOF (degrees/s)"
+              },
+              "angularAcceleration": {
+                "type": "object",
+                "properties": {
+                  "flexionExtension": {
+                    "type": "number",
+                    "description": "deg/s²"
+                  },
+                  "abductionAdduction": {
+                    "type": "number",
+                    "description": "deg/s²"
+                  },
+                  "internalExternalRotation": {
+                    "type": "number",
+                    "description": "deg/s²"
+                  }
+                },
+                "required": [
+                  "flexionExtension",
+                  "abductionAdduction",
+                  "internalExternalRotation"
+                ],
+                "additionalProperties": false,
+                "description": "Joint angular acceleration per DOF (degrees/s²)"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              }
+            },
+            "required": [
+              "jointId",
+              "angles"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "description": "Joint angle state for every articulated joint (ordered: proximal to distal)"
+        },
+        "segmentStates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "segmentId": {
+                "$ref": "#/properties/segments/items/properties/id"
+              },
+              "globalPose": {
+                "type": "object",
+                "properties": {
+                  "position": {
+                    "$ref": "#/properties/referenceFrames/items/properties/poseInParent/properties/position"
+                  },
+                  "orientation": {
+                    "$ref": "#/properties/referenceFrames/items/properties/poseInParent/properties/orientation"
+                  }
+                },
+                "required": [
+                  "position",
+                  "orientation"
+                ],
+                "additionalProperties": false,
+                "description": "Position + orientation of the segment's local frame in the global frame"
+              },
+              "globalCenterOfMass": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              },
+              "linearVelocity": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              },
+              "linearAcceleration": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              },
+              "angularVelocity": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              },
+              "angularAcceleration": {
+                "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              }
+            },
+            "required": [
+              "segmentId",
+              "globalPose"
+            ],
+            "additionalProperties": false
+          },
+          "description": "[Computed] World-space state of each segment, derived from rootPose + jointStates via FK"
+        },
+        "wholeBodyCenterOfMass": {
+          "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+        },
+        "extensions": {
+          "$ref": "#/properties/skeleton/items/properties/extensions"
+        }
+      },
+      "required": [
+        "id",
+        "rootSegmentId",
+        "rootPose",
+        "jointStates"
+      ],
+      "additionalProperties": false,
+      "description": "Current body configuration. If absent, the body is in the default (anatomical) position defined by bone transforms."
+    },
+    "savedPoses": {
+      "type": "array",
+      "items": {
+        "$ref": "#/properties/currentPose"
+      },
+      "description": "Library of named poses (e.g. anatomical position, T-pose, seated, mid-stance)"
+    },
+    "motionSequences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Descriptive name (e.g. 'normal_gait_cycle', 'squat_3RM')"
+          },
+          "sampleRate": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Capture/sample rate in Hz"
+          },
+          "duration": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "description": "Total duration in seconds"
+          },
+          "poses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/currentPose"
+            },
+            "minItems": 1,
+            "description": "Ordered sequence of poses (ascending timestamp)"
+          },
+          "interpolation": {
+            "type": "string",
+            "enum": [
+              "linear",
+              "cubic_spline",
+              "slerp",
+              "none"
+            ],
+            "default": "linear",
+            "description": "Recommended interpolation between keyframes. 'slerp' for rotations, 'linear'/'cubic_spline' for positions."
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "poses"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Recorded or designed motion sequences"
+    },
+    "loadingConditions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque unique identifier (LoadingConditionId)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Descriptive label (e.g. 'mid_stance_gait', 'max_squat_depth')"
+          },
+          "poseId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Pose (body configuration) at this instant"
+          },
+          "forces": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Opaque unique identifier (ForceId)"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "magnitude": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Force magnitude in Newtons (N)"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "gravitational"
+                    },
+                    "targetSegmentId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Segment this gravitational force acts on (applied at its CoM)"
+                    },
+                    "gravitationalAcceleration": {
+                      "type": "number",
+                      "default": 981,
+                      "description": "Gravitational acceleration in cm/s² (default: 981 cm/s² = 9.81 m/s²)"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "targetSegmentId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "muscle"
+                    },
+                    "muscleId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Muscle generating this force"
+                    },
+                    "applicationPoint": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Point where force is effectively applied in global frame (cm). For pennate muscles, this is the effective insertion point along the tendon."
+                    },
+                    "activeComponent": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Active contractile force in N"
+                    },
+                    "passiveComponent": {
+                      "type": "number",
+                      "minimum": 0,
+                      "default": 0,
+                      "description": "Passive elastic force in N"
+                    },
+                    "activationLevel": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Neural activation level (0 = fully relaxed, 1 = max voluntary contraction)"
+                    },
+                    "currentLength": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "description": "Current muscle-tendon unit length in cm"
+                    },
+                    "contractionVelocity": {
+                      "type": "number",
+                      "description": "Rate of change of muscle length in cm/s (negative = shortening)"
+                    },
+                    "momentArm": {
+                      "type": "number",
+                      "description": "Perpendicular distance from the joint center to the muscle's line of action (cm). τ = F × momentArm gives the moment contribution."
+                    },
+                    "crossedJointId": {
+                      "$ref": "#/properties/joints/items/properties/id"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "muscleId",
+                    "applicationPoint",
+                    "activeComponent"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "ground_reaction"
+                    },
+                    "centerOfPressure": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Point of application on the ground plane in global frame (cm). COP = point where the resultant GRF acts with zero horizontal moment."
+                    },
+                    "vertical": {
+                      "type": "number",
+                      "description": "Vertical component in N (+Y = upward)"
+                    },
+                    "anteroposterior": {
+                      "type": "number",
+                      "description": "A-P component in N (+X = anterior = braking is negative)"
+                    },
+                    "mediolateral": {
+                      "type": "number",
+                      "description": "M-L component in N (+Z = right lateral)"
+                    },
+                    "freeMoment": {
+                      "type": "number",
+                      "description": "Vertical free moment (torque about Y axis) in N·cm"
+                    },
+                    "contactSide": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right",
+                        "bilateral"
+                      ]
+                    },
+                    "contactSegmentId": {
+                      "$ref": "#/properties/segments/items/properties/id"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "centerOfPressure",
+                    "vertical",
+                    "anteroposterior",
+                    "mediolateral"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "joint_reaction"
+                    },
+                    "jointId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Joint where this reaction force acts"
+                    },
+                    "applicationPoint": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Joint center position in global frame (cm)"
+                    },
+                    "componentsInJCS": {
+                      "type": "object",
+                      "properties": {
+                        "compression": {
+                          "type": "number",
+                          "description": "Along the bone's longitudinal axis (N). Positive = compressive."
+                        },
+                        "anteriorShear": {
+                          "type": "number",
+                          "description": "Anterior-posterior shear (N)"
+                        },
+                        "medialShear": {
+                          "type": "number",
+                          "description": "Medial-lateral shear (N)"
+                        }
+                      },
+                      "required": [
+                        "compression",
+                        "anteriorShear",
+                        "medialShear"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Force decomposed into the joint coordinate system"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "jointId",
+                    "applicationPoint"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "external_applied"
+                    },
+                    "applicationPoint": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Point of application in global frame (cm)"
+                    },
+                    "targetSegmentId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Segment this force is applied to"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "What this force represents (e.g. 'barbell load', 'wind gust')"
+                    },
+                    "distributed": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Whether this is a distributed load (pressure) or a point force"
+                    },
+                    "contactArea": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "description": "Contact area in cm² (if distributed)"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "applicationPoint",
+                    "targetSegmentId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "ligamentous"
+                    },
+                    "ligamentId": {
+                      "$ref": "#/properties/ligaments/items/properties/id"
+                    },
+                    "ligamentName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Anatomical name (e.g. 'anterior cruciate ligament')"
+                    },
+                    "jointId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Joint this ligament stabilizes"
+                    },
+                    "applicationPoint": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Effective point of application in global frame (cm)"
+                    },
+                    "strain": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Current strain (ΔL/L₀, dimensionless). Ligaments typically fail at 0.06–0.15."
+                    },
+                    "stiffness": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "description": "Linear stiffness in N/cm (slope of force-displacement curve)"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "ligamentName",
+                    "jointId",
+                    "applicationPoint"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "inertial"
+                    },
+                    "targetSegmentId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Segment experiencing this pseudo-force"
+                    },
+                    "segmentAcceleration": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Linear acceleration of the segment CoM (cm/s²)"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "targetSegmentId",
+                    "segmentAcceleration"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "contact"
+                    },
+                    "contactId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Reference to the contact entity"
+                    },
+                    "applicationPoint": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Point of contact in global frame (cm)"
+                    },
+                    "normalForce": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Normal component at the contact surface (N)"
+                    },
+                    "frictionForce": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Tangential friction force (N)"
+                    },
+                    "staticFrictionCoeff": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "μₛ (dimensionless)"
+                    },
+                    "kineticFrictionCoeff": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "μₖ (dimensionless)"
+                    },
+                    "targetSegmentId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Segment in contact"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "contactId",
+                    "applicationPoint",
+                    "normalForce",
+                    "targetSegmentId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "aerodynamic_drag"
+                    },
+                    "targetSegmentId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Segment experiencing drag"
+                    },
+                    "dragCoefficient": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "description": "Cd (dimensionless)"
+                    },
+                    "frontalArea": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "description": "Cross-sectional area facing the flow (cm²)"
+                    },
+                    "fluidDensity": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "default": 0.001225,
+                      "description": "Fluid density in g/cm³ (air ≈ 0.001225 g/cm³)"
+                    },
+                    "relativeVelocity": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Velocity of segment relative to fluid (cm/s)"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "targetSegmentId",
+                    "dragCoefficient",
+                    "frontalArea",
+                    "relativeVelocity"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                    },
+                    "name": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/name"
+                    },
+                    "magnitude": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/magnitude"
+                    },
+                    "direction": {
+                      "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/direction"
+                    },
+                    "forceType": {
+                      "type": "string",
+                      "const": "buoyancy"
+                    },
+                    "targetSegmentId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Segment experiencing buoyancy"
+                    },
+                    "displacedVolume": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "description": "Volume of fluid displaced by the segment (cm³)"
+                    },
+                    "fluidDensity": {
+                      "type": "number",
+                      "exclusiveMinimum": true,
+                      "minimum": 0,
+                      "description": "Density of the fluid in g/cm³ (water ≈ 1.0)"
+                    },
+                    "centerOfBuoyancy": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                        },
+                        "y": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                        },
+                        "z": {
+                          "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Centroid of displaced volume in global frame (cm)"
+                    },
+                    "extensions": {
+                      "$ref": "#/properties/skeleton/items/properties/extensions"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "magnitude",
+                    "direction",
+                    "forceType",
+                    "targetSegmentId",
+                    "displacedVolume",
+                    "fluidDensity",
+                    "centerOfBuoyancy"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "All forces acting on the body at this instant"
+          },
+          "moments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Opaque unique identifier (MomentId)"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "momentType": {
+                  "$ref": "#/$defs/MomentType"
+                },
+                "aboutJointId": {
+                  "$ref": "#/properties/joints/items/properties/id"
+                },
+                "aboutPoint": {
+                  "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+                },
+                "axis": {
+                  "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+                },
+                "magnitude": {
+                  "type": "number",
+                  "description": "Moment magnitude in N·cm (positive = right-hand rule about axis)"
+                },
+                "componentsInJCS": {
+                  "type": "object",
+                  "properties": {
+                    "flexionExtension": {
+                      "type": "number",
+                      "description": "Moment about the flexion/extension axis (N·cm)"
+                    },
+                    "abductionAdduction": {
+                      "type": "number",
+                      "description": "Moment about the ab/adduction axis (N·cm)"
+                    },
+                    "internalExternalRotation": {
+                      "type": "number",
+                      "description": "Moment about the rotation axis (N·cm)"
+                    }
+                  },
+                  "required": [
+                    "flexionExtension",
+                    "abductionAdduction",
+                    "internalExternalRotation"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Moment decomposed into JCS axes (standard clinical reporting)"
+                },
+                "sourceForceId": {
+                  "$ref": "#/properties/loadingConditions/items/properties/forces/items/anyOf/0/properties/id"
+                },
+                "sourceMuscleId": {
+                  "$ref": "#/properties/muscles/items/properties/id"
+                },
+                "extensions": {
+                  "$ref": "#/properties/skeleton/items/properties/extensions"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "momentType",
+                "axis",
+                "magnitude"
+              ],
+              "additionalProperties": false
+            },
+            "description": "All moments (may be computed from forces)"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Opaque unique identifier (ContactId)"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "contactType": {
+                  "$ref": "#/$defs/ContactType"
+                },
+                "segmentId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Body segment involved in the contact"
+                },
+                "surfaceNormal": {
+                  "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+                },
+                "contactPoint": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                    },
+                    "y": {
+                      "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                    },
+                    "z": {
+                      "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Contact location in global frame (cm)"
+                },
+                "contactArea": {
+                  "type": "number",
+                  "exclusiveMinimum": true,
+                  "minimum": 0,
+                  "description": "Contact area in cm²"
+                },
+                "staticFrictionCoeff": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "μₛ (dimensionless)"
+                },
+                "kineticFrictionCoeff": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "μₖ (dimensionless)"
+                },
+                "coefficientOfRestitution": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "e (dimensionless). 1 = perfectly elastic, 0 = perfectly inelastic."
+                },
+                "isActive": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether this contact is currently engaged"
+                },
+                "extensions": {
+                  "$ref": "#/properties/skeleton/items/properties/extensions"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "contactType",
+                "segmentId",
+                "surfaceNormal",
+                "contactPoint"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Active contacts at this instant"
+          },
+          "equilibrium": {
+            "type": "object",
+            "properties": {
+              "netForce": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                  },
+                  "y": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                  },
+                  "z": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false,
+                "description": "[Computed] Resultant of all forces (N). Zero = static equilibrium."
+              },
+              "netMoment": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/x"
+                  },
+                  "y": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/y"
+                  },
+                  "z": {
+                    "$ref": "#/properties/skeleton/items/properties/transform/properties/position/properties/z"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false,
+                "description": "[Computed] Resultant moment about the whole-body CoM (N·cm)."
+              },
+              "isStatic": {
+                "type": "boolean",
+                "description": "[Computed] True if |netForce| < tolerance AND |netMoment| < tolerance"
+              },
+              "residualForceMagnitude": {
+                "type": "number",
+                "minimum": 0,
+                "description": "[Computed] |ΣF| in N"
+              },
+              "residualMomentMagnitude": {
+                "type": "number",
+                "minimum": 0,
+                "description": "[Computed] |ΣM| in N·cm"
+              }
+            },
+            "required": [
+              "netForce",
+              "netMoment",
+              "isStatic",
+              "residualForceMagnitude",
+              "residualMomentMagnitude"
+            ],
+            "additionalProperties": false,
+            "description": "[Computed] Equilibrium check — residuals should be near zero for valid solutions"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "poseId",
+          "forces"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Force/moment snapshots. Each references a pose and contains all forces at that instant."
+    },
+    "freeBodyDiagrams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "segmentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The isolated segment"
+          },
+          "loadingConditionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Parent loading condition"
+          },
+          "forces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/loadingConditions/items/properties/forces/items"
+            },
+            "minItems": 1,
+            "description": "All forces acting on this segment"
+          },
+          "moments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/loadingConditions/items/properties/moments/items"
+            },
+            "description": "All moments acting on this segment"
+          },
+          "translationalResidual": {
+            "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+          },
+          "rotationalResidual": {
+            "$ref": "#/properties/skeleton/items/properties/centerOfMass"
+          },
+          "extensions": {
+            "$ref": "#/properties/skeleton/items/properties/extensions"
+          }
+        },
+        "required": [
+          "segmentId",
+          "loadingConditionId",
+          "forces"
+        ],
+        "additionalProperties": false
+      },
+      "description": "[Computed] Per-segment FBDs derived from loading conditions"
+    },
+    "derivationGraph": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable label (e.g. 'forward_kinematics', 'equilibrium_check')"
+              },
+              "law": {
+                "$ref": "#/$defs/PhysicalLaw"
+              },
+              "inputFields": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/FieldRef"
+                },
+                "minItems": 1,
+                "description": "Schema fields that serve as inputs to this derivation"
+              },
+              "outputField": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[a-zA-Z_]",
+                "description": "Schema field that this derivation computes. Must be a field annotated [Computed]."
+              },
+              "invertible": {
+                "type": "boolean",
+                "default": false,
+                "description": "Whether the equation can be solved in reverse (output → inputs)"
+              },
+              "consistencyTolerance": {
+                "type": "object",
+                "properties": {
+                  "absolute": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Absolute tolerance in the output field's units"
+                  },
+                  "relative": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Relative tolerance (fraction of expected value)"
+                  }
+                },
+                "required": [
+                  "absolute"
+                ],
+                "additionalProperties": false,
+                "description": "Tolerance for consistency verification. If |stored - derived| > tolerance, the field is inconsistent."
+              },
+              "dependsOn": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "IDs of DerivationRules whose outputs are inputs to this rule (establishes DAG order)"
+              },
+              "extensions": {
+                "$ref": "#/properties/skeleton/items/properties/extensions"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "law",
+              "inputFields",
+              "outputField"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "version",
+        "rules"
+      ],
+      "additionalProperties": false,
+      "description": "Declarative derivation DAG. Each rule declares: output = f(inputs) with a named physical law, tolerance, and dependency ordering. Enables mechanical consistency checking of [Computed] fields."
+    },
+    "constitutiveLaws": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "laws": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "lawType": {
+                    "type": "string",
+                    "const": "hill_muscle_model"
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Human-readable label (e.g. 'biceps_brachii_hill_model')"
+                  },
+                  "constrainedFields": {
+                    "type": "object",
+                    "properties": {
+                      "muscleForce": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to the MuscleForce magnitude (e.g. 'loadingConditions[*].forces[type=muscle].magnitude')"
+                      },
+                      "activation": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to activation level"
+                      },
+                      "currentLength": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to current muscle-tendon length"
+                      },
+                      "contractionVelocity": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to contraction velocity"
+                      },
+                      "maxIsometricForce": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to F_max on MuscleSchema"
+                      },
+                      "optimalFiberLength": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to L_opt on MuscleSchema"
+                      },
+                      "maxContractionVelocity": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to V_max on MuscleSchema"
+                      }
+                    },
+                    "required": [
+                      "muscleForce",
+                      "activation",
+                      "currentLength",
+                      "contractionVelocity",
+                      "maxIsometricForce",
+                      "optimalFiberLength",
+                      "maxContractionVelocity"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "forceLength": {
+                    "type": "object",
+                    "properties": {
+                      "widthParameter": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 0.56,
+                        "description": "Width of the Gaussian active force-length curve (γ). f_L(L̃) = exp(-((L̃ - 1)/γ)²). Typical: 0.45–0.56. Ref: Thelen, J Biomech 36(6):853–862, 2003."
+                      },
+                      "minActiveForceLengthRatio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "default": 0.5,
+                        "description": "Minimum normalized length for active force production (L̃_min). Typically ~0.5."
+                      },
+                      "maxActiveForceLengthRatio": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 2,
+                        "default": 1.5,
+                        "description": "Maximum normalized length for active force production (L̃_max). Typically ~1.5."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "forceVelocity": {
+                    "type": "object",
+                    "properties": {
+                      "concentricCurveShape": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 0.25,
+                        "description": "Shape factor for concentric (shortening) force-velocity curve (A_f). Smaller = more curved. Typical: 0.1–0.4. Ref: Thelen (2003)."
+                      },
+                      "eccentricForceMax": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 2,
+                        "default": 1.4,
+                        "description": "Maximum eccentric force as multiple of F_max (F_len). Muscles can produce ~1.4–1.8× F_max eccentrically. Ref: Katz (1939), Thelen (2003)."
+                      },
+                      "eccentricCurveShape": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 0.15,
+                        "description": "Shape factor for eccentric (lengthening) curve. Typical: 0.1–0.3."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "passiveElement": {
+                    "type": "object",
+                    "properties": {
+                      "strainAtMaxForce": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 0.6,
+                        "description": "Normalized strain at which passive force = F_max (ε_M). f_PE(L̃) = (exp(k_PE × (L̃ - 1)/ε_M) - 1) / (exp(k_PE) - 1). Typical: 0.5–0.7. Ref: Thelen (2003)."
+                      },
+                      "exponentialShape": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 4,
+                        "description": "Shape of the passive force exponential (k_PE). Typical: 3–5."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "tendonCompliance": {
+                    "type": "object",
+                    "properties": {
+                      "normalizedSlackLength": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "Tendon slack length / optimal fiber length (L_T_slack / L_opt). Typical: 0.5–10."
+                      },
+                      "strainAtMaxIsometricForce": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 0.033,
+                        "description": "Tendon strain at F_max. Typical: 0.033 (3.3%). Ref: Zajac (1989)."
+                      }
+                    },
+                    "required": [
+                      "normalizedSlackLength"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Tendon elasticity parameters. If absent, tendon is assumed rigid."
+                  },
+                  "constraint": {
+                    "type": "object",
+                    "properties": {
+                      "equation": {
+                        "type": "string",
+                        "const": "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]",
+                        "description": "The Hill model constraint in symbolic form"
+                      },
+                      "violationSeverity": {
+                        "type": "string",
+                        "enum": [
+                          "error",
+                          "warning",
+                          "info"
+                        ],
+                        "default": "error",
+                        "description": "Severity when a muscle force exceeds the achievable envelope"
+                      },
+                      "toleranceFraction": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.5,
+                        "default": 0.1,
+                        "description": "Fractional tolerance above the computed envelope before flagging a violation. 0.1 = allow 10% overshoot (accounts for parameter uncertainty)."
+                      }
+                    },
+                    "required": [
+                      "equation"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "validityBoundaries": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/ValidityBoundary"
+                    },
+                    "minItems": 1
+                  },
+                  "extensions": {
+                    "$ref": "#/properties/skeleton/items/properties/extensions"
+                  }
+                },
+                "required": [
+                  "lawType",
+                  "id",
+                  "name",
+                  "constrainedFields",
+                  "forceLength",
+                  "forceVelocity",
+                  "passiveElement",
+                  "constraint",
+                  "validityBoundaries"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "lawType": {
+                    "type": "string",
+                    "const": "ligament_force_strain"
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "constrainedFields": {
+                    "type": "object",
+                    "properties": {
+                      "ligamentForce": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to LigamentousForce.magnitude"
+                      },
+                      "strain": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to LigamentousForce.strain"
+                      },
+                      "stiffness": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to LigamentousForce.stiffness or LigamentSchema.linearStiffness"
+                      },
+                      "restingLength": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to LigamentSchema.restingLength"
+                      },
+                      "referenceStrain": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to LigamentSchema.referenceStrain"
+                      }
+                    },
+                    "required": [
+                      "ligamentForce",
+                      "strain",
+                      "stiffness",
+                      "restingLength",
+                      "referenceStrain"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "toeRegion": {
+                    "type": "object",
+                    "properties": {
+                      "maxStrain": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.1,
+                        "description": "Strain at transition from toe to linear region (ε_toe). Typical: 0.03–0.06."
+                      },
+                      "curveExponent": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 2,
+                        "description": "Exponent for the quadratic toe region: F = k_toe × ε^n. Typical: 2."
+                      }
+                    },
+                    "required": [
+                      "maxStrain"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "linearRegion": {
+                    "type": "object",
+                    "properties": {
+                      "stiffness": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "Stiffness in the linear region in N/mm (slope of force-displacement). Varies widely by ligament."
+                      },
+                      "interceptStrain": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Strain-axis intercept of the linear extrapolation (ε₀). F = k × (ε - ε₀) for ε > ε_toe."
+                      }
+                    },
+                    "required": [
+                      "stiffness",
+                      "interceptStrain"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "failure": {
+                    "type": "object",
+                    "properties": {
+                      "ultimateStrain": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "Strain at rupture (ε_fail). Typical: 0.10–0.15 for healthy ligament."
+                      },
+                      "ultimateLoad": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "Force at rupture in N. Highly variable: ACL ~2,160 N young adult."
+                      },
+                      "reference": {
+                        "type": "string",
+                        "description": "Source for failure data"
+                      }
+                    },
+                    "required": [
+                      "ultimateStrain",
+                      "ultimateLoad"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "constraint": {
+                    "type": "object",
+                    "properties": {
+                      "equation": {
+                        "type": "string",
+                        "const": "F_lig = piecewise(ε ≤ 0: 0, ε ≤ ε_toe: k_toe×ε^n, ε ≤ ε_fail: k×(ε-ε₀), ε > ε_fail: FAILURE)",
+                        "description": "Piecewise force-strain relationship"
+                      },
+                      "violationSeverity": {
+                        "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/constraint/properties/violationSeverity"
+                      },
+                      "strainTolerance": {
+                        "type": "number",
+                        "minimum": 0,
+                        "default": 0.005,
+                        "description": "Absolute strain tolerance for consistency checking"
+                      }
+                    },
+                    "required": [
+                      "equation"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "validityBoundaries": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/validityBoundaries/items"
+                    },
+                    "minItems": 1
+                  },
+                  "extensions": {
+                    "$ref": "#/properties/skeleton/items/properties/extensions"
+                  }
+                },
+                "required": [
+                  "lawType",
+                  "id",
+                  "name",
+                  "constrainedFields",
+                  "toeRegion",
+                  "linearRegion",
+                  "failure",
+                  "constraint",
+                  "validityBoundaries"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "lawType": {
+                    "type": "string",
+                    "const": "cartilage_stress_strain"
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "constrainedFields": {
+                    "type": "object",
+                    "properties": {
+                      "contactForce": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to contact/joint reaction force on the cartilage surface"
+                      },
+                      "contactArea": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to CartilageSchema.surfaceArea or ContactSchema.contactArea"
+                      },
+                      "youngsModulus": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to CartilageSchema.youngsModulus"
+                      },
+                      "thickness": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to CartilageSchema.thickness"
+                      }
+                    },
+                    "required": [
+                      "contactForce",
+                      "contactArea",
+                      "youngsModulus",
+                      "thickness"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "aggregateModulus": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "Equilibrium aggregate modulus H_A in MPa. Healthy articular: 0.5–1.5 MPa."
+                      },
+                      "poissonRatio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.5,
+                        "description": "Poisson's ratio ν. Articular cartilage: 0.1–0.4."
+                      },
+                      "maxContactPressure": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "Maximum tolerable contact pressure in MPa before damage. Articular cartilage: ~5–10 MPa static, ~15–25 MPa dynamic. Ref: Torzilli et al., J Biomech 32(10):1063–1073, 1999."
+                      }
+                    },
+                    "required": [
+                      "aggregateModulus",
+                      "poissonRatio",
+                      "maxContactPressure"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "constraint": {
+                    "type": "object",
+                    "properties": {
+                      "equation": {
+                        "type": "string",
+                        "const": "σ = F / A ≤ σ_max AND ε = σ / H_A ≤ thickness",
+                        "description": "Contact stress must not exceed damage threshold; deformation must not exceed thickness"
+                      },
+                      "violationSeverity": {
+                        "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/constraint/properties/violationSeverity"
+                      },
+                      "pressureTolerance": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 0.5,
+                        "description": "Tolerance in MPa for pressure violation threshold"
+                      }
+                    },
+                    "required": [
+                      "equation"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "validityBoundaries": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/validityBoundaries/items"
+                    },
+                    "minItems": 1
+                  },
+                  "extensions": {
+                    "$ref": "#/properties/skeleton/items/properties/extensions"
+                  }
+                },
+                "required": [
+                  "lawType",
+                  "id",
+                  "name",
+                  "constrainedFields",
+                  "parameters",
+                  "constraint",
+                  "validityBoundaries"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "lawType": {
+                    "type": "string",
+                    "const": "bone_yield_criterion"
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "constrainedFields": {
+                    "type": "object",
+                    "properties": {
+                      "jointReactionForce": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to JointReactionForce acting on this bone"
+                      },
+                      "boneCrossSectionalArea": {
+                        "$ref": "#/properties/derivationGraph/properties/rules/items/properties/inputFields/items"
+                      }
+                    },
+                    "required": [
+                      "jointReactionForce"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "corticalTensileYield": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 130,
+                        "description": "Cortical bone tensile yield stress in MPa. Ref: Reilly & Burstein (1974)."
+                      },
+                      "corticalCompressiveYield": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 190,
+                        "description": "Cortical bone compressive yield stress in MPa."
+                      },
+                      "trabecularCompressiveYield": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 5,
+                        "description": "Trabecular bone compressive yield stress in MPa (highly variable: 2–12 MPa)."
+                      },
+                      "fatigueReductionFactor": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "default": 0.6,
+                        "description": "Reduction factor for cyclic loading fatigue. Effective yield ≈ yield × factor for repetitive loading."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "constraint": {
+                    "type": "object",
+                    "properties": {
+                      "equation": {
+                        "type": "string",
+                        "const": "σ_bone = F / A ≤ σ_yield (rigid body assumption valid when σ_bone << σ_yield)",
+                        "description": "Bone stress must remain well below yield for rigid body dynamics to be valid"
+                      },
+                      "violationSeverity": {
+                        "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/constraint/properties/violationSeverity"
+                      }
+                    },
+                    "required": [
+                      "equation"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "validityBoundaries": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/validityBoundaries/items"
+                    },
+                    "minItems": 1
+                  },
+                  "extensions": {
+                    "$ref": "#/properties/skeleton/items/properties/extensions"
+                  }
+                },
+                "required": [
+                  "lawType",
+                  "id",
+                  "name",
+                  "constrainedFields",
+                  "parameters",
+                  "constraint",
+                  "validityBoundaries"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "lawType": {
+                    "type": "string",
+                    "const": "joint_range_limit"
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "constrainedFields": {
+                    "type": "object",
+                    "properties": {
+                      "jointAngle": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to JointState.angles for the relevant DOF"
+                      },
+                      "jointLimit": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]",
+                        "description": "Path to JointSchema.limits for this DOF"
+                      },
+                      "passiveMoment": {
+                        "$ref": "#/properties/derivationGraph/properties/rules/items/properties/inputFields/items"
+                      }
+                    },
+                    "required": [
+                      "jointAngle",
+                      "jointLimit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "bufferAngle": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 5,
+                        "description": "Angle (degrees) before the hard limit where passive resistance begins. Typical: 3–10°."
+                      },
+                      "exponentialStiffness": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "default": 1,
+                        "description": "Stiffness of the exponential barrier in N·cm/degree."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "constraint": {
+                    "type": "object",
+                    "properties": {
+                      "equation": {
+                        "type": "string",
+                        "const": "θ_min + buffer ≤ θ ≤ θ_max - buffer (passive resistance outside this range)",
+                        "description": "Joint angle should be within ROM limits; passive torque increases exponentially at boundaries"
+                      },
+                      "violationSeverity": {
+                        "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/constraint/properties/violationSeverity"
+                      }
+                    },
+                    "required": [
+                      "equation"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "validityBoundaries": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/properties/constitutiveLaws/properties/laws/items/anyOf/0/properties/validityBoundaries/items"
+                    },
+                    "minItems": 1
+                  },
+                  "extensions": {
+                    "$ref": "#/properties/skeleton/items/properties/extensions"
+                  }
+                },
+                "required": [
+                  "lawType",
+                  "id",
+                  "name",
+                  "constrainedFields",
+                  "parameters",
+                  "constraint",
+                  "validityBoundaries"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "version",
+        "laws"
+      ],
+      "additionalProperties": false,
+      "description": "Constitutive law collection. Each law declares an inequality/envelope constraint on field values (e.g. muscle force ≤ Hill model envelope). Includes model validity boundaries declaring when assumptions break down."
+    },
+    "extensions": {
+      "$ref": "#/properties/skeleton/items/properties/extensions"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "proportions",
+    "skeleton",
+    "joints",
+    "tendons",
+    "muscles",
+    "organs",
+    "vascularSystem",
+    "clothing"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "BoneClass": {
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "flat",
+        "irregular",
+        "sesamoid"
+      ]
+    },
+    "BoneRegion": {
+      "type": "string",
+      "enum": [
+        "axial_cranium",
+        "axial_face",
+        "axial_vertebral",
+        "axial_thorax",
+        "appendicular_upper",
+        "appendicular_lower",
+        "appendicular_pelvic",
+        "appendicular_pectoral"
+      ]
+    },
+    "CSGOperation": {
+      "type": "string",
+      "enum": [
+        "union",
+        "subtract",
+        "intersect"
+      ]
+    },
+    "CartilageType": {
+      "type": "string",
+      "enum": [
+        "hyaline",
+        "fibrocartilage",
+        "elastic"
+      ]
+    },
+    "ClothingType": {
+      "type": "string",
+      "enum": [
+        "headwear",
+        "top",
+        "bottom",
+        "footwear",
+        "accessory",
+        "fullbody"
+      ]
+    },
+    "Color": {
+      "type": "object",
+      "properties": {
+        "r": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "g": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "b": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "a": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        }
+      },
+      "required": [
+        "r",
+        "g",
+        "b"
+      ],
+      "additionalProperties": false
+    },
+    "ContactType": {
+      "type": "string",
+      "enum": [
+        "foot_ground",
+        "hand_object",
+        "body_surface",
+        "body_body",
+        "body_fluid",
+        "body_equipment"
+      ]
+    },
+    "FascicleArchitecture": {
+      "type": "string",
+      "enum": [
+        "parallel",
+        "convergent",
+        "unipennate",
+        "bipennate",
+        "multipennate",
+        "circular",
+        "fusiform"
+      ]
+    },
+    "FieldRef": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-zA-Z_]",
+      "description": "Dot-separated path to a schema field. Use [*] for array iteration, [i] for indexed access. Examples: 'muscles[*].pcsa', 'loadingConditions[*].equilibrium.netForce'"
+    },
+    "Innervation": {
+      "type": "object",
+      "properties": {
+        "nerveId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Reference to a Nerve entity if the nervous system is modeled"
+        },
+        "nerveName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Anatomical nerve name (e.g. 'musculocutaneous nerve')"
+        },
+        "spinalRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[CTLS]\\d{1,2}$"
+          },
+          "minItems": 1,
+          "description": "Spinal nerve roots (e.g. ['C5', 'C6']). Format: C=cervical, T=thoracic, L=lumbar, S=sacral + level number"
+        }
+      },
+      "required": [
+        "nerveName",
+        "spinalRoots"
+      ],
+      "additionalProperties": false
+    },
+    "JointType": {
+      "type": "string",
+      "enum": [
+        "ball_and_socket",
+        "hinge",
+        "pivot",
+        "condyloid",
+        "saddle",
+        "plane",
+        "fixed",
+        "cartilaginous"
+      ]
+    },
+    "MeshFormat": {
+      "type": "string",
+      "enum": [
+        "gltf2",
+        "glb",
+        "obj",
+        "stl_binary",
+        "stl_ascii",
+        "ply",
+        "fbx",
+        "usdz"
+      ]
+    },
+    "MeshLOD": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "LOD level: 0 = highest resolution"
+        },
+        "vertexCount": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 500000
+        },
+        "triangleCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "vertices": {
+          "$ref": "#/$defs/MeshVertex"
+        },
+        "indices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Triangle indices into the vertex arrays. Length must be 3 × triangleCount. Winding order: counter-clockwise (right-hand rule for outward normals)."
+        }
+      },
+      "required": [
+        "level",
+        "vertexCount",
+        "triangleCount",
+        "vertices",
+        "indices"
+      ],
+      "additionalProperties": false
+    },
+    "MeshVertex": {
+      "type": "object",
+      "properties": {
+        "positions": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Flat array of vertex positions [x0,y0,z0, x1,y1,z1, ...] in cm, bone-local frame. Length must be 3 × vertexCount."
+        },
+        "normals": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Flat array of vertex normals [nx0,ny0,nz0, ...]. Length must equal positions.length. Unit-length vectors."
+        },
+        "uvs": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Flat array of UV coordinates [u0,v0, u1,v1, ...] for texture mapping. Length must be 2 × vertexCount."
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "description": "Flat array of per-vertex colors [r0,g0,b0,a0, ...] as uint8. Length must be 4 × vertexCount. Useful for encoding bone density maps."
+        }
+      },
+      "required": [
+        "positions"
+      ],
+      "additionalProperties": false
+    },
+    "MomentType": {
+      "type": "string",
+      "enum": [
+        "joint_resultant",
+        "muscle_contribution",
+        "external",
+        "gravitational",
+        "inertial"
+      ]
+    },
+    "MuscleAction": {
+      "type": "string",
+      "enum": [
+        "flexion",
+        "extension",
+        "abduction",
+        "adduction",
+        "medial_rotation",
+        "lateral_rotation",
+        "circumduction",
+        "elevation",
+        "depression",
+        "protraction",
+        "retraction",
+        "supination",
+        "pronation",
+        "inversion",
+        "eversion",
+        "opposition",
+        "reposition",
+        "dorsiflexion",
+        "plantarflexion",
+        "lateral_flexion"
+      ]
+    },
+    "MuscleRegion": {
+      "type": "string",
+      "enum": [
+        "head_and_neck",
+        "face",
+        "thorax_anterior",
+        "thorax_posterior",
+        "abdomen",
+        "back_superficial",
+        "back_deep",
+        "shoulder",
+        "arm_anterior",
+        "arm_posterior",
+        "forearm_anterior",
+        "forearm_posterior",
+        "hand_intrinsic",
+        "hip",
+        "thigh_anterior",
+        "thigh_posterior",
+        "thigh_medial",
+        "leg_anterior",
+        "leg_posterior",
+        "leg_lateral",
+        "foot_intrinsic"
+      ]
+    },
+    "NerveType": {
+      "type": "string",
+      "enum": [
+        "motor",
+        "sensory",
+        "mixed",
+        "autonomic"
+      ]
+    },
+    "OrganSystem": {
+      "type": "string",
+      "enum": [
+        "cardiovascular",
+        "respiratory",
+        "digestive",
+        "nervous",
+        "endocrine",
+        "integumentary",
+        "lymphatic",
+        "urinary",
+        "reproductive"
+      ]
+    },
+    "PhysicalLaw": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the physical law or definition"
+        },
+        "equation": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Symbolic equation in standard math notation. Variables correspond to inputFields and outputField. Examples: 'PCSA = V / L_opt', 'F_net = Σ Fᵢ', 'r_com = Σ(mᵢrᵢ) / Σ(mᵢ)'"
+        },
+        "reference": {
+          "type": "string",
+          "description": "Literature reference. Example: 'Zajac, CRC Crit Rev Biomed Eng 17(4):359–411, 1989'"
+        },
+        "domain": {
+          "type": "string",
+          "enum": [
+            "kinematics",
+            "rigid_body_dynamics",
+            "muscle_mechanics",
+            "material_mechanics",
+            "definition",
+            "constraint"
+          ],
+          "description": "Which branch of mechanics this law belongs to"
+        }
+      },
+      "required": [
+        "name",
+        "equation",
+        "domain"
+      ],
+      "additionalProperties": false
+    },
+    "Proportions": {
+      "type": "object",
+      "properties": {
+        "biologicalSex": {
+          "type": "string",
+          "enum": [
+            "male",
+            "female",
+            "intersex"
+          ],
+          "description": "Biological sex — affects default proportional ratios"
+        },
+        "totalHeight": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0,
+          "description": "Standing height in cm"
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0,
+          "description": "Total body mass in kg"
+        },
+        "shoulderWidth": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0,
+          "description": "Biacromial width in cm"
+        },
+        "armLength": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0,
+          "description": "Acromion to fingertip in cm"
+        },
+        "legLength": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0,
+          "description": "Greater trochanter to floor in cm"
+        },
+        "headCircumference": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0,
+          "description": "Head circumference in cm"
+        },
+        "muscleMassPercentage": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 60,
+          "description": "Percentage of body mass that is skeletal muscle (typical: 30–45%)"
+        },
+        "fatPercentage": {
+          "type": "number",
+          "minimum": 3,
+          "maximum": 55,
+          "description": "Body fat percentage (essential fat: ~3% male, ~12% female)"
+        }
+      },
+      "required": [
+        "totalHeight",
+        "weight",
+        "shoulderWidth",
+        "armLength",
+        "legLength",
+        "headCircumference"
+      ],
+      "additionalProperties": false
+    },
+    "ReferenceFrameType": {
+      "type": "string",
+      "enum": [
+        "global",
+        "segment_anatomical",
+        "segment_technical",
+        "joint",
+        "custom"
+      ]
+    },
+    "SkinningWeight": {
+      "type": "object",
+      "properties": {
+        "vertexId": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "vertexId",
+        "weight"
+      ],
+      "additionalProperties": false
+    },
+    "SurfaceRegion": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Region name (e.g., 'articular_surface_medial_condyle', 'deltoid_tuberosity')"
+        },
+        "vertexIndices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 3,
+          "maxItems": 500000,
+          "description": "Vertex indices (in LOD 0) belonging to this region. Max 500k (matches vertex count ceiling)."
+        },
+        "regionType": {
+          "type": "string",
+          "enum": [
+            "articular",
+            "attachment",
+            "cortical",
+            "trabecular",
+            "periosteal",
+            "endosteal",
+            "fracture_zone",
+            "custom"
+          ]
+        },
+        "relatedEntityId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "ID of the related entity (e.g., TendonId for attachment, CartilageId for articular)"
+        }
+      },
+      "required": [
+        "name",
+        "vertexIndices",
+        "regionType"
+      ],
+      "additionalProperties": false
+    },
+    "ValidityBoundary": {
+      "type": "object",
+      "properties": {
+        "assumption": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The modeling assumption this boundary protects. Examples: 'rigid body', 'small deformations', 'quasi-static loading'"
+        },
+        "validWhen": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Condition under which the assumption holds, as a human-readable predicate. Example: 'bone stress < yield stress (~130 MPa cortical, ~5 MPa trabecular)'"
+        },
+        "violatedWhen": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Condition under which the assumption breaks down. Example: 'impact loading with strain rate > 1/s'"
+        },
+        "consequence": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What goes wrong when the assumption is violated. Example: 'bone deformation is non-negligible; rigid body dynamics underestimates joint forces'"
+        },
+        "reference": {
+          "type": "string",
+          "description": "Literature reference for the validity domain"
+        }
+      },
+      "required": [
+        "assumption",
+        "validWhen",
+        "violatedWhen",
+        "consequence"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
