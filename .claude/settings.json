@@ -9,7 +9,13 @@
       "Bash(grep -n '\\\\$defs' /home/admin/codebases/codespaces-blank/session-02/schemas/active/gvpp-v3.schema.json)",
       "Bash(npx ajv:*)",
       "Bash(python3 -c \":*)",
-      "Bash(ls -lh active/*.json)"
+      "Bash(ls -lh active/*.json)",
+      "Bash(jq .joints[0] /home/admin/codebases/codespaces-blank/session-3/examples/david.json)",
+      "Bash(jq .muscles[0] /home/admin/codebases/codespaces-blank/session-3/examples/david.json)",
+      "Bash(jq .segments[0] /home/admin/codebases/codespaces-blank/session-3/examples/david.json)",
+      "Bash(find /home/admin/codebases/codespaces-blank/session-3/schemas/ -type f -name *.ts -o -name *.tsx)",
+      "Bash(grep -E \"\\\\.ts$|\\\\.json$|\\\\.md$|\\\\.zip$\")",
+      "Bash(node -e \":*)"
     ]
   }
 }

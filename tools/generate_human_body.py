@@ -528,7 +528,7 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
         sl = round(length * ds, 2)
         sw = round(width * ds, 2)
         sd = round(depth * ds, 2)
-        sm = round(mass * ms, 2)
+        sm = max(0.01, round(mass * ms, 2))
         sp = (round(pos[0] * ds, 1), round(pos[1] * ds, 1), round(pos[2] * ds, 1))
         a, b, c = sw / 2, sl / 2, sd / 2
         ixx = round(sm / 5 * (b * b + c * c), 2)
