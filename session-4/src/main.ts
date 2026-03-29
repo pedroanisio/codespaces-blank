@@ -5,25 +5,30 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 import {
+  ACTIONS,
   type ActionName,
   applyExchange,
-  chooseAiAction,
   createFighter,
+  createStrategy,
   distanceBetween,
   EXCHANGE_COOLDOWN,
+  type FighterStrategy,
   recoverStamina,
   resetFighters,
   resolveExchange,
   shouldResetRound,
+  updateStrategy,
   type FighterRuntime,
 } from './combat';
+import { fightEvents } from './fightEvents';
+import { requestFightDecision, resetStrategies, type LlmDecision } from './llm';
 
 const MODEL_URL = '/assets/mannequin_v4.glb';
 const TARGET_MODEL_HEIGHT = 1.82;
 const CAMERA_POSITION = new THREE.Vector3(0, 4.6, -9.5);
 const CAMERA_LOOK_AT = new THREE.Vector3(0, 1.35, 0);
 const FLOOR_RADIUS = 26;
-const ROUND_RESET_DELAY = 2.1;
+const ROUND_RESET_DELAY = 3.0;
 const REQUIRED_CLIPS: ActionName[] = [
   'guard',
   'jab',
@@ -31,6 +36,8 @@ const REQUIRED_CLIPS: ActionName[] = [
   'hook',
   'uppercut',
   'bodyShot',
+  'kickL',
+  'kickR',
   'slip',
   'block',
   'duck',
@@ -41,9 +48,11 @@ const REQUIRED_CLIPS: ActionName[] = [
 
 type FighterActor = {
   runtime: FighterRuntime;
+  strategy: FighterStrategy;
   anchor: THREE.Group;
   mixer: THREE.AnimationMixer;
   actions: Partial<Record<ActionName, THREE.AnimationAction>>;
+  koAction: THREE.AnimationAction | null;
 };
 
 type DuelState = {
@@ -52,9 +61,20 @@ type DuelState = {
   exchangeCount: number;
   round: number;
   resetTimer: number;
+  decisionPending: boolean;
   lastNarrative: string;
   clipWarnings: string[];
+  providerStatus: string;
+  history: string[];
+  lastDecisionA: string;
+  lastDecisionB: string;
 };
+
+declare global {
+  interface Window {
+    __session4FightEvents?: typeof fightEvents;
+  }
+}
 
 const mountElement = document.querySelector<HTMLDivElement>('#app');
 const hudElement = document.querySelector<HTMLDivElement>('.hud');
@@ -160,6 +180,8 @@ errorPanel.className = 'error-panel';
 errorPanel.hidden = true;
 document.body.append(errorPanel);
 
+window.__session4FightEvents = fightEvents;
+
 function normalizeModel(model: THREE.Object3D): void {
   const initialBounds = new THREE.Box3().setFromObject(model);
   const size = initialBounds.getSize(new THREE.Vector3());
@@ -188,10 +210,11 @@ function collectActions(
     }
 
     const action = mixer.clipAction(clip);
-    action.loop = name === 'guard' ? THREE.LoopRepeat : THREE.LoopOnce;
+    action.setLoop(name === 'guard' ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
     action.clampWhenFinished = true;
     action.enabled = true;
     action.setEffectiveWeight(1);
+    action.stop();
     actions[name] = action;
   }
 
@@ -221,6 +244,39 @@ function tintFighter(model: THREE.Object3D, color: string): void {
   });
 }
 
+function rotateIfFound(model: THREE.Object3D, name: string, x = 0, y = 0, z = 0): void {
+  const joint = model.getObjectByName(name);
+  if (!joint) {
+    return;
+  }
+
+  joint.rotation.x += x;
+  joint.rotation.y += y;
+  joint.rotation.z += z;
+}
+
+function applyRelaxedFightStance(model: THREE.Object3D): void {
+  // Pull the mannequin out of the bind/T pose before any clips run.
+  rotateIfFound(model, 'hips', 0.05, 0, 0);
+  rotateIfFound(model, 'spine', -0.06, 0, 0);
+  rotateIfFound(model, 'chest', -0.05, 0, 0);
+  rotateIfFound(model, 'neck', 0.02, 0, 0);
+
+  rotateIfFound(model, 'clavicleL', 0.08, 0, -0.12);
+  rotateIfFound(model, 'clavicleR', 0.08, 0, 0.12);
+  rotateIfFound(model, 'upperArmL', -0.25, 0, -1.18);
+  rotateIfFound(model, 'upperArmR', -0.25, 0, 1.18);
+  rotateIfFound(model, 'lowerArmL', -0.1, 0, -0.4);
+  rotateIfFound(model, 'lowerArmR', -0.1, 0, 0.4);
+
+  rotateIfFound(model, 'upperLegL', 0.06, 0, 0.04);
+  rotateIfFound(model, 'upperLegR', 0.06, 0, -0.04);
+  rotateIfFound(model, 'lowerLegL', 0.12, 0, 0);
+  rotateIfFound(model, 'lowerLegR', 0.12, 0, 0);
+  rotateIfFound(model, 'footL', -0.08, 0, 0);
+  rotateIfFound(model, 'footR', -0.08, 0, 0);
+}
+
 function createActor(
   template: THREE.Object3D,
   clips: THREE.AnimationClip[],
@@ -234,25 +290,40 @@ function createActor(
   const actions = collectActions(mixer, clips);
 
   tintFighter(model, tint);
+  applyRelaxedFightStance(model);
   model.rotation.y = rotationY;
   anchor.position.set(0, 0, runtime.positionZ);
   anchor.add(model);
   scene.add(anchor);
 
+  // Set up KO animation clip
+  const koClip = clips.find((c) => c.name === 'ko');
+  let koAction: THREE.AnimationAction | null = null;
+  if (koClip) {
+    koAction = mixer.clipAction(koClip);
+    koAction.loop = THREE.LoopOnce;
+    koAction.clampWhenFinished = true;
+  }
+
   const actor: FighterActor = {
     runtime,
+    strategy: createStrategy(),
     anchor,
     mixer,
     actions,
+    koAction,
   };
 
   playAction(actor, 'guard', true);
+  mixer.update(1 / 60);
   return actor;
 }
 
 function playAction(actor: FighterActor, actionName: ActionName, immediate = false): void {
-  const nextAction = actor.actions[actionName] ?? actor.actions.guard;
-  const currentAction = actor.actions[actor.runtime.currentAction];
+  const nextClip = ACTIONS[actionName].clipName;
+  const currentClip = ACTIONS[actor.runtime.currentAction].clipName;
+  const nextAction = actor.actions[nextClip] ?? actor.actions.guard;
+  const currentAction = actor.actions[currentClip];
 
   actor.runtime.currentAction = actionName;
 
@@ -264,16 +335,21 @@ function playAction(actor: FighterActor, actionName: ActionName, immediate = fal
     if (immediate) {
       currentAction.stop();
     } else {
-      currentAction.fadeOut(0.1);
+      currentAction.fadeOut(0.08);
     }
   }
 
   nextAction.reset();
   nextAction.paused = false;
+  nextAction.enabled = true;
   nextAction.setEffectiveTimeScale(1);
   nextAction.setEffectiveWeight(1);
   nextAction.fadeIn(immediate ? 0 : 0.08);
   nextAction.play();
+
+  if (immediate) {
+    actor.mixer.update(1 / 60);
+  }
 }
 
 function updateActorTransform(actor: FighterActor, delta: number): void {
@@ -295,6 +371,7 @@ function updateHud(duel: DuelState): void {
         <div class="bar"><span class="bar-fill bar-fill-hp" style="width:${actorA.runtime.hp}%"></span></div>
         <div class="bar"><span class="bar-fill bar-fill-stamina" style="width:${actorA.runtime.stamina}%"></span></div>
         <p class="fighter-action">Action: ${actorA.runtime.currentAction}</p>
+        <p class="fighter-action">Decision: ${duel.lastDecisionA}</p>
       </section>
       <section class="fighter-card fighter-card-b">
         <h2>${actorB.runtime.name}</h2>
@@ -302,9 +379,11 @@ function updateHud(duel: DuelState): void {
         <div class="bar"><span class="bar-fill bar-fill-hp" style="width:${actorB.runtime.hp}%"></span></div>
         <div class="bar"><span class="bar-fill bar-fill-stamina" style="width:${actorB.runtime.stamina}%"></span></div>
         <p class="fighter-action">Action: ${actorB.runtime.currentAction}</p>
+        <p class="fighter-action">Decision: ${duel.lastDecisionB}</p>
       </section>
     </div>
-    <p class="logline">Round ${duel.round} · Exchange ${duel.exchangeCount} · Distance ${distance.toFixed(2)}m · ${duel.lastNarrative}</p>
+    <p class="logline">Round ${duel.round} · Exchange ${duel.exchangeCount} · Distance ${distance.toFixed(2)}m · ${duel.providerStatus} · ${duel.lastNarrative}</p>
+    <div class="event-log">${duel.history.map((entry) => `<p>${entry}</p>`).join('')}</div>
   `;
 
   warningPanel.hidden = duel.clipWarnings.length === 0;
@@ -313,18 +392,23 @@ function updateHud(duel: DuelState): void {
     : `Mannequin loaded with partial clip support. Missing clips: ${duel.clipWarnings.join(', ')}`;
 }
 
-async function createDuel(): Promise<DuelState> {
+async function loadModel(): Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }> {
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(MODEL_URL);
-  const template = gltf.scene;
-  normalizeModel(template);
+  normalizeModel(gltf.scene);
+  return { scene: gltf.scene, animations: gltf.animations };
+}
+
+async function createDuel(): Promise<DuelState> {
+  // Load GLB twice so each fighter owns its scene graph and bone bindings work
+  const [modelA, modelB] = await Promise.all([loadModel(), loadModel()]);
 
   const runtimeA = createFighter('Alpha', -1.5);
   const runtimeB = createFighter('Beta', 1.5);
-  const actorA = createActor(template, gltf.animations, runtimeA, 0, '#4f76a8');
-  const actorB = createActor(template, gltf.animations, runtimeB, Math.PI, '#a86457');
+  const actorA = createActor(modelA.scene, modelA.animations, runtimeA, 0, '#4f76a8');
+  const actorB = createActor(modelB.scene, modelB.animations, runtimeB, Math.PI, '#a86457');
   const clipWarnings = REQUIRED_CLIPS.filter(
-    (clipName) => !gltf.animations.some((clip) => clip.name === clipName),
+    (clipName) => !modelA.animations.some((clip: THREE.AnimationClip) => clip.name === clipName),
   );
 
   return {
@@ -333,15 +417,59 @@ async function createDuel(): Promise<DuelState> {
     exchangeCount: 0,
     round: 1,
     resetTimer: 0,
+    decisionPending: false,
     lastNarrative: 'Fighters enter guard.',
     clipWarnings,
+    providerStatus: 'Anthropic vs OpenAI',
+    history: ['System: fight runtime ready.'],
+    lastDecisionA: 'Awaiting Anthropic.',
+    lastDecisionB: 'Awaiting OpenAI.',
   };
 }
 
-function runExchange(duel: DuelState): void {
+async function requestExchange(duel: DuelState): Promise<void> {
   const { actorA, actorB } = duel;
-  const actionA = chooseAiAction(actorA.runtime, actorB.runtime);
-  const actionB = chooseAiAction(actorB.runtime, actorA.runtime);
+  duel.decisionPending = true;
+  duel.providerStatus = 'Requesting Anthropic and OpenAI decisions';
+  fightEvents.emit('decisionRequested', {
+    round: duel.round,
+    exchange: duel.exchangeCount + 1,
+  });
+  updateHud(duel);
+
+  const [decisionA, decisionB] = await Promise.all([
+    requestFightDecision('anthropic', {
+      fighter: actorA.runtime,
+      opponent: actorB.runtime,
+      round: duel.round,
+      exchange: duel.exchangeCount + 1,
+    }),
+    requestFightDecision('openai', {
+      fighter: actorB.runtime,
+      opponent: actorA.runtime,
+      round: duel.round,
+      exchange: duel.exchangeCount + 1,
+    }),
+  ]);
+
+  const actionA = decisionA.action;
+  const actionB = decisionB.action;
+  duel.lastDecisionA = `${decisionA.provider}:${actionA} (${decisionA.source})`;
+  duel.lastDecisionB = `${decisionB.provider}:${actionB} (${decisionB.source})`;
+  fightEvents.emit('decisionResolved', {
+    fighter: actorA.runtime.name,
+    provider: decisionA.provider,
+    action: actionA,
+    reasoning: decisionA.reasoning,
+    source: decisionA.source,
+  });
+  fightEvents.emit('decisionResolved', {
+    fighter: actorB.runtime.name,
+    provider: decisionB.provider,
+    action: actionB,
+    reasoning: decisionB.reasoning,
+    source: decisionB.source,
+  });
   const outcome = resolveExchange(
     actionA,
     actionB,
@@ -349,17 +477,89 @@ function runExchange(duel: DuelState): void {
   );
 
   applyExchange(actorA.runtime, actorB.runtime, outcome);
+
+  // Update strategies based on exchange results
+  const outcomeForA = outcome.damageB > 0 ? 'hit' : outcome.outcome === 'a_defends' ? 'defended' : outcome.damageA > 0 ? 'missed' : 'neutral';
+  const outcomeForB = outcome.damageA > 0 ? 'hit' : outcome.outcome === 'b_defends' ? 'defended' : outcome.damageB > 0 ? 'missed' : 'neutral';
+  updateStrategy(actorA.strategy, actorA.runtime, actorB.runtime, outcomeForA as 'hit' | 'missed' | 'defended' | 'neutral');
+  updateStrategy(actorB.strategy, actorB.runtime, actorA.runtime, outcomeForB as 'hit' | 'missed' | 'defended' | 'neutral');
+
   playAction(actorA, actionA);
   playAction(actorB, actionB);
 
   actorA.runtime.actionTimer = Math.max(outcome.actionA.duration, EXCHANGE_COOLDOWN);
   actorB.runtime.actionTimer = Math.max(outcome.actionB.duration, EXCHANGE_COOLDOWN);
   duel.exchangeCount += 1;
-  duel.lastNarrative = outcome.narrative;
+  duel.lastNarrative = `${outcome.narrative} Alpha:${decisionA.reasoning || actionA}. Beta:${decisionB.reasoning || actionB}.`;
+  duel.providerStatus = providerStatusLabel(decisionA, decisionB);
+  duel.decisionPending = false;
+  fightEvents.emit('exchangeResolved', {
+    round: duel.round,
+    exchange: duel.exchangeCount,
+    narrative: duel.lastNarrative,
+  });
+}
+
+function providerStatusLabel(decisionA: LlmDecision, decisionB: LlmDecision): string {
+  const labelA = decisionA.source === 'remote' ? 'Anthropic' : 'Anthropic fallback';
+  const labelB = decisionB.source === 'remote' ? 'OpenAI' : 'OpenAI fallback';
+  return `${labelA} vs ${labelB}`;
 }
 
 const clock = new THREE.Clock();
 let duel: DuelState | null = null;
+
+function pushHistory(duelState: DuelState, line: string): void {
+  duelState.history = [line, ...duelState.history].slice(0, 6);
+}
+
+fightEvents.on('decisionRequested', ({ round, exchange }) => {
+  if (!duel) {
+    return;
+  }
+
+  pushHistory(duel, `Round ${round} exchange ${exchange}: requesting decisions.`);
+});
+
+fightEvents.on('decisionResolved', ({ fighter, provider, action, source }) => {
+  if (!duel) {
+    return;
+  }
+
+  pushHistory(duel, `${fighter}: ${provider} chose ${action} (${source}).`);
+});
+
+fightEvents.on('exchangeResolved', ({ round, exchange, narrative }) => {
+  if (!duel) {
+    return;
+  }
+
+  pushHistory(duel, `Round ${round} exchange ${exchange}: ${narrative}`);
+});
+
+fightEvents.on('knockout', ({ round, winner }) => {
+  if (!duel) {
+    return;
+  }
+
+  pushHistory(duel, `Round ${round}: ${winner} scored the knockout.`);
+});
+
+fightEvents.on('roundReset', ({ round }) => {
+  if (!duel) {
+    return;
+  }
+
+  pushHistory(duel, `Round ${round}: reset to guard.`);
+});
+
+fightEvents.on('annotation', ({ message }) => {
+  if (!duel) {
+    return;
+  }
+
+  pushHistory(duel, `Note: ${message}`);
+});
 
 function animate(): void {
   requestAnimationFrame(animate);
@@ -380,23 +580,43 @@ function animate(): void {
       duel.resetTimer = Math.max(0, duel.resetTimer - delta);
       if (duel.resetTimer === 0) {
         resetFighters(actorA.runtime, actorB.runtime);
+        actorA.strategy = createStrategy();
+        actorB.strategy = createStrategy();
+        resetStrategies();
+        // Stop KO animation and reset to guard
+        actorA.mixer.stopAllAction();
+        actorB.mixer.stopAllAction();
         playAction(actorA, 'guard', true);
         playAction(actorB, 'guard', true);
         duel.exchangeCount = 0;
         duel.round += 1;
+        duel.decisionPending = false;
         duel.lastNarrative = 'New round begins from guard.';
+        duel.lastDecisionA = 'Awaiting Anthropic.';
+        duel.lastDecisionB = 'Awaiting OpenAI.';
+        fightEvents.emit('roundReset', { round: duel.round });
       }
     } else if (shouldResetRound(actorA.runtime, actorB.runtime)) {
-      if (actorA.runtime.hp > actorB.runtime.hp) {
-        actorA.runtime.wins += 1;
-        duel.lastNarrative = `${actorA.runtime.name} scores the knockout.`;
-      } else {
-        actorB.runtime.wins += 1;
-        duel.lastNarrative = `${actorB.runtime.name} scores the knockout.`;
+      const loser = actorA.runtime.hp <= actorB.runtime.hp ? actorA : actorB;
+      const winner = loser === actorA ? actorB : actorA;
+      winner.runtime.wins += 1;
+      duel.lastNarrative = `${winner.runtime.name} scores the knockout.`;
+      fightEvents.emit('knockout', {
+        round: duel.round,
+        winner: winner.runtime.name,
+      });
+
+      // Play KO animation on the loser
+      if (loser.koAction) {
+        // Stop all current actions on the loser's mixer
+        loser.mixer.stopAllAction();
+        loser.koAction.reset();
+        loser.koAction.play();
       }
+
       duel.resetTimer = ROUND_RESET_DELAY;
-    } else if (actorA.runtime.actionTimer === 0 && actorB.runtime.actionTimer === 0) {
-      runExchange(duel);
+    } else if (!duel.decisionPending && actorA.runtime.actionTimer === 0 && actorB.runtime.actionTimer === 0) {
+      void requestExchange(duel);
     }
 
     if (actorA.runtime.actionTimer === 0 && actorA.runtime.currentAction !== 'guard') {

@@ -140,6 +140,18 @@ h1 {
   border-top: 1px solid rgba(48, 69, 84, 0.14);
 }
 
+.event-log {
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.event-log p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #415562;
+}
+
 .error-panel {
   position: fixed;
   right: 1rem;

@@ -47,6 +47,36 @@ describe('combat', () => {
     expect(outcome.outcome).toBe('b_defends');
   });
 
+  it('allows ear slap as a close-range attack', () => {
+    const outcome = resolveExchange('earSlap', 'guard', 2.0);
+
+    expect(outcome.damageB).toBe(Math.round((ACTIONS.earSlap.power ?? 0) * 0.85));
+    expect(outcome.outcome).toBe('a_wins');
+  });
+
+  it('lets block defend against ear slap', () => {
+    const outcome = resolveExchange('earSlap', 'block', 2.0);
+
+    expect(outcome.damageA).toBe(0);
+    expect(outcome.damageB).toBe(0);
+    expect(outcome.outcome).toBe('b_defends');
+  });
+
+  it('allows side kick as a longer-range attack', () => {
+    const outcome = resolveExchange('sideKick', 'guard', 2.6);
+
+    expect(outcome.damageB).toBe(Math.round((ACTIONS.sideKick.power ?? 0) * 0.85));
+    expect(outcome.outcome).toBe('a_wins');
+  });
+
+  it('lets duck defend against head kick', () => {
+    const outcome = resolveExchange('headKick', 'duck', 2.4);
+
+    expect(outcome.damageA).toBe(0);
+    expect(outcome.damageB).toBe(0);
+    expect(outcome.outcome).toBe('b_defends');
+  });
+
   it('clips a retreat instead of landing full power', () => {
     const outcome = resolveExchange('cross', 'retreat', ATTACK_RANGE - 0.1);
 

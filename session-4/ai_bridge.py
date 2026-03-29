@@ -7,6 +7,7 @@ Uses the provider helpers from session-02 so API keys stay server-side.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -25,8 +26,11 @@ VALID_ACTIONS = {
     "jab",
     "cross",
     "hook",
+    "earSlap",
     "uppercut",
     "bodyShot",
+    "sideKick",
+    "headKick",
     "slip",
     "block",
     "duck",
@@ -58,14 +62,15 @@ def _user_prompt(payload: dict[str, Any]) -> str:
         f"- Opponent: name={opponent['name']} hp={opponent['hp']} stamina={opponent['stamina']} "
         f"positionZ={opponent['positionZ']} currentAction={opponent['currentAction']} wins={opponent['wins']}\n"
         "Available actions and semantics:\n"
-        "- attacks: jab, cross, hook, uppercut, bodyShot\n"
+        "- attacks: jab, cross, hook, earSlap, uppercut, bodyShot, sideKick, headKick\n"
         "- defense: slip, block, duck, parry\n"
         "- movement: advance, retreat\n"
         "- neutral: guard\n"
         "Heuristics:\n"
         "- advance when out of range\n"
         "- prefer jab/cross in standard range\n"
-        "- prefer hook/uppercut/bodyShot in tight range\n"
+        "- prefer hook/earSlap/uppercut/bodyShot in tight range\n"
+        "- use sideKick/headKick when in kick range and stamina allows\n"
         "- use defense or retreat when low on stamina or health\n"
         'Return JSON: {"action":"one_valid_action","reasoning":"short reason <= 12 words"}'
     )
@@ -101,7 +106,7 @@ def _fallback_decision(payload: dict[str, Any]) -> dict[str, str]:
     elif distance > 2.5:
         action = "advance"
     elif distance < 2.15:
-        action = "hook" if stamina >= 14 else "bodyShot"
+        action = "headKick" if stamina >= 20 else "sideKick" if stamina >= 17 else "earSlap" if stamina >= 11 else "bodyShot"
     else:
         action = "jab" if stamina >= 5 else "guard"
 
@@ -173,8 +178,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    server = ThreadingHTTPServer(("127.0.0.1", 8787), Handler)
-    print("session-4 ai bridge listening on http://127.0.0.1:8787")
+    port = int(os.getenv("SESSION4_AI_BRIDGE_PORT", "8787"))
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    print(f"session-4 ai bridge listening on http://127.0.0.1:{port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

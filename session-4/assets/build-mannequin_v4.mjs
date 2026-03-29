@@ -1262,6 +1262,237 @@ function addMoonwalkAnimation(doc, buffer, BONES, nodes) {
   return anim;
 }
 
+// ─── 7b. KO animation clip ──────────────────────────────────────────
+
+/**
+ * Add a knockout animation: stagger → buckle → collapse to floor.
+ *
+ * 6 keyframes over 1.4 s:
+ *   0.0 s  guard pose (standing)
+ *   0.2 s  head snap back, stagger
+ *   0.5 s  knees buckle, torso folds
+ *   0.8 s  falling sideways
+ *   1.1 s  hitting the ground
+ *   1.4 s  lying flat on back
+ */
+function addKOAnimation(doc, buffer, BONES, nodes) {
+  const anim = doc.createAnimation("ko");
+
+  const deg = d => d * Math.PI / 180;
+
+  function qaa(ax, ay, az, angleDeg) {
+    const ha = deg(angleDeg) / 2, s = Math.sin(ha);
+    return [ax * s, ay * s, az * s, Math.cos(ha)];
+  }
+
+  function qmul(a, b) {
+    return [
+      a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1],
+      a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0],
+      a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3],
+      a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2],
+    ];
+  }
+
+  function qnorm(q) {
+    const len = Math.sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]) || 1;
+    return [q[0]/len, q[1]/len, q[2]/len, q[3]/len];
+  }
+
+  function euler(xd, yd, zd) {
+    let q = qaa(1, 0, 0, xd);
+    if (yd) q = qmul(qaa(0, 1, 0, yd), q);
+    if (zd) q = qmul(qaa(0, 0, 1, zd), q);
+    return qnorm(q);
+  }
+
+  const nameIdx = new Map();
+  BONES.forEach(([name], i) => nameIdx.set(name, i));
+
+  const times = [0.0, 0.2, 0.5, 0.8, 1.1, 1.4];
+  const K = times.length;
+  const timeAcc = doc.createAccessor("ko_time")
+    .setType("SCALAR").setArray(new Float32Array(times)).setBuffer(buffer);
+
+  function addRot(name, quats) {
+    if (!nameIdx.has(name)) return;
+    const arr = new Float32Array(K * 4);
+    quats.forEach((q, i) => arr.set(q, i * 4));
+    const samp = doc.createAnimationSampler()
+      .setInput(timeAcc)
+      .setOutput(doc.createAccessor(`ko_r_${name}`).setType("VEC4").setArray(arr).setBuffer(buffer))
+      .setInterpolation("LINEAR");
+    const chan = doc.createAnimationChannel()
+      .setTargetNode(nodes[nameIdx.get(name)])
+      .setTargetPath("rotation").setSampler(samp);
+    anim.addSampler(samp);
+    anim.addChannel(chan);
+  }
+
+  function addTrans(name, offsets) {
+    if (!nameIdx.has(name)) return;
+    const base = BONES[nameIdx.get(name)][2];
+    const arr = new Float32Array(K * 3);
+    offsets.forEach(([dx, dy, dz], i) => {
+      arr[i * 3]     = base[0] + dx;
+      arr[i * 3 + 1] = base[1] + dy;
+      arr[i * 3 + 2] = base[2] + dz;
+    });
+    const samp = doc.createAnimationSampler()
+      .setInput(timeAcc)
+      .setOutput(doc.createAccessor(`ko_t_${name}`).setType("VEC3").setArray(arr).setBuffer(buffer))
+      .setInterpolation("LINEAR");
+    const chan = doc.createAnimationChannel()
+      .setTargetNode(nodes[nameIdx.get(name)])
+      .setTargetPath("translation").setSampler(samp);
+    anim.addSampler(samp);
+    anim.addChannel(chan);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // K E Y F R A M E S
+  //  idx:    0       1       2       3       4       5
+  //  time:  0.0     0.2     0.5     0.8     1.1     1.4
+  //         stand   snap    buckle  fall    impact  floor
+  // ════════════════════════════════════════════════════════════════
+
+  // ── Root: drop to the ground ──
+  addTrans("root", [
+    [0, 0,    0],      // standing
+    [0, 0,    0.03],   // stagger back slightly
+    [0, -0.15, 0.06],  // knees buckling, dropping
+    [0, -0.45, 0.10],  // falling
+    [0, -0.75, 0.14],  // impact
+    [0, -0.82, 0.16],  // lying flat
+  ]);
+
+  // ── Hips: tilt back then sideways ──
+  addRot("hips", [
+    euler(0,  0,  0),      // standing
+    euler(-8, 0,  3),      // snap back
+    euler(-20, 5, 10),     // buckle back
+    euler(-45, 8, 25),     // falling sideways
+    euler(-70, 5, 35),     // impact
+    euler(-85, 3, 40),     // lying on back
+  ]);
+
+  // ── Spine: fold forward then flop ──
+  addRot("spine", [
+    euler(3,  0, 0),
+    euler(10, 0, 2),
+    euler(15, -3, 5),
+    euler(8,  -5, 8),
+    euler(-5, -3, 5),
+    euler(-10, 0, 3),
+  ]);
+
+  // ── Head: snap back hard, then loll ──
+  addRot("head", [
+    euler(-3, 0, 0),
+    euler(-25, 5, 0),     // head snaps back from hit
+    euler(-15, 10, -5),
+    euler(-10, 15, -10),
+    euler(5,  10, -15),   // head lolls on impact
+    euler(10, 8, -12),    // resting
+  ]);
+
+  // ── Upper arms: flail then go limp ──
+  addRot("upperArmL", [
+    euler(5, 0, -75),
+    euler(-10, 0, -60),    // arms drop from guard
+    euler(-20, -10, -40),  // arms flailing
+    euler(-15, -15, -25),
+    euler(5,  -10, -15),   // arm hits ground
+    euler(10, -5, -10),    // limp on floor
+  ]);
+  addRot("upperArmR", [
+    euler(5, 0, 75),
+    euler(-10, 0, 60),
+    euler(-20, 10, 40),
+    euler(-15, 15, 25),
+    euler(5,  10, 15),
+    euler(10, 5, 10),
+  ]);
+
+  // ── Lower arms: go limp ──
+  addRot("lowerArmL", [
+    euler(0, 0, -25),
+    euler(0, 0, -20),
+    euler(0, 0, -10),
+    euler(0, 0, -5),
+    euler(0, 0, 0),
+    euler(0, 0, 0),
+  ]);
+  addRot("lowerArmR", [
+    euler(0, 0, 25),
+    euler(0, 0, 20),
+    euler(0, 0, 10),
+    euler(0, 0, 5),
+    euler(0, 0, 0),
+    euler(0, 0, 0),
+  ]);
+
+  // ── Upper legs: buckle then splay ──
+  addRot("upperLegL", [
+    euler(0, 0, 0),
+    euler(5, 0, 3),
+    euler(35, 0, 8),       // knees buckle
+    euler(20, -5, 15),
+    euler(5,  -8, 20),     // legs splay on ground
+    euler(0,  -5, 18),
+  ]);
+  addRot("upperLegR", [
+    euler(0, 0, 0),
+    euler(5, 0, -3),
+    euler(35, 0, -8),
+    euler(20, 5, -15),
+    euler(5,  8, -20),
+    euler(0,  5, -18),
+  ]);
+
+  // ── Lower legs: fold then straighten ──
+  addRot("lowerLegL", [
+    euler(0, 0, 0),
+    euler(8, 0, 0),
+    euler(50, 0, 0),       // knees deeply bent
+    euler(35, 0, 0),
+    euler(10, 0, 0),       // legs unfold on ground
+    euler(5, 0, 0),
+  ]);
+  addRot("lowerLegR", [
+    euler(0, 0, 0),
+    euler(8, 0, 0),
+    euler(50, 0, 0),
+    euler(35, 0, 0),
+    euler(10, 0, 0),
+    euler(5, 0, 0),
+  ]);
+
+  // ── Heels: plantarflex during buckle ──
+  addRot("heelL", [
+    euler(0, 0, 0),
+    euler(5, 0, 0),
+    euler(20, 0, 0),
+    euler(10, 0, 0),
+    euler(0, 0, 0),
+    euler(0, 0, 0),
+  ]);
+  addRot("heelR", [
+    euler(0, 0, 0),
+    euler(5, 0, 0),
+    euler(20, 0, 0),
+    euler(10, 0, 0),
+    euler(0, 0, 0),
+    euler(0, 0, 0),
+  ]);
+
+  // ── Palms: go limp ──
+  addRot("palmL", Array(K).fill(euler(0, 0, 0)));
+  addRot("palmR", Array(K).fill(euler(0, 0, 0)));
+
+  return anim;
+}
+
 // ─── 8. Build GLB ───────────────────────────────────────────────────
 
 async function main() {
@@ -1484,6 +1715,7 @@ async function main() {
 
   // ── Animation ──
   addMoonwalkAnimation(doc, buffer, BONES, nodes);
+  addKOAnimation(doc, buffer, BONES, nodes);
 
   const outPath = "./mannequin_v4.glb";
   await new NodeIO().write(outPath, doc);
