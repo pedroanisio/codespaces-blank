@@ -2482,10 +2482,20 @@ def _mesh_vertex_normals(positions: list[float], indices: list[int]) -> list[flo
             normals[idx * 3 + 2] += nz
 
     for i in range(0, len(normals), 3):
-        mag = math.sqrt(normals[i] ** 2 + normals[i + 1] ** 2 + normals[i + 2] ** 2) or 1.0
-        normals[i] /= mag
-        normals[i + 1] /= mag
-        normals[i + 2] /= mag
+        mag = math.sqrt(normals[i] ** 2 + normals[i + 1] ** 2 + normals[i + 2] ** 2)
+        if mag > 1e-8:
+            normals[i] /= mag
+            normals[i + 1] /= mag
+            normals[i + 2] /= mag
+        else:
+            # Degenerate normal (pole vertex or coplanar faces):
+            # fall back to using the vertex position as the normal direction.
+            # This is correct for convex shapes (sphere, ellipsoid).
+            px, py, pz = positions[i], positions[i + 1], positions[i + 2]
+            pmag = math.sqrt(px * px + py * py + pz * pz) or 1.0
+            normals[i] = px / pmag
+            normals[i + 1] = py / pmag
+            normals[i + 2] = pz / pmag
     return _round_list(normals)
 
 

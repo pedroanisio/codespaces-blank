@@ -311,7 +311,6 @@ function boneMaterial(region: string): THREE.MeshPhysicalMaterial {
     sheen: 0.15,
     sheenRoughness: 0.5,
     sheenColor: new THREE.Color(0xfffff0),
-    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -332,7 +331,6 @@ function muscleMaterial(region: string): THREE.MeshPhysicalMaterial {
     sheenRoughness: 0.4,
     sheenColor: new THREE.Color(0xff8888),
     side: THREE.DoubleSide,
-    envMapIntensity: 0.5,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -350,7 +348,6 @@ function tendonMaterial(): THREE.MeshPhysicalMaterial {
     sheen: 0.4,
     sheenRoughness: 0.35,
     sheenColor: new THREE.Color(0xeeeedd),
-    envMapIntensity: 0.4,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -367,7 +364,6 @@ function arteryMaterial(): THREE.MeshPhysicalMaterial {
     clearcoatRoughness: 0.15,
     transmission: 0.12,
     thickness: 0.4,
-    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -384,7 +380,6 @@ function veinMaterial(): THREE.MeshPhysicalMaterial {
     clearcoatRoughness: 0.15,
     transmission: 0.12,
     thickness: 0.4,
-    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -401,7 +396,6 @@ function nerveMaterial(): THREE.MeshPhysicalMaterial {
     emissiveIntensity: 0.15,
     clearcoat: 0.15,
     clearcoatRoughness: 0.4,
-    envMapIntensity: 0.3,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -422,7 +416,6 @@ function organMaterial(system: string): THREE.MeshPhysicalMaterial {
     sheenRoughness: 0.5,
     sheenColor: new THREE.Color(0xffcccc),
     side: THREE.DoubleSide,
-    envMapIntensity: 0.7,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -440,7 +433,6 @@ function ligamentMaterial(): THREE.MeshPhysicalMaterial {
     sheen: 0.25,
     sheenRoughness: 0.45,
     sheenColor: new THREE.Color(0xeeeedd),
-    envMapIntensity: 0.4,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -458,7 +450,6 @@ function cartilageMaterial(type: string): THREE.MeshPhysicalMaterial {
     clearcoatRoughness: 0.15,
     transmission: 0.2,
     thickness: 0.6,
-    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -475,7 +466,6 @@ function jointMaterial(): THREE.MeshPhysicalMaterial {
     clearcoatRoughness: 0.1,
     emissive: 0x112244,
     emissiveIntensity: 0.2,
-    envMapIntensity: 0.8,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -2029,7 +2019,7 @@ export default function AnatomyViewer({ body }: AnatomyViewerProps) {
       lastTime = ts;
 
       handle.controls.update();
-      handle.composer.render();
+      handle.renderer.render(handle.scene, handle.camera);
 
       // FPS counter
       frameCount++;
