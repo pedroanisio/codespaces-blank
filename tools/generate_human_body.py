@@ -528,7 +528,7 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
         sl = round(length * ds, 2)
         sw = round(width * ds, 2)
         sd = round(depth * ds, 2)
-        sm = max(0.01, round(mass * ms, 2))
+        sm = round(mass * ms, 2)
         sp = (round(pos[0] * ds, 1), round(pos[1] * ds, 1), round(pos[2] * ds, 1))
         a, b, c = sw / 2, sl / 2, sd / 2
         ixx = round(sm / 5 * (b * b + c * c), 2)
@@ -928,9 +928,9 @@ _RAW: list[tuple] = [
     ("Longissimus", "back_deep", "parallel", B_SACRUM, B_T1, "extension", "T1,T2,T3,T4,T5,T6", "Posterior rami", 40, 250, 1800, None),
     ("Spinalis", "back_deep", "parallel", B_L5, B_C7, "extension", "T1,T2,T3,T4,T5,T6", "Posterior rami", 30, 80, 600, None),
     ("Multifidus", "back_deep", "multipennate", B_SACRUM, B_L5 + 2, "extension", "L1,L2,L3", "Posterior rami", 8, 120, 1200, 25),
-    ("Rotatores", "back_deep", "parallel", B_T12, B_T12 + 2, "extension", "T1,T2,T3", "Posterior rami", 3, 15, 100, None),
+    # Rotatores -> per-level in _deep_segmental_raw()
     ("Semispinalis Capitis", "back_deep", "multipennate", _T4, B_OCCIPITAL, "extension", "C1,C2,C3,C4", "Posterior rami", 18, 80, 600, 20),
-    ("Interspinales", "back_deep", "parallel", B_L5, B_L5 + 1, "extension", "L1,L2", "Posterior rami", 2, 5, 40, None),
+    # Interspinales -> per-level in _deep_segmental_raw()
     ("Quadratus Lumborum", "back_deep", "parallel", B_HIP_R, B_L1, "lateral_flexion", "T12,L1,L2,L3", "Subcostal nerve", 12, 90, 800, None),
     ("Serratus Posterior Superior", "back_deep", "parallel", B_C7, B_RIB_R[2], "elevation", "T1,T2,T3,T4", "Intercostal nerves", 8, 15, 100, None),
     ("Serratus Posterior Inferior", "back_deep", "parallel", B_T12, B_RIB_R[10], "depression", "T9,T10,T11,T12", "Intercostal nerves", 8, 15, 100, None),
@@ -938,8 +938,7 @@ _RAW: list[tuple] = [
     ("Pectoralis Major", "thorax_anterior", "convergent", B_STERNUM, B_HUMER_R, "flexion,adduction", "C5,C6,C7,C8,T1", "Pectoral nerves", 25, 520, 4200, None),
     ("Pectoralis Minor", "thorax_anterior", "convergent", B_RIB_R[2], B_SCAP_R, "depression", "C8,T1", "Medial pectoral nerve", 12, 30, 300, None),
     ("Subclavius", "thorax_anterior", "parallel", B_RIB_R[0], B_CLAV_R, "depression", "C5,C6", "Subclavian nerve", 5, 8, 80, None),
-    ("External Intercostal", "thorax_anterior", "parallel", B_RIB_R[3], B_RIB_R[4], "elevation", "T1,T2,T3,T4,T5,T6", "Intercostal nerves", 3, 20, 150, None),
-    ("Internal Intercostal", "thorax_anterior", "parallel", B_RIB_R[4], B_RIB_R[3], "depression", "T1,T2,T3,T4,T5,T6", "Intercostal nerves", 3, 20, 150, None),
+    # External/Internal Intercostal -> per-level in _intercostal_per_level_raw()
     ("Rectus Abdominis", "abdomen", "parallel", B_STERNUM, B_HIP_R, "flexion", "T7,T8,T9,T10,T11,T12", "Intercostal nerves", 40, 280, 2200, None),
     ("External Oblique", "abdomen", "parallel", _T8, B_HIP_R, "flexion,lateral_flexion", "T7,T8,T9,T10,T11,T12", "Intercostal nerves", 20, 100, 600, None),
     ("Internal Oblique", "abdomen", "parallel", B_HIP_R, B_RIB_R[9], "flexion,lateral_flexion", "T7,T8,T9,T10,T11,T12", "Intercostal nerves", 18, 90, 500, None),
@@ -987,8 +986,7 @@ _RAW: list[tuple] = [
     ("Piriformis", "hip", "parallel", B_SACRUM, B_FEM_R, "lateral_rotation", "S1,S2", "Sacral plexus", 6, 30, 200, None),
     ("Obturator Internus", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 5, 25, 200, None),
     ("Obturator Externus", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L3,L4", "Obturator nerve", 4, 20, 150, None),
-    ("Gemellus Superior", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 3, 8, 60, None),
-    ("Gemellus Inferior", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 3, 8, 60, None),
+    # Gemellus Superior/Inferior moved to Round 7 additions as Superior/Inferior Gemellus with distinct naming
     ("Quadratus Femoris", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 5, 25, 200, None),
     ("Tensor Fasciae Latae", "hip", "parallel", B_HIP_R, B_TIB_R, "flexion,abduction", "L4,L5,S1", "Superior gluteal nerve", 12, 40, 300, None),
     ("Psoas Minor", "hip", "parallel", B_T12, B_HIP_R, "flexion", "L1,L2", "Lumbar plexus", 10, 15, 100, None),
@@ -1022,6 +1020,107 @@ _RAW: list[tuple] = [
     # === PELVIC ===
     ("Levator Ani", "hip", "parallel", B_HIP_R, B_COCCYX, "elevation", "S3,S4", "Pudendal nerve", 6, 15, 100, None),
     ("Coccygeus", "hip", "parallel", B_HIP_R, B_COCCYX, "elevation", "S4,S5", "Pudendal nerve", 4, 8, 60, None),
+    # ===========================================================================
+    # ROUND 7 — ADDITIONAL MUSCLES (~50 base → ~100 bilateral)
+    # Reference: Standring, Gray's Anatomy 42nd ed. (2020)
+    # Muscle volumes/forces estimated from cadaver literature where available
+    # ===========================================================================
+    # === ADDITIONAL FACIAL MUSCLES (8) ===
+    # Ref: Gray's Ch. 28 (muscles of facial expression)
+    ("Levator Labii Superioris", "face", "parallel", B_MAXILLA_R, B_MAXILLA_R, "elevation", "C7", "Facial VII", 3, 2, 20, None),
+    ("Levator Labii Superioris Alaeque Nasi", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "elevation", "C7", "Facial VII", 4, 2, 20, None),
+    ("Depressor Labii Inferioris", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "depression", "C7", "Facial VII", 2, 1.5, 15, None),
+    ("Depressor Anguli Oris", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "depression", "C7", "Facial VII", 3, 2, 20, None),
+    ("Risorius", "face", "parallel", B_ZYGOMATIC_R, B_MANDIBLE, "retraction", "C7", "Facial VII", 4, 1, 10, None),
+    ("Procerus", "face", "parallel", B_NASAL_R, B_FRONTAL, "depression", "C7", "Facial VII", 2, 1, 10, None),
+    ("Levator Anguli Oris", "face", "parallel", B_MAXILLA_R, B_MANDIBLE, "elevation", "C7", "Facial VII", 3, 2, 15, None),
+    ("Zygomaticus Minor", "face", "parallel", B_ZYGOMATIC_R, B_MAXILLA_R, "elevation", "C7", "Facial VII", 4, 1.5, 15, None),
+    # === EXTRAOCULAR MUSCLES (7 per side) ===
+    # Ref: Gray's Ch. 39 (orbit)
+    ("Superior Rectus", "face", "parallel", B_SPHENOID, B_FRONTAL, "elevation", "C1", "Oculomotor nerve (III)", 4, 1, 60, None),
+    ("Inferior Rectus", "face", "parallel", B_SPHENOID, B_FRONTAL, "depression", "C1", "Oculomotor nerve (III)", 4, 1, 60, None),
+    ("Medial Rectus", "face", "parallel", B_SPHENOID, B_FRONTAL, "adduction", "C1", "Oculomotor nerve (III)", 4, 1.5, 80, None),
+    ("Lateral Rectus", "face", "parallel", B_SPHENOID, B_FRONTAL, "abduction", "C1", "Abducens nerve (VI)", 4, 1, 60, None),
+    ("Superior Oblique", "face", "parallel", B_SPHENOID, B_FRONTAL, "medial_rotation", "C1", "Trochlear nerve (IV)", 4, 0.8, 40, None),
+    ("Inferior Oblique", "face", "parallel", B_MAXILLA_R, B_FRONTAL, "lateral_rotation", "C1", "Oculomotor nerve (III)", 4, 0.8, 40, None),
+    ("Levator Palpebrae Superioris", "face", "parallel", B_SPHENOID, B_FRONTAL, "elevation", "C1", "Oculomotor nerve (III)", 4, 0.5, 30, None),
+    # === SUBOCCIPITAL MUSCLES (4) ===
+    # Ref: Gray's Ch. 26 (suboccipital triangle)
+    ("Rectus Capitis Posterior Major", "back_deep", "parallel", B_C1 - 1, B_OCCIPITAL, "extension", "C1", "Posterior rami", 4, 5, 60, None),
+    ("Rectus Capitis Posterior Minor", "back_deep", "parallel", B_C1, B_OCCIPITAL, "extension", "C1", "Posterior rami", 3, 3, 40, None),
+    ("Obliquus Capitis Superior", "back_deep", "parallel", B_C1, B_OCCIPITAL, "lateral_flexion", "C1", "Posterior rami", 4, 4, 50, None),
+    ("Obliquus Capitis Inferior", "back_deep", "parallel", B_C1 - 1, B_C1, "lateral_rotation", "C1,C2", "Posterior rami", 5, 5, 60, None),
+    # === TONGUE MUSCLES (4 extrinsic) ===
+    # Ref: Gray's Ch. 29 (tongue)
+    ("Genioglossus", "head_and_neck", "convergent", B_MANDIBLE, B_HYOID, "depression,protraction", "C1", "Hypoglossal nerve (XII)", 5, 15, 100, None),
+    ("Hyoglossus", "head_and_neck", "parallel", B_HYOID, B_HYOID, "depression,retraction", "C1", "Hypoglossal nerve (XII)", 4, 5, 40, None),
+    ("Styloglossus", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "retraction,elevation", "C1", "Hypoglossal nerve (XII)", 6, 3, 30, None),
+    ("Palatoglossus", "head_and_neck", "parallel", B_MAXILLA_R, B_HYOID, "elevation", "C1", "Vagus nerve (X)", 4, 2, 20, None),
+    # === ADDITIONAL NECK (3) ===
+    # Ref: Gray's Ch. 26-27 (prevertebral, infrahyoid)
+    ("Longus Capitis", "head_and_neck", "parallel", B_C7, B_OCCIPITAL, "flexion", "C1,C2,C3", "Cervical plexus", 8, 8, 100, None),
+    ("Rectus Capitis Anterior", "head_and_neck", "parallel", B_C1, B_OCCIPITAL, "flexion", "C1,C2", "Cervical plexus", 3, 2, 30, None),
+    ("Rectus Capitis Lateralis", "head_and_neck", "parallel", B_C1, B_OCCIPITAL, "lateral_flexion", "C1,C2", "Cervical plexus", 2, 1.5, 20, None),
+    # === LARYNGEAL MUSCLES (5) ===
+    # Ref: Gray's Ch. 31 (larynx). Attached to hyoid as proxy for laryngeal cartilages.
+    ("Cricothyroid", "head_and_neck", "parallel", B_HYOID, B_HYOID, "elevation", "C1", "Vagus nerve (X)", 2, 2, 40, None),
+    ("Thyroarytenoid", "head_and_neck", "parallel", B_HYOID, B_HYOID, "depression", "C1", "Vagus nerve (X)", 2, 1.5, 30, None),
+    ("Posterior Cricoarytenoid", "head_and_neck", "parallel", B_HYOID, B_HYOID, "abduction", "C1", "Vagus nerve (X)", 1.5, 1, 25, None),
+    ("Lateral Cricoarytenoid", "head_and_neck", "parallel", B_HYOID, B_HYOID, "adduction", "C1", "Vagus nerve (X)", 1.5, 1, 25, None),
+    ("Transverse Arytenoid", "head_and_neck", "parallel", B_HYOID, B_HYOID, "adduction", "C1", "Vagus nerve (X)", 1, 0.5, 15, None),
+    # === PHARYNGEAL CONSTRICTORS (3) ===
+    # Ref: Gray's Ch. 30 (pharynx)
+    ("Superior Pharyngeal Constrictor", "head_and_neck", "circular", B_SPHENOID, B_OCCIPITAL, "flexion", "C1", "Vagus nerve (X)", 4, 5, 40, None),
+    ("Middle Pharyngeal Constrictor", "head_and_neck", "circular", B_HYOID, B_OCCIPITAL, "flexion", "C1", "Vagus nerve (X)", 3, 4, 35, None),
+    ("Inferior Pharyngeal Constrictor", "head_and_neck", "circular", B_HYOID, B_OCCIPITAL, "flexion", "C1", "Vagus nerve (X)", 3, 5, 45, None),
+    # === ADDITIONAL DEEP BACK (5) ===
+    # Ref: Gray's Ch. 26 (deep back muscles)
+    ("Semispinalis Thoracis", "back_deep", "multipennate", B_T12 + 4, B_C7, "extension", "T1,T2,T3,T4,T5,T6", "Posterior rami", 20, 60, 500, 18),
+    ("Semispinalis Cervicis", "back_deep", "multipennate", B_T12 + 8, B_C7 + 3, "extension", "C3,C4,C5,C6", "Posterior rami", 12, 30, 300, 15),
+    # Intertransversarii -> per-level in _deep_segmental_raw()
+    ("Longissimus Capitis", "back_deep", "parallel", B_T12 + 8, B_TEMPORAL_R, "extension,lateral_flexion", "C3,C4,C5", "Posterior rami", 15, 15, 150, None),
+    ("Longissimus Cervicis", "back_deep", "parallel", B_T12 + 6, B_C7 + 2, "extension,lateral_flexion", "C4,C5,C6", "Posterior rami", 12, 12, 120, None),
+    # === ADDITIONAL THORAX (3) ===
+    # Ref: Gray's Ch. 53 (thoracic wall)
+    # Innermost Intercostal -> per-level in _intercostal_per_level_raw()
+    ("Transversus Thoracis", "thorax_anterior", "parallel", B_STERNUM, B_RIB_R[3], "depression", "T2,T3,T4,T5,T6", "Intercostal nerves", 8, 10, 80, None),
+    # Levatores Costarum -> per-level in _levatores_costarum_per_level_raw()
+    # === ADDITIONAL ABDOMEN (1) ===
+    ("Pyramidalis", "abdomen", "parallel", B_HIP_R, B_STERNUM, "flexion", "T12", "Subcostal nerve", 5, 5, 40, None),
+    # === ADDITIONAL LEG (1) ===
+    ("Peroneus Tertius", "leg_anterior", "unipennate", B_FIB_R, _FR_MT[4], "dorsiflexion,eversion", "L5,S1", "Deep peroneal nerve", 12, 15, 120, 8),
+    # === ADDITIONAL HIP (2) ===
+    # Ref: Gray's Ch. 77 (hip joint muscles)
+    ("Superior Gemellus", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 3, 5, 50, None),
+    ("Inferior Gemellus", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 3, 5, 50, None),
+    # === ROUND 8: COMPLETING ALL MUSCLES ===
+    # === PERINEAL (5) Ref: Gray's Ch.76 ===
+    ("External Anal Sphincter", "hip", "circular", B_COCCYX, B_HIP_R, "flexion", "S2,S3,S4", "Pudendal nerve", 3, 3, 40, None),
+    ("Bulbospongiosus", "hip", "parallel", B_HIP_R, B_HIP_R, "flexion", "S2,S3,S4", "Pudendal nerve", 4, 3, 30, None),
+    ("Ischiocavernosus", "hip", "parallel", B_HIP_R, B_HIP_R, "flexion", "S2,S3,S4", "Pudendal nerve", 3, 2, 25, None),
+    ("Deep Transverse Perineal", "hip", "parallel", B_HIP_R, B_HIP_L, "elevation", "S2,S3,S4", "Pudendal nerve", 4, 3, 30, None),
+    ("Superficial Transverse Perineal", "hip", "parallel", B_HIP_R, B_HIP_L, "elevation", "S2,S3,S4", "Pudendal nerve", 3, 2, 20, None),
+    # === PALATE (3) Ref: Gray's Ch.29-30 ===
+    ("Tensor Veli Palatini", "head_and_neck", "parallel", B_SPHENOID, B_MAXILLA_R, "elevation", "C5,C6,C7", "Trigeminal V3", 3, 2, 25, None),
+    ("Levator Veli Palatini", "head_and_neck", "parallel", B_TEMPORAL_R, B_MAXILLA_R, "elevation", "C1", "Vagus nerve (X)", 3, 2, 25, None),
+    ("Musculus Uvulae", "head_and_neck", "parallel", B_MAXILLA_R, B_MAXILLA_R, "elevation", "C1", "Vagus nerve (X)", 2, 0.5, 10, None),
+    # === MIDDLE EAR (2) Ref: Gray's Ch.37 ===
+    ("Tensor Tympani", "face", "parallel", B_SPHENOID, B_MALLEUS_R, "flexion", "C5,C6,C7", "Trigeminal V3", 2, 0.1, 5, None),
+    ("Stapedius", "face", "parallel", B_TEMPORAL_R, B_STAPES_R, "flexion", "C7", "Facial VII", 0.6, 0.03, 2, None),
+    # === PHARYNGEAL LONGITUDINAL (2) Ref: Gray's Ch.30 ===
+    ("Stylopharyngeus", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "elevation", "C1", "Glossopharyngeal nerve (IX)", 6, 3, 30, None),
+    ("Salpingopharyngeus", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "elevation", "C1", "Vagus nerve (X)", 3, 1, 10, None),
+    # === TONGUE INTRINSIC (4) Ref: Gray's Ch.29 ===
+    ("Superior Longitudinal Tongue", "head_and_neck", "parallel", B_HYOID, B_HYOID, "elevation,retraction", "C1", "Hypoglossal nerve (XII)", 5, 3, 20, None),
+    ("Inferior Longitudinal Tongue", "head_and_neck", "parallel", B_HYOID, B_HYOID, "depression,retraction", "C1", "Hypoglossal nerve (XII)", 5, 2, 15, None),
+    ("Transverse Tongue", "head_and_neck", "parallel", B_HYOID, B_HYOID, "adduction", "C1", "Hypoglossal nerve (XII)", 4, 2, 15, None),
+    ("Vertical Tongue", "head_and_neck", "parallel", B_HYOID, B_HYOID, "depression", "C1", "Hypoglossal nerve (XII)", 4, 2, 15, None),
+    # === ADDITIONAL FACIAL (5) Ref: Gray's Ch.28 ===
+    ("Auricularis Anterior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "protraction", "C7", "Facial VII", 2, 0.5, 5, None),
+    ("Auricularis Superior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "elevation", "C7", "Facial VII", 2, 0.5, 5, None),
+    ("Auricularis Posterior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "retraction", "C7", "Facial VII", 2, 0.5, 5, None),
+    ("Occipitalis", "face", "parallel", B_OCCIPITAL, B_OCCIPITAL, "retraction", "C7", "Facial VII", 4, 3, 20, None),
+    ("Depressor Septi Nasi", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "depression", "C7", "Facial VII", 1.5, 0.5, 8, None),
 ]
 
 # === HAND INTRINSIC (18 per side — generated programmatically for R) ===
@@ -1079,7 +1178,57 @@ def _foot_intrinsic_raw() -> list[tuple]:
     return m
 
 # Combine all raw definitions
-_ALL_RAW = _RAW + _hand_intrinsic_raw() + _foot_intrinsic_raw()
+
+def _intercostal_per_level_raw() -> list[tuple]:
+    """11 external + 11 internal + 8 innermost intercostals per side."""
+    m: list[tuple] = []
+    for i in range(11):
+        sp = f"T{i+1}"
+        m.append((f"External Intercostal {sp}", "thorax_anterior", "parallel", B_RIB_R[i], B_RIB_R[i+1], "elevation", sp, "Intercostal nerves", 3, 2, 15, None))
+        m.append((f"Internal Intercostal {sp}", "thorax_anterior", "parallel", B_RIB_R[i+1], B_RIB_R[i], "depression", sp, "Intercostal nerves", 3, 2, 15, None))
+    for i in range(2, 10):
+        sp = f"T{i+1}"
+        m.append((f"Innermost Intercostal {sp}", "thorax_anterior", "parallel", B_RIB_R[i+1], B_RIB_R[i], "depression", sp, "Intercostal nerves", 3, 1.5, 10, None))
+    return m
+
+def _levatores_costarum_per_level_raw() -> list[tuple]:
+    """12 levatores costarum (one per rib)."""
+    m: list[tuple] = []
+    for i in range(12):
+        t_vert = B_T1 - i
+        sp = f"T{i+1}"
+        m.append((f"Levator Costae {i+1}", "thorax_anterior", "parallel", t_vert, B_RIB_R[i], "elevation", sp, "Posterior rami", 2, 1, 8, None))
+    return m
+
+def _deep_segmental_raw() -> list[tuple]:
+    """Per-level rotatores (11) + interspinales (10) + intertransversarii (11) + multifidus (16)."""
+    m: list[tuple] = []
+    for i in range(11):
+        t_lo = B_T12 + i; t_hi = B_T12 + i + 1; sp = f"T{12-i}"
+        m.append((f"Rotator {sp}", "back_deep", "parallel", t_lo, t_hi, "extension", sp, "Posterior rami", 2, 1.5, 12, None))
+    for i in range(6):
+        c_lo = B_C7 + i; c_hi = B_C7 + i + 1; sp = f"C{7-i}"
+        m.append((f"Interspinalis {sp}", "back_deep", "parallel", c_lo, c_hi, "extension", sp, "Posterior rami", 1.5, 0.5, 5, None))
+    for i in range(4):
+        l_lo = B_L5 + i; l_hi = B_L5 + i + 1; sp = f"L{5-i}"
+        m.append((f"Interspinalis {sp}", "back_deep", "parallel", l_lo, l_hi, "extension", sp, "Posterior rami", 2, 0.8, 8, None))
+    for i in range(6):
+        c_lo = B_C1 - i; c_hi = c_lo - 1; sp = f"C{1+i}"
+        m.append((f"Intertransversarius {sp}", "back_deep", "parallel", c_lo, max(c_hi, B_C7), "lateral_flexion", sp, "Posterior rami", 1.5, 0.5, 5, None))
+    for i in range(4):
+        l_lo = B_L1 - i; l_hi = max(l_lo - 1, B_L5); sp = f"L{1+i}"
+        m.append((f"Intertransversarius {sp}", "back_deep", "parallel", l_lo, l_hi, "lateral_flexion", sp, "Posterior rami", 2, 0.8, 8, None))
+    for i in range(4):
+        c_vert = B_C7 + (3 - i); sp = f"C{4+i}"
+        m.append((f"Multifidus {sp}", "back_deep", "multipennate", c_vert, min(c_vert + 2, B_C1), "extension", sp, "Posterior rami", 3, 3, 40, 20))
+    for i in range(12):
+        t_vert = B_T1 - i; target = max(t_vert - 3, B_T12); sp = f"T{i+1}"
+        m.append((f"Multifidus {sp}", "back_deep", "multipennate", t_vert, target, "extension", sp, "Posterior rami", 4, 4, 50, 22))
+    return m
+# Total: 170 base (_RAW) + 18 hand intrinsic + 20 foot intrinsic = 208 base → ~414 bilateral
+_ALL_RAW = (_RAW + _hand_intrinsic_raw() + _foot_intrinsic_raw()
+           + _intercostal_per_level_raw() + _levatores_costarum_per_level_raw()
+           + _deep_segmental_raw())
 
 # Antagonist map (base name → list of base antagonist names)
 _ANTAG: dict[str, list[str]] = {
@@ -1090,6 +1239,13 @@ _ANTAG: dict[str, list[str]] = {
     "Biceps Brachii": ["Triceps Brachii"], "Triceps Brachii": ["Biceps Brachii"],
     "Pectoralis Major": ["Latissimus Dorsi"], "Latissimus Dorsi": ["Pectoralis Major", "Deltoid"],
     "Tibialis Anterior": ["Gastrocnemius", "Soleus"],
+    "Peroneus Tertius": ["Tibialis Posterior"],
+    "Superior Rectus": ["Inferior Rectus"],
+    "Inferior Rectus": ["Superior Rectus"],
+    "Medial Rectus": ["Lateral Rectus"],
+    "Lateral Rectus": ["Medial Rectus"],
+    "Genioglossus": ["Styloglossus"],
+    "Styloglossus": ["Genioglossus"],
     "External Oblique": ["Erector Spinae"],
     "Rectus Abdominis": ["Latissimus Dorsi (R)", "Latissimus Dorsi (L)"],
 }

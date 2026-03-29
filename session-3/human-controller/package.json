@@ -9,17 +9,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "three": "^0.175.0",
     "zustand": "^5.0.5"
   },
   "devDependencies": {
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/three": "^0.175.0",
     "@vitejs/plugin-react": "^4.5.2",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.3",
     "vite": "^6.3.5"
-  }
+  },
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
