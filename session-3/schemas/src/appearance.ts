@@ -57,11 +57,27 @@ export const SkinningWeightSchema = z.object({
   weight: z.number().min(0).max(1),
 });
 
+export const PBRMaterialSchema = z.object({
+  baseColor: ColorSchema.optional(),
+  metalness: z.number().min(0).max(1).optional(),
+  roughness: z.number().min(0).max(1).optional(),
+  clearcoat: z.number().min(0).max(1).optional(),
+  clearcoatRoughness: z.number().min(0).max(1).optional(),
+  transmission: z.number().min(0).max(1).optional(),
+  thickness: z.number().nonnegative().optional(),
+  sheen: z.number().min(0).max(1).optional(),
+  sheenRoughness: z.number().min(0).max(1).optional(),
+  sheenColor: ColorSchema.optional(),
+  emissive: ColorSchema.optional(),
+  emissiveIntensity: z.number().min(0).optional(),
+}).describe("Portable PBR material override for renderers that support physically based shading");
+
 export const EntityRenderOverride = z.object({
   entityId: z.string().uuid().describe("ID of the anatomical entity"),
   color: ColorSchema.optional(),
   opacity: z.number().min(0).max(1).optional(),
   visible: z.boolean().default(true),
+  material: PBRMaterialSchema.optional(),
   skinningWeights: z
     .array(SkinningWeightSchema)
     .optional()

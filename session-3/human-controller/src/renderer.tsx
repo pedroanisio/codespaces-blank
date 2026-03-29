@@ -31,6 +31,13 @@ export interface Vec3 {
   z: number;
 }
 
+export interface RGBAColor {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
 export interface Transform {
   position: Vec3;
   rotation: Vec3;
@@ -150,6 +157,38 @@ export interface HumanBodyData {
   ligaments: LigamentData[];
   cartilage: CartilageData[];
   boneGeometries?: BoneGeometryData[];
+  rendering?: RenderingLayerData;
+}
+
+export interface PBRMaterialData {
+  baseColor?: RGBAColor;
+  metalness?: number;
+  roughness?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  transmission?: number;
+  thickness?: number;
+  sheen?: number;
+  sheenRoughness?: number;
+  sheenColor?: RGBAColor;
+  emissive?: RGBAColor;
+  emissiveIntensity?: number;
+}
+
+export interface EntityRenderOverrideData {
+  entityId: string;
+  color?: RGBAColor;
+  opacity?: number;
+  visible?: boolean;
+  material?: PBRMaterialData;
+}
+
+export interface RenderingLayerData {
+  muscleOverrides?: EntityRenderOverrideData[];
+  boneOverrides?: EntityRenderOverrideData[];
+  organOverrides?: EntityRenderOverrideData[];
+  vesselOverrides?: EntityRenderOverrideData[];
+  globalOpacity?: number;
 }
 
 // ── CSG Geometry Types (from geometry.ts schema) ──
@@ -166,12 +205,34 @@ export type CSGNode =
   | { nodeType: "primitive"; primitive: CSGPrimitive }
   | { nodeType: "operation"; operation: "union" | "subtract" | "intersect"; children: CSGNode[] };
 
-export interface BoneGeometryData {
-  geometryType: "parametric_csg";
+export interface IndexedMeshLODData {
+  level: number;
+  vertexCount: number;
+  triangleCount: number;
+  vertices: {
+    positions: number[];
+    normals?: number[];
+    uvs?: number[];
+  };
+  indices: number[];
+}
+
+export interface IndexedMeshGeometryData {
+  geometryType: "indexed_mesh";
   id: string;
   boneId: string;
-  csgTree: CSGNode;
+  lods: IndexedMeshLODData[];
+  isClosed?: boolean;
+  isManifold?: boolean;
+}
+
+export interface BoneGeometryData {
+  geometryType: "parametric_csg" | "indexed_mesh";
+  id: string;
+  boneId: string;
+  csgTree?: CSGNode;
   collisionHull?: string;
+  lods?: IndexedMeshLODData[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -409,6 +470,43 @@ function jointMaterial(): THREE.MeshPhysicalMaterial {
     envMapIntensity: 0.8,
   });
   _materialCache.set(key, mat);
+  return mat;
+}
+
+function toThreeColor(c?: RGBAColor): THREE.Color | undefined {
+  if (!c) return undefined;
+  return new THREE.Color(c.r / 255, c.g / 255, c.b / 255);
+}
+
+function applyRenderOverride(
+  base: THREE.MeshPhysicalMaterial,
+  override?: EntityRenderOverrideData,
+  globalOpacity = 1,
+): THREE.MeshPhysicalMaterial {
+  if (!override) return base;
+  const mat = base.clone();
+  const baseColor = toThreeColor(override.material?.baseColor ?? override.color);
+  if (baseColor) mat.color = baseColor;
+  if (override.opacity !== undefined) {
+    mat.opacity = Math.max(0, Math.min(1, override.opacity * globalOpacity));
+    mat.transparent = mat.opacity < 1;
+  } else if (globalOpacity < 1) {
+    mat.opacity = globalOpacity;
+    mat.transparent = true;
+  }
+  if (override.material?.metalness !== undefined) mat.metalness = override.material.metalness;
+  if (override.material?.roughness !== undefined) mat.roughness = override.material.roughness;
+  if (override.material?.clearcoat !== undefined) mat.clearcoat = override.material.clearcoat;
+  if (override.material?.clearcoatRoughness !== undefined) mat.clearcoatRoughness = override.material.clearcoatRoughness;
+  if (override.material?.transmission !== undefined) mat.transmission = override.material.transmission;
+  if (override.material?.thickness !== undefined) mat.thickness = override.material.thickness;
+  if (override.material?.sheen !== undefined) mat.sheen = override.material.sheen;
+  if (override.material?.sheenRoughness !== undefined) mat.sheenRoughness = override.material.sheenRoughness;
+  const sheenColor = toThreeColor(override.material?.sheenColor);
+  if (sheenColor) mat.sheenColor = sheenColor;
+  const emissive = toThreeColor(override.material?.emissive);
+  if (emissive) mat.emissive = emissive;
+  if (override.material?.emissiveIntensity !== undefined) mat.emissiveIntensity = override.material.emissiveIntensity;
   return mat;
 }
 
@@ -659,8 +757,10 @@ function mergeBufferGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeomet
   let totalVerts = 0;
   const nonIndexed: THREE.BufferGeometry[] = [];
 
+  const disposeList: THREE.BufferGeometry[] = [];
   for (const g of geos) {
     const ni = g.index ? g.toNonIndexed() : g;
+    if (ni !== g) disposeList.push(ni); // track intermediate geos for cleanup
     nonIndexed.push(ni);
     totalVerts += ni.attributes.position!.count;
   }
@@ -677,11 +777,33 @@ function mergeBufferGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeomet
     offset += pos.count;
   }
 
+  // Dispose intermediate non-indexed geometries
+  for (const d of disposeList) d.dispose();
+
   const merged = new THREE.BufferGeometry();
   merged.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   merged.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
   if (normals.every((v) => v === 0)) merged.computeVertexNormals();
   return merged;
+}
+
+function indexedMeshToGeometry(mesh: IndexedMeshGeometryData): THREE.BufferGeometry {
+  const lod = [...mesh.lods].sort((a, b) => a.level - b.level)[0];
+  if (!lod) {
+    return new THREE.BufferGeometry();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(lod.vertices.positions, 3));
+  geo.setIndex(lod.indices);
+  if (lod.vertices.normals && lod.vertices.normals.length === lod.vertices.positions.length) {
+    geo.setAttribute("normal", new THREE.Float32BufferAttribute(lod.vertices.normals, 3));
+  } else {
+    geo.computeVertexNormals();
+  }
+  if (lod.vertices.uvs && lod.vertices.uvs.length === (lod.vertexCount * 2)) {
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(lod.vertices.uvs, 2));
+  }
+  return geo;
 }
 
 /**
@@ -1246,6 +1368,8 @@ export function applyTheme(handle: SceneHandle, mode: ThemeMode): void {
 
   ((themeRefs.ground as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(t.groundColor);
 
+  themeRefs.grid.geometry.dispose();
+  (themeRefs.grid.material as THREE.Material).dispose();
   scene.remove(themeRefs.grid);
   const newGrid = new THREE.GridHelper(200, 40, t.gridA, t.gridB);
   newGrid.position.y = 0.05;
@@ -1429,18 +1553,23 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   //     local-frame orientation.
   // ════════════════════════════════════════════════════════════════════
 
-  const csgByBoneId = new Map<string, CSGNode>();
+  const geometryByBoneId = new Map<string, BoneGeometryData>();
   if (body.boneGeometries) {
     for (const bg of body.boneGeometries) {
-      if (bg.geometryType === "parametric_csg") {
-        csgByBoneId.set(bg.boneId, bg.csgTree);
-      }
+      geometryByBoneId.set(bg.boneId, bg);
     }
   }
+  const globalOpacity = body.rendering?.globalOpacity ?? 1;
+  const boneOverrideById = new Map((body.rendering?.boneOverrides ?? []).map((o) => [o.entityId, o]));
+  const muscleOverrideById = new Map((body.rendering?.muscleOverrides ?? []).map((o) => [o.entityId, o]));
+  const organOverrideById = new Map((body.rendering?.organOverrides ?? []).map((o) => [o.entityId, o]));
+  const vesselOverrideById = new Map((body.rendering?.vesselOverrides ?? []).map((o) => [o.entityId, o]));
 
   for (const bone of body.skeleton) {
-    const mat = boneMaterial(bone.region);
-    const csgTree = csgByBoneId.get(bone.id);
+    const renderOverride = boneOverrideById.get(bone.id);
+    if (renderOverride?.visible === false) continue;
+    const mat = applyRenderOverride(boneMaterial(bone.region), renderOverride, globalOpacity);
+    const geometryEntry = geometryByBoneId.get(bone.id);
     const parent = bone.parentBoneId ? boneDataById.get(bone.parentBoneId) : undefined;
     const bonePos = toV3(bone.transform.position);
 
@@ -1453,8 +1582,11 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
       const dist = dir.length();
       const midpoint = parentPos.clone().add(bonePos).multiplyScalar(0.5);
 
-      if (csgTree) {
-        const geo = csgTreeToGeometry(csgTree);
+      if (geometryEntry?.geometryType === "indexed_mesh" && geometryEntry.lods) {
+        const geo = indexedMeshToGeometry(geometryEntry as IndexedMeshGeometryData);
+        mesh = new THREE.Mesh(geo, mat);
+      } else if (geometryEntry?.geometryType === "parametric_csg" && geometryEntry.csgTree) {
+        const geo = csgTreeToGeometry(geometryEntry.csgTree);
         mesh = new THREE.Mesh(geo, mat);
       } else {
         const spanLen = Math.max(dist, 1);
@@ -1472,8 +1604,11 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
       }
     } else {
       // NON-LONG BONES: placed at own position, rotation from transform data
-      if (csgTree) {
-        const geo = csgTreeToGeometry(csgTree);
+      if (geometryEntry?.geometryType === "indexed_mesh" && geometryEntry.lods) {
+        const geo = indexedMeshToGeometry(geometryEntry as IndexedMeshGeometryData);
+        mesh = new THREE.Mesh(geo, mat);
+      } else if (geometryEntry?.geometryType === "parametric_csg" && geometryEntry.csgTree) {
+        const geo = csgTreeToGeometry(geometryEntry.csgTree);
         mesh = new THREE.Mesh(geo, mat);
       } else {
         const geo = boneGeometry(bone);
@@ -1520,6 +1655,8 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
 
   const tMat = tendonMaterial();
   for (const muscle of body.muscles) {
+    const renderOverride = muscleOverrideById.get(muscle.id);
+    if (renderOverride?.visible === false) continue;
     const originTendon = tendonById.get(muscle.origin.tendonId);
     const insertionTendon = tendonById.get(muscle.insertion.tendonId);
     if (!originTendon || !insertionTendon) continue;
@@ -1569,7 +1706,10 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
       8,
     );
 
-    const muscleMesh = new THREE.Mesh(muscleGeo, muscleMaterial(muscle.region));
+    const muscleMesh = new THREE.Mesh(
+      muscleGeo,
+      applyRenderOverride(muscleMaterial(muscle.region), renderOverride, globalOpacity),
+    );
     muscleMesh.castShadow = true;
     muscleMesh.userData = { type: "muscle", id: muscle.id, name: muscle.name, region: muscle.region };
     layers.muscles.add(muscleMesh);
@@ -1605,11 +1745,17 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   // ════════════════════════════════════════════════════════════════════
 
   for (const vessel of body.vascularSystem) {
+    const renderOverride = vesselOverrideById.get(vessel.id);
+    if (renderOverride?.visible === false) continue;
     if (vessel.path.length < 2) continue;
     const pts = vessel.path.map(toV3);
     const r = Math.max(0.08, vessel.averageLumenRadius * 0.6);
     const geo = tubeFromPath(pts, r);
-    const mat = vessel.vesselType === "artery" ? arteryMaterial() : veinMaterial();
+    const mat = applyRenderOverride(
+      vessel.vesselType === "artery" ? arteryMaterial() : veinMaterial(),
+      renderOverride,
+      globalOpacity,
+    );
     const mesh = new THREE.Mesh(geo, mat);
     mesh.userData = { type: "vessel", id: vessel.id, name: vessel.name, vesselType: vessel.vesselType };
     const layer = vessel.vesselType === "artery" ? layers.arteries : layers.veins;
@@ -1635,8 +1781,13 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   // ════════════════════════════════════════════════════════════════════
 
   for (const organ of body.organs) {
+    const renderOverride = organOverrideById.get(organ.id);
+    if (renderOverride?.visible === false) continue;
     const geo = organGeometry(organ);
-    const mesh = new THREE.Mesh(geo, organMaterial(organ.system));
+    const mesh = new THREE.Mesh(
+      geo,
+      applyRenderOverride(organMaterial(organ.system), renderOverride, globalOpacity),
+    );
     mesh.position.set(
       organ.transform.position.x,
       organ.transform.position.y,
@@ -1707,6 +1858,11 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
     scene.traverse((obj: THREE.Object3D) => {
       if (obj instanceof THREE.Mesh) {
         obj.geometry.dispose();
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach((m) => m.dispose());
+        } else {
+          obj.material.dispose();
+        }
       }
     });
     if (container.contains(renderer.domElement)) {
@@ -1729,20 +1885,22 @@ export interface PickResult {
   extra: Record<string, unknown>;
 }
 
+// Reusable raycaster — avoids GC pressure from per-frame allocation
+const _raycaster = new THREE.Raycaster();
+
 export function pick(
   handle: SceneHandle,
   ndc: THREE.Vector2,
   visibleLayers: Set<LayerName>,
 ): PickResult | null {
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(ndc, handle.camera);
+  _raycaster.setFromCamera(ndc, handle.camera);
 
   const targets: THREE.Object3D[] = [];
   for (const ln of ALL_LAYERS) {
     if (visibleLayers.has(ln)) targets.push(handle.layers[ln]);
   }
 
-  const hits = raycaster.intersectObjects(targets, true);
+  const hits = _raycaster.intersectObjects(targets, true);
   if (hits.length === 0) return null;
 
   const hit = hits[0];
