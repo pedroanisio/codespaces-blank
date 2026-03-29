@@ -123,14 +123,27 @@ def _mesh_vertex_normals(positions: list[float], indices: list[int]) -> list[flo
             normals[i + 1] /= mag
             normals[i + 2] /= mag
         else:
-            # Degenerate normal (pole vertex or coplanar faces):
-            # fall back to using the vertex position as the normal direction.
-            # This is correct for convex shapes (sphere, ellipsoid).
-            px, py, pz = positions[i], positions[i + 1], positions[i + 2]
-            pmag = math.sqrt(px * px + py * py + pz * pz) or 1.0
-            normals[i] = px / pmag
-            normals[i + 1] = py / pmag
-            normals[i + 2] = pz / pmag
+            vertex_idx = i // 3
+            fallback = None
+            for tri_i in range(0, len(indices), 3):
+                i0, i1, i2 = indices[tri_i], indices[tri_i + 1], indices[tri_i + 2]
+                if vertex_idx not in (i0, i1, i2):
+                    continue
+                ax, ay, az = positions[i0 * 3:i0 * 3 + 3]
+                bx, by, bz = positions[i1 * 3:i1 * 3 + 3]
+                cx, cy, cz = positions[i2 * 3:i2 * 3 + 3]
+                ux, uy, uz = bx - ax, by - ay, bz - az
+                vx, vy, vz = cx - ax, cy - ay, cz - az
+                fnx = uy * vz - uz * vy
+                fny = uz * vx - ux * vz
+                fnz = ux * vy - uy * vx
+                fmag = math.sqrt(fnx * fnx + fny * fny + fnz * fnz)
+                if fmag > 1e-8:
+                    fallback = (fnx / fmag, fny / fmag, fnz / fmag)
+                    break
+            if fallback is None:
+                fallback = (0.0, 1.0, 0.0)
+            normals[i], normals[i + 1], normals[i + 2] = fallback
     return _round_list(normals)
 
 
@@ -315,7 +328,7 @@ def _indexed_mesh_geometry(name: str, cls: str, region: str, bone_id: str,
         "boneId": bone_id,
         "lods": lods,
         "isClosed": True,
-        "isManifold": True,
+        "isManifold": False,
         "source": source,
     }
     if surface_regions:
@@ -323,4 +336,4 @@ def _indexed_mesh_geometry(name: str, cls: str, region: str, bone_id: str,
     return geometry
 
 
-__all__ = [name for name in globals() if not name.startswith("__")]
+__all__ = [name for name in globals() if not name.startswith("_")]

@@ -1,4 +1,5 @@
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -107,6 +108,7 @@ def test_mesh_and_skull_helpers_cover_branches():
 
     normals = geometry._mesh_vertex_normals([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0], [0, 1, 2])
     assert len(normals) == 9
+    assert normals[:3] == [0.0, 1.0, 0.0]
 
     lathe = geometry._lathe_mesh([(0.5, -1.0), (1.0, 1.0)], 6)
     sphere = geometry._uv_sphere_mesh(1.0, 2.0, 3.0, 6, 4)
@@ -154,12 +156,53 @@ def test_geometry_loading_and_generation_variants(tmp_path, monkeypatch):
     assert all(g["geometryType"] == "parametric_csg" for g in parametric)
     assert any("surfaceRegions" in g for g in indexed)
     assert any("landmarks" in g for g in indexed)
+    assert all(g["isManifold"] is False for g in indexed)
     indexed_by_bone = {g["boneId"]: g for g in indexed}
     skull_landmark_names = {
         lm["name"]
         for lm in indexed_by_bone[reg.bone_ids[shared.B_SPHENOID]].get("landmarks", [])
     }
     assert "sella_turcica" in skull_landmark_names
+    menton = next(
+        lm
+        for lm in indexed_by_bone[reg.bone_ids[shared.B_MANDIBLE]].get("landmarks", [])
+        if lm["name"] == "menton"
+    )
+    menton_normal = menton["surfaceNormal"]
+    assert math.isclose(
+        math.sqrt(
+            menton_normal["x"] ** 2 + menton_normal["y"] ** 2 + menton_normal["z"] ** 2
+        ),
+        1.0,
+        rel_tol=1e-6,
+    )
     frontal_csg = parametric[shared.B_FRONTAL]["csgTree"]
     assert frontal_csg["operation"] == "union"
     assert len(frontal_csg["children"]) >= 5
+
+
+def test_public_geometry_exports_hide_private_helpers():
+    assert "_mesh_for_bone" not in geometry.__all__
+    assert "gen_bone_geometries" in geometry.__all__
+
+
+def test_skeleton_helpers_validate_cycles_and_names():
+    assert skeleton._cervical_name(1) == "C1 atlas"
+    assert skeleton._cervical_name(2) == "C2 axis"
+    assert skeleton._cervical_name(7) == "C7 vertebra"
+
+    acyclic = [
+        skeleton.BoneDef("root", "flat", "axial", None, 1, 1, 1, 1, (0, 0, 0)),
+        skeleton.BoneDef("child", "flat", "axial", 0, 1, 1, 1, 1, (0, 0, 0)),
+    ]
+    skeleton._validate_parent_graph(acyclic)
+
+    cyclic = [
+        skeleton.BoneDef("a", "flat", "axial", 1, 1, 1, 1, 1, (0, 0, 0)),
+        skeleton.BoneDef("b", "flat", "axial", 0, 1, 1, 1, 1, (0, 0, 0)),
+    ]
+    try:
+        skeleton._validate_parent_graph(cyclic)
+        raise AssertionError("Expected cycle validation to fail")
+    except ValueError as exc:
+        assert "parent cycle" in str(exc)

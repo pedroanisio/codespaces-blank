@@ -1,7 +1,42 @@
-from ..shared import *
-from ..skeleton import *
-from .csg import *
-from .mesh import *
+from ..shared import Any, Path, Reg, json, math, uid, vec3
+from ..skeleton import BONE_DEFS
+from .csg import (
+    _csg_flat_bone,
+    _csg_irregular_bone,
+    _csg_long_bone,
+    _csg_sesamoid_bone,
+    _csg_short_bone,
+)
+from .mesh import _indexed_mesh_geometry
+
+
+_DEFAULT_ASSETS_DIR = (
+    Path(__file__).resolve().parents[3] / "session-3" / "human-controller" / "public" / "assets" / "bones"
+)
+_DEFAULT_BONE_MESH_MAP = (
+    Path(__file__).resolve().parents[3] / "session-3" / "human-controller" / "tools" / "bone_mesh_map.json"
+)
+
+
+def _normalize_vec3(value: dict[str, float]) -> dict[str, float]:
+    mag = math.sqrt(value["x"] ** 2 + value["y"] ** 2 + value["z"] ** 2)
+    if mag <= 1e-8:
+        return value
+    return vec3(value["x"] / mag, value["y"] / mag, value["z"] / mag)
+
+
+def _normalize_landmarks(landmarks: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    normalized: dict[str, list[dict]] = {}
+    for bone_name, entries in landmarks.items():
+        normalized_entries: list[dict] = []
+        for entry in entries:
+            normalized_entry = dict(entry)
+            normal = normalized_entry.get("surfaceNormal")
+            if normal is not None:
+                normalized_entry["surfaceNormal"] = _normalize_vec3(normal)
+            normalized_entries.append(normalized_entry)
+        normalized[bone_name] = normalized_entries
+    return normalized
 
 
 def _load_mesh_manifest(assets_dir: str | None = None) -> dict[str, dict]:
@@ -9,8 +44,7 @@ def _load_mesh_manifest(assets_dir: str | None = None) -> dict[str, dict]:
     if assets_dir:
         manifest_path = Path(assets_dir) / "manifest.json"
     else:
-        manifest_path = (Path(__file__).parent.parent.parent
-                         / "session-3" / "human-controller" / "public" / "assets" / "bones" / "manifest.json")
+        manifest_path = _DEFAULT_ASSETS_DIR / "manifest.json"
     if manifest_path.exists():
         with open(manifest_path) as f:
             return json.load(f)
@@ -19,8 +53,7 @@ def _load_mesh_manifest(assets_dir: str | None = None) -> dict[str, dict]:
 
 def _load_bone_mesh_map() -> dict[str, str]:
     """Load bone name → filename mapping from bone_mesh_map.json."""
-    map_path = (Path(__file__).parent.parent.parent
-                / "session-3" / "human-controller" / "tools" / "bone_mesh_map.json")
+    map_path = _DEFAULT_BONE_MESH_MAP
     if not map_path.exists():
         return {}
     with open(map_path) as f:
@@ -46,9 +79,9 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh",
          Watertight, UVs, normals, 2 LOD levels. Fallback.
       3. `parametric_csg` — compact CSG tree. Lightest weight.
 
-    When `assets_dir` is provided (or manifest.json exists in the default
-    location), bones with matching mesh files get `external_asset` geometry
-    pointing to the GLB URI. Remaining bones get inline `indexed_mesh`.
+    When `assets_dir` is provided, bones with matching mesh files get
+    `external_asset` geometry pointing to the GLB URI. Remaining bones get
+    inline `indexed_mesh` or `parametric_csg` according to `geometry_format`.
     """
     _CSG_BUILDERS = {
         "long": _csg_long_bone,
@@ -59,8 +92,8 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh",
     }
 
     # Load external mesh manifest and name→file mapping
-    manifest = _load_mesh_manifest(assets_dir)
-    mesh_map = _load_bone_mesh_map()
+    manifest = _load_mesh_manifest(assets_dir) if assets_dir else {}
+    mesh_map = _load_bone_mesh_map() if assets_dir else {}
 
     geometries: list[dict] = []
     for i, (name, cls, _region, _parent, length, width, depth, _mass, _pos) in enumerate(BONE_DEFS):
@@ -124,7 +157,7 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh",
     # Wu G et al., J Biomech 38(5):981-992, 2005 (upper extremity).
     #
     # Positions are in bone-local frame (cm). Y = long axis.
-    _LANDMARKS: dict[str, list[dict]] = {
+    _LANDMARKS = _normalize_landmarks({
         # Pelvis
         "Hip bone (R)": [
             {"name": "asis_r", "position": vec3(0, 5, 6), "surfaceNormal": vec3(0, 0, 1)},
@@ -270,22 +303,15 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh",
             {"name": "condylion_r", "position": vec3(-4.6, 4.4, -0.5), "surfaceNormal": vec3(-0.6, 0.7, 0)},
             {"name": "condylion_l", "position": vec3(4.6, 4.4, -0.5), "surfaceNormal": vec3(0.6, 0.7, 0)},
         ],
-    }
+    })
 
-    # Inject landmarks into matching geometries
-    bone_name_to_geo_idx: dict[str, int] = {}
-    for gi, g in enumerate(geometries):
-        # Find which bone this geometry belongs to
-        for bi, bd in enumerate(BONE_DEFS):
-            if r.bone_ids[bi] == g["boneId"]:
-                bone_name_to_geo_idx[bd[0]] = gi
-                break
+    bone_id_to_name = {r.bone_ids[i]: bone_def.name for i, bone_def in enumerate(BONE_DEFS)}
 
-    for bone_name, lms in _LANDMARKS.items():
-        gi = bone_name_to_geo_idx.get(bone_name)
-        if gi is not None:
-            geometries[gi]["landmarks"] = lms
+    for geometry in geometries:
+        bone_name = bone_id_to_name.get(geometry["boneId"])
+        if bone_name and bone_name in _LANDMARKS:
+            geometry["landmarks"] = _LANDMARKS[bone_name]
 
     return geometries
 
-__all__ = [name for name in globals() if not name.startswith("__")]
+__all__ = [name for name in globals() if not name.startswith("_")]

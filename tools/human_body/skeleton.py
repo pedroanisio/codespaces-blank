@@ -19,6 +19,49 @@ class BoneDef(NamedTuple):
     pos: tuple[float, float, float]
 
 
+def _cervical_name(level: int) -> str:
+    if level == 1:
+        return "C1 atlas"
+    if level == 2:
+        return "C2 axis"
+    return f"C{level} vertebra"
+
+
+def _validate_parent_graph(bones: list[BoneDef]) -> None:
+    for i, bone in enumerate(bones):
+        assert bone.parent_idx is None or (0 <= bone.parent_idx < len(bones)), (
+            f"Bone {i} ({bone.name}): invalid parent index {bone.parent_idx}"
+        )
+
+    for i, bone in enumerate(bones):
+        seen: set[int] = set()
+        parent_idx = bone.parent_idx
+        while parent_idx is not None:
+            if parent_idx in seen:
+                raise ValueError(f"Bone {i} ({bone.name}) participates in a parent cycle")
+            seen.add(parent_idx)
+            parent_idx = bones[parent_idx].parent_idx
+
+
+def _build_rotations() -> dict[str, tuple[float, float, float]]:
+    rotations: dict[str, tuple[float, float, float]] = {}
+
+    for ri in range(12):
+        tilt_fwd = 10 + ri * 3
+        rotations[f"Rib {ri+1} (R)"] = (tilt_fwd, 0, -90)
+        rotations[f"Rib {ri+1} (L)"] = (tilt_fwd, 0, 90)
+
+    rotations["Scapula (R)"] = (15, -10, 0)
+    rotations["Scapula (L)"] = (15, 10, 0)
+    rotations["Parietal bone (R)"] = (0, 0, 15)
+    rotations["Parietal bone (L)"] = (0, 0, -15)
+
+    return rotations
+
+
+_ROT = _build_rotations()
+
+
 def _build_bone_defs() -> list[BoneDef]:
     """Build the full 206-bone definition list.
 
@@ -134,10 +177,8 @@ def _build_bone_defs() -> list[BoneDef]:
 
     # === CERVICAL VERTEBRAE C7–C1 (7) ===
     for i, level in enumerate(range(7, 0, -1)):
-        name = f"C{level} vertebra" if level > 2 else ("C2 axis" if level == 2 else "C1 atlas")
-        parent = "T1 vertebra" if i == 0 else (
-            f"C{level + 1} vertebra" if level + 1 > 2 else ("C2 axis" if level + 1 == 2 else "C1 atlas")
-        )
+        name = _cervical_name(level)
+        parent = "T1 vertebra" if i == 0 else _cervical_name(level + 1)
         y = 155 + i * 1.7
         add(name, "irregular", "axial_vertebral", parent,
             1.7, 3, 2.5, 11, (0, y, 0))
@@ -166,10 +207,7 @@ def _build_bone_defs() -> list[BoneDef]:
         else:
             resolved.append(b)
 
-    # --- Validate parent DAG: every parent index must be valid ---
-    for i, b in enumerate(resolved):
-        assert b.parent_idx is None or (0 <= b.parent_idx < len(resolved)), \
-            f"Bone {i} ({b.name}): invalid parent index {b.parent_idx}"
+    _validate_parent_graph(resolved)
 
     return resolved
 
@@ -296,35 +334,6 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
     REF_H = 175.0
     ms = weight / REF_W
     ds = height / REF_H
-
-    # Anatomical rotations (Euler XYZ degrees) for non-long bones.
-    # CSG shapes are authored with Y-up as the bone's long axis.
-    # These rotations orient them correctly in world space.
-    # Convention: (rx, ry, rz) in degrees, applied as Euler XYZ intrinsic.
-    _ROT: dict[str, tuple[float, float, float]] = {}
-
-    # Ribs: rotate ~90° around Z so capsule Y-axis points laterally.
-    # In Euler XYZ: +90° Z rotates local Y toward −X (leftward in world).
-    # R ribs at negative X need local Y pointing toward −X: Z = +90°.
-    # L ribs at positive X need local Y pointing toward +X: Z = −90°.
-    # Forward tilt via X rotation: lower ribs tilt more anteriorly.
-    for ri in range(12):
-        tilt_fwd = 10 + ri * 3
-        _ROT[f"Rib {ri+1} (R)"] = (tilt_fwd, 0, -90)  # local Y → +X → toward body (rib goes lateral-right)
-        _ROT[f"Rib {ri+1} (L)"] = (tilt_fwd, 0, 90)   # local Y → −X → toward body (rib goes lateral-left)
-
-    # Scapulae: thin plates lying flat on the back (long axis vertical, thin axis posterior)
-    # Default CSG has Y=long axis which is correct, just needs slight forward tilt
-    _ROT["Scapula (R)"] = (15, -10, 0)
-    _ROT["Scapula (L)"] = (15, 10, 0)
-
-    # Cranial bones: thin curved plates. CSG ellipsoid Y=long axis.
-    # These are already roughly correct since they're at skull positions,
-    # but parietal bones should tilt outward slightly
-    _ROT["Parietal bone (R)"] = (0, 0, 15)
-    _ROT["Parietal bone (L)"] = (0, 0, -15)
-
-    # Sternum: vertical plate, thin in Z — already correct orientation
 
     for _ in BONE_DEFS:
         r.bone_ids.append(uid())

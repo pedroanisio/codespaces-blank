@@ -343,4 +343,4 @@ def _csg_sesamoid_bone(l: float, w: float, d: float, _name: str) -> dict:
     ])
 
 
-__all__ = [name for name in globals() if not name.startswith("__")]
+__all__ = [name for name in globals() if not name.startswith("_")]
