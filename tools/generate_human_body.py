@@ -1433,6 +1433,114 @@ def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
         if nerve_name in r.nerve_name_to_idx:
             m["innervation"]["nerveId"] = r.nerve_ids[r.nerve_name_to_idx[nerve_name]]
 
+    # ── P0.1: Wrapping surfaces, via-points, and moment arms ──────────────
+    # Muscles that cross prominent bony landmarks need wrapping surfaces
+    # to avoid penetrating bone. Via-points redirect the muscle path.
+    # Moment arms are the perpendicular distance from joint center to
+    # muscle line of action — the key quantity for inverse dynamics.
+    #
+    # Data source: Arnold et al., Ann Biomed Eng 38(2):269-279, 2010 (LE);
+    #              Holzbaur et al., Ann Biomed Eng 33(6):829-840, 2005 (UE).
+    #
+    # Stored in the schema's `extensions` field (key: "biomechanics:musclePath")
+    # since MuscleSchema has no wrapping/via-point fields yet.
+
+    # Wrapping surface templates: bone index → (type, radius, local position, local axis)
+    _WRAP_SURFACES: dict[int, list[dict]] = {
+        B_FEM_R: [{"type": "cylinder", "radius": 2.5, "position": vec3(0, 20, 0),
+                    "axis": vec3(1, 0, 0), "boneId": None, "name": "femoral_neck_wrap"}],
+        B_FEM_L: [{"type": "cylinder", "radius": 2.5, "position": vec3(0, 20, 0),
+                    "axis": vec3(1, 0, 0), "boneId": None, "name": "femoral_neck_wrap"}],
+        B_HUMER_R: [{"type": "sphere", "radius": 2.0, "position": vec3(0, 16, 0),
+                      "boneId": None, "name": "humeral_head_wrap"}],
+        B_HUMER_L: [{"type": "sphere", "radius": 2.0, "position": vec3(0, 16, 0),
+                      "boneId": None, "name": "humeral_head_wrap"}],
+        B_TIB_R: [{"type": "cylinder", "radius": 1.8, "position": vec3(0, 18, 1),
+                    "axis": vec3(1, 0, 0), "boneId": None, "name": "tibial_plateau_wrap"}],
+        B_TIB_L: [{"type": "cylinder", "radius": 1.8, "position": vec3(0, 18, 1),
+                    "axis": vec3(1, 0, 0), "boneId": None, "name": "tibial_plateau_wrap"}],
+    }
+    # Fill in bone IDs
+    for bone_idx, surfs in _WRAP_SURFACES.items():
+        for s in surfs:
+            s["boneId"] = r.bone_ids[bone_idx]
+
+    # Muscle → wrapping/via-point/moment-arm rules.
+    # Key: base muscle name (without side). Value: dict of path data.
+    # momentArm: approximate moment arm in cm at neutral joint angle.
+    # Ref: Spoor & van Leeuwen, J Biomech 25(10):1135-1143, 1992.
+    _MUSCLE_PATH: dict[str, dict] = {
+        # Lower extremity — Arnold et al. (2010)
+        "Gluteus Maximus": {"wraps": [B_FEM_R], "momentArm": {"hip_extension": 5.2}},
+        "Gluteus Medius":  {"wraps": [B_FEM_R], "momentArm": {"hip_abduction": 4.8}},
+        "Gluteus Minimus": {"wraps": [B_FEM_R], "momentArm": {"hip_abduction": 2.8}},
+        "Iliopsoas":       {"wraps": [B_HIP_R], "viaPoints": [{"boneIdx": B_HIP_R, "local": vec3(0, -5, 3)}],
+                            "momentArm": {"hip_flexion": 3.5}},
+        "Rectus Femoris":  {"momentArm": {"hip_flexion": 3.8, "knee_extension": 4.4}},
+        "Vastus Lateralis": {"momentArm": {"knee_extension": 4.2}},
+        "Vastus Medialis":  {"momentArm": {"knee_extension": 3.8}},
+        "Vastus Intermedius": {"momentArm": {"knee_extension": 4.0}},
+        "Biceps Femoris":  {"wraps": [B_TIB_R], "momentArm": {"hip_extension": 4.5, "knee_flexion": 3.2}},
+        "Semitendinosus":  {"wraps": [B_TIB_R], "momentArm": {"hip_extension": 5.0, "knee_flexion": 3.8}},
+        "Semimembranosus": {"wraps": [B_TIB_R], "momentArm": {"hip_extension": 4.8, "knee_flexion": 3.0}},
+        "Gastrocnemius":   {"wraps": [B_FEM_R], "momentArm": {"knee_flexion": 1.8, "ankle_plantarflexion": 5.2}},
+        "Soleus":          {"momentArm": {"ankle_plantarflexion": 4.8}},
+        "Tibialis Anterior": {"momentArm": {"ankle_dorsiflexion": 3.6}},
+        "Sartorius":       {"wraps": [B_FEM_R], "momentArm": {"hip_flexion": 2.5}},
+        "Gracilis":        {"momentArm": {"hip_adduction": 2.0}},
+        "Adductor Magnus": {"momentArm": {"hip_adduction": 4.5}},
+        "Adductor Longus": {"momentArm": {"hip_adduction": 3.8}},
+        "Tensor Fasciae Latae": {"momentArm": {"hip_flexion": 3.0, "hip_abduction": 2.5}},
+        # Upper extremity — Holzbaur et al. (2005)
+        "Biceps Brachii":  {"wraps": [B_HUMER_R], "momentArm": {"elbow_flexion": 4.6, "shoulder_flexion": 2.0}},
+        "Triceps Brachii": {"momentArm": {"elbow_extension": 2.2, "shoulder_extension": 1.5}},
+        "Brachialis":      {"momentArm": {"elbow_flexion": 2.8}},
+        "Deltoid":         {"wraps": [B_HUMER_R], "momentArm": {"shoulder_abduction": 2.0}},
+        "Supraspinatus":   {"wraps": [B_HUMER_R], "momentArm": {"shoulder_abduction": 1.0}},
+        "Infraspinatus":   {"wraps": [B_HUMER_R], "momentArm": {"shoulder_external_rotation": 2.2}},
+        "Subscapularis":   {"wraps": [B_HUMER_R], "momentArm": {"shoulder_internal_rotation": 2.5}},
+        "Pectoralis Major": {"wraps": [B_HUMER_R], "momentArm": {"shoulder_flexion": 3.5, "shoulder_adduction": 4.0}},
+        "Latissimus Dorsi": {"wraps": [B_HUMER_R], "momentArm": {"shoulder_extension": 4.0, "shoulder_adduction": 3.5}},
+        # Trunk
+        "Erector Spinae":  {"momentArm": {"trunk_extension": 5.5}},
+        "Rectus Abdominis": {"momentArm": {"trunk_flexion": 8.0}},
+        "External Oblique": {"momentArm": {"trunk_flexion": 4.5, "trunk_rotation": 3.0}},
+    }
+
+    for i, m in enumerate(muscles):
+        base = m["name"].replace(" (R)", "").replace(" (L)", "")
+        side = "(R)" if "(R)" in m["name"] else ("(L)" if "(L)" in m["name"] else "")
+        path_data = _MUSCLE_PATH.get(base)
+        if not path_data:
+            continue
+
+        ext: dict[str, Any] = {}
+
+        # Wrapping surfaces
+        if "wraps" in path_data:
+            wrap_list = []
+            for bone_idx in path_data["wraps"]:
+                actual_idx = _mirror_bone(bone_idx) if side == "(L)" else bone_idx
+                for surf in _WRAP_SURFACES.get(actual_idx, []):
+                    wrap_list.append(surf)
+            if wrap_list:
+                ext["wrappingSurfaces"] = wrap_list
+
+        # Via-points
+        if "viaPoints" in path_data:
+            vps = []
+            for vp in path_data["viaPoints"]:
+                actual_idx = _mirror_bone(vp["boneIdx"]) if side == "(L)" else vp["boneIdx"]
+                vps.append({"boneId": r.bone_ids[actual_idx], "localPosition": vp["local"]})
+            ext["viaPoints"] = vps
+
+        # Moment arms
+        if "momentArm" in path_data:
+            ext["momentArms"] = path_data["momentArm"]
+
+        if ext:
+            muscles[i]["extensions"] = {"biomechanics:musclePath": ext}
+
     return tendons, muscles
 
 
@@ -2473,6 +2581,124 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh") -> list[d
         else:
             geometries.append(_indexed_mesh_geometry(name, cls, r.bone_ids[i], length, width, depth))
 
+    # ── P0.4: Anatomical landmarks (ISB recommendations) ────────────────
+    # Named points on bone surfaces required for reproducible joint
+    # coordinate system definitions.
+    #
+    # Reference: Wu G et al., "ISB recommendation on definitions of joint
+    # coordinate system", J Biomech 35(4):543-548, 2002 (lower extremity);
+    # Wu G et al., J Biomech 38(5):981-992, 2005 (upper extremity).
+    #
+    # Positions are in bone-local frame (cm). Y = long axis.
+    _LANDMARKS: dict[str, list[dict]] = {
+        # Pelvis
+        "Hip bone (R)": [
+            {"name": "asis_r", "position": vec3(0, 5, 6), "surfaceNormal": vec3(0, 0, 1)},
+            {"name": "psis_r", "position": vec3(0, 3, -4), "surfaceNormal": vec3(0, 0, -1)},
+            {"name": "iliac_crest_r", "position": vec3(0, 8, 0)},
+        ],
+        "Hip bone (L)": [
+            {"name": "asis_l", "position": vec3(0, 5, 6), "surfaceNormal": vec3(0, 0, 1)},
+            {"name": "psis_l", "position": vec3(0, 3, -4), "surfaceNormal": vec3(0, 0, -1)},
+            {"name": "iliac_crest_l", "position": vec3(0, 8, 0)},
+        ],
+        # Femur
+        "Femur (R)": [
+            {"name": "greater_trochanter_r", "position": vec3(-2, 20, 0), "surfaceNormal": vec3(-1, 0, 0)},
+            {"name": "lateral_epicondyle_r", "position": vec3(-1.5, -20, 0), "surfaceNormal": vec3(-1, 0, 0)},
+            {"name": "medial_epicondyle_r", "position": vec3(1.5, -20, 0), "surfaceNormal": vec3(1, 0, 0)},
+        ],
+        "Femur (L)": [
+            {"name": "greater_trochanter_l", "position": vec3(2, 20, 0), "surfaceNormal": vec3(1, 0, 0)},
+            {"name": "lateral_epicondyle_l", "position": vec3(1.5, -20, 0), "surfaceNormal": vec3(1, 0, 0)},
+            {"name": "medial_epicondyle_l", "position": vec3(-1.5, -20, 0), "surfaceNormal": vec3(-1, 0, 0)},
+        ],
+        # Tibia
+        "Tibia (R)": [
+            {"name": "tibial_tuberosity_r", "position": vec3(0, 17, 1.5), "surfaceNormal": vec3(0, 0, 1)},
+            {"name": "medial_malleolus_r", "position": vec3(1, -18, 0), "surfaceNormal": vec3(1, 0, 0)},
+        ],
+        "Tibia (L)": [
+            {"name": "tibial_tuberosity_l", "position": vec3(0, 17, 1.5), "surfaceNormal": vec3(0, 0, 1)},
+            {"name": "medial_malleolus_l", "position": vec3(-1, -18, 0), "surfaceNormal": vec3(-1, 0, 0)},
+        ],
+        # Fibula
+        "Fibula (R)": [
+            {"name": "lateral_malleolus_r", "position": vec3(0, -17, 0), "surfaceNormal": vec3(-1, 0, 0)},
+        ],
+        "Fibula (L)": [
+            {"name": "lateral_malleolus_l", "position": vec3(0, -17, 0), "surfaceNormal": vec3(1, 0, 0)},
+        ],
+        # Calcaneus
+        "Calcaneus (R)": [
+            {"name": "calcaneal_tuberosity_r", "position": vec3(0, -3, -2), "surfaceNormal": vec3(0, -1, 0)},
+        ],
+        "Calcaneus (L)": [
+            {"name": "calcaneal_tuberosity_l", "position": vec3(0, -3, -2), "surfaceNormal": vec3(0, -1, 0)},
+        ],
+        # Humerus
+        "Humerus (R)": [
+            {"name": "lateral_epicondyle_humerus_r", "position": vec3(-1, -16, 0), "surfaceNormal": vec3(-1, 0, 0)},
+            {"name": "medial_epicondyle_humerus_r", "position": vec3(1, -16, 0), "surfaceNormal": vec3(1, 0, 0)},
+        ],
+        "Humerus (L)": [
+            {"name": "lateral_epicondyle_humerus_l", "position": vec3(1, -16, 0), "surfaceNormal": vec3(1, 0, 0)},
+            {"name": "medial_epicondyle_humerus_l", "position": vec3(-1, -16, 0), "surfaceNormal": vec3(-1, 0, 0)},
+        ],
+        # Radius
+        "Radius (R)": [
+            {"name": "radial_styloid_r", "position": vec3(0, -12, 0.5), "surfaceNormal": vec3(-1, 0, 0)},
+        ],
+        "Radius (L)": [
+            {"name": "radial_styloid_l", "position": vec3(0, -12, 0.5), "surfaceNormal": vec3(1, 0, 0)},
+        ],
+        # Ulna
+        "Ulna (R)": [
+            {"name": "ulnar_styloid_r", "position": vec3(0, -13, -0.5), "surfaceNormal": vec3(1, 0, 0)},
+            {"name": "olecranon_r", "position": vec3(0, 13, -1), "surfaceNormal": vec3(0, 0, -1)},
+        ],
+        "Ulna (L)": [
+            {"name": "ulnar_styloid_l", "position": vec3(0, -13, -0.5), "surfaceNormal": vec3(-1, 0, 0)},
+            {"name": "olecranon_l", "position": vec3(0, 13, -1), "surfaceNormal": vec3(0, 0, -1)},
+        ],
+        # Scapula
+        "Scapula (R)": [
+            {"name": "acromion_r", "position": vec3(5, 7, 0.5), "surfaceNormal": vec3(0, 1, 0)},
+            {"name": "inferior_angle_scapula_r", "position": vec3(0, -7, 0)},
+        ],
+        "Scapula (L)": [
+            {"name": "acromion_l", "position": vec3(-5, 7, 0.5), "surfaceNormal": vec3(0, 1, 0)},
+            {"name": "inferior_angle_scapula_l", "position": vec3(0, -7, 0)},
+        ],
+        # Sternum / trunk
+        "Sternum": [
+            {"name": "suprasternal_notch", "position": vec3(0, 7.5, 0.5), "surfaceNormal": vec3(0, 0, 1)},
+            {"name": "xiphoid_process", "position": vec3(0, -7, 0.3), "surfaceNormal": vec3(0, 0, 1)},
+        ],
+        # Cervical
+        "C7 vertebra": [
+            {"name": "c7_spinous_process", "position": vec3(0, 0, -1.5), "surfaceNormal": vec3(0, 0, -1)},
+        ],
+        # Sacrum
+        "Sacrum": [
+            {"name": "sacral_promontory", "position": vec3(0, 5, 1), "surfaceNormal": vec3(0, 0, 1)},
+        ],
+    }
+
+    # Inject landmarks into matching geometries
+    bone_name_to_geo_idx: dict[str, int] = {}
+    for gi, g in enumerate(geometries):
+        # Find which bone this geometry belongs to
+        for bi, bd in enumerate(BONE_DEFS):
+            if r.bone_ids[bi] == g["boneId"]:
+                bone_name_to_geo_idx[bd[0]] = gi
+                break
+
+    for bone_name, lms in _LANDMARKS.items():
+        gi = bone_name_to_geo_idx.get(bone_name)
+        if gi is not None:
+            geometries[gi]["landmarks"] = lms
+
     return geometries
 
 
@@ -2800,11 +3026,34 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
                 "targetSegmentId": r.segment_ids[seg_idx], "displacedVolume": disp_vol,
                 "fluidDensity": density, "centerOfBuoyancy": vec3(0, 50, 0)}
 
-    def _equil():
-        nf = vec3(round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.2,0.2),2))
-        return {"netForce": nf, "netMoment": vec3(round(random.uniform(-1,1),1), round(random.uniform(-0.5,0.5),1), round(random.uniform(-0.5,0.5),1)),
-                "isStatic": True, "residualForceMagnitude": round(math.sqrt(nf["x"]**2+nf["y"]**2+nf["z"]**2), 2),
-                "residualMomentMagnitude": round(random.uniform(0.5,2), 1)}
+    def _equil(forces: list[dict]) -> dict:
+        """Compute equilibrium from the actual force list.
+
+        Sums all force vectors (magnitude × direction) to get the net force.
+        isStatic is true only when the residual magnitude is below a threshold
+        (1% of total body weight ≈ 7 N for a 75 kg person).
+
+        This replaces the previous fabricated equilibrium that claimed isStatic=True
+        with random nonzero residuals — a self-contradiction flagged in assessment_01.md §2.2.
+        """
+        fx, fy, fz = 0.0, 0.0, 0.0
+        for f in forces:
+            mag = f.get("magnitude", 0)
+            d = f.get("direction", {"x": 0, "y": 0, "z": 0})
+            fx += mag * d["x"]
+            fy += mag * d["y"]
+            fz += mag * d["z"]
+        nf = vec3(round(fx, 2), round(fy, 2), round(fz, 2))
+        res_force = round(math.sqrt(fx * fx + fy * fy + fz * fz), 2)
+        # Static threshold: 1% of body weight (tw ≈ weight * 9.81)
+        threshold = tw * 0.01
+        return {
+            "netForce": nf,
+            "netMoment": vec3(0, 0, 0),  # moment computation requires application points — left as zero
+            "isStatic": res_force < threshold,
+            "residualForceMagnitude": res_force,
+            "residualMomentMagnitude": 0.0,
+        }
 
     def _contacts_bilateral():
         return [{"id": uid(), "name": "Right foot ground contact", "contactType": "foot_ground",
@@ -2830,7 +3079,7 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     f1 += [_lig("ACL passive (R)", 25, "Anterior cruciate ligament (R)", J_KNEE_R),
            _lig("ACL passive (L)", 25, "Anterior cruciate ligament (L)", J_KNEE_L)]
     conditions.append({"id": uid(), "name": "double_leg_standing", "poseId": r.saved_pose_id,
-                        "forces": f1, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
+                        "forces": f1, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil(f1)})
 
     # --- LC 2: Contrapposto (asymmetric weight shift) ---
     rf = random.uniform(0.55, 0.75)
@@ -2851,7 +3100,7 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     km = {"id": uid(), "name": "Knee resultant moment (R)", "momentType": "joint_resultant",
           "aboutJointId": r.joint_ids[J_KNEE_R], "axis": unit_vec3(0,0,1), "magnitude": round(random.uniform(800,1500))}
     conditions.append({"id": uid(), "name": "contrapposto_standing", "poseId": r.pose_id,
-                        "forces": f2, "moments": [km], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
+                        "forces": f2, "moments": [km], "contacts": _contacts_bilateral(), "equilibrium": _equil(f2)})
 
     # --- LC 3: Mid-stance gait (R stance phase) ---
     # GRF ~ 1.0 BW at mid-stance (Winter 2009, Fig 4.4)
@@ -2875,7 +3124,7 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     # Use the 4th saved pose (gait_midstance_r)
     ms_pose_id = r.saved_pose_id  # will be overridden at runtime
     conditions.append({"id": uid(), "name": "gait_midstance_r", "poseId": ms_pose_id,
-                        "forces": f3, "moments": [], "contacts": _contacts_bilateral()[:1], "equilibrium": _equil()})
+                        "forces": f3, "moments": [], "contacts": _contacts_bilateral()[:1], "equilibrium": _equil(f3)})
 
     # --- LC 4: Heel-strike (R foot initial contact) ---
     # GRF ~ 1.2 BW at heel-strike impact (Winter 2009)
@@ -2889,7 +3138,7 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     f4 += [_jr("R hip JRF heelstrike", round(tw*3.0), J_HIP_R),
            _jr("R knee JRF heelstrike", round(tw*2.0), J_KNEE_R)]
     conditions.append({"id": uid(), "name": "gait_heelstrike_r", "poseId": ms_pose_id,
-                        "forces": f4, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
+                        "forces": f4, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil(f4)})
 
     # --- LC 5: Toe-off (R push-off) ---
     # GRF ~ 1.1 BW at toe-off (Winter 2009)
@@ -2901,7 +3150,7 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     f5 += [_jr("R ankle JRF toeoff", round(tw*5.0), J_ANKLE_R),    # peak ankle force
            _jr("R hip JRF toeoff", round(tw*2.0), J_HIP_R)]
     conditions.append({"id": uid(), "name": "gait_toeoff_r", "poseId": ms_pose_id,
-                        "forces": f5, "moments": [], "contacts": _contacts_bilateral()[:1], "equilibrium": _equil()})
+                        "forces": f5, "moments": [], "contacts": _contacts_bilateral()[:1], "equilibrium": _equil(f5)})
 
     # --- LC 6: External load — carrying object + wind + contact ---
     # Scenario: carrying 10 kg box, walking into 3 m/s headwind
@@ -2931,7 +3180,7 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     # Ligamentous passive restraint at L5-S1 under load
     f6.append(_lig("PLL L5-S1 carry", 80, "Posterior longitudinal ligament (lumbar)", J_L5S1))
     conditions.append({"id": uid(), "name": "carrying_external_load", "poseId": r.saved_pose_id,
-                        "forces": f6, "moments": [], "contacts": contacts6, "equilibrium": _equil()})
+                        "forces": f6, "moments": [], "contacts": contacts6, "equilibrium": _equil(f6)})
 
     # --- LC 7: Aquatic — partial submersion with buoyancy ---
     # Scenario: standing in waist-deep water (pelvis + legs submerged)
@@ -2953,7 +3202,7 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     f7.append(_drag("Water drag (R shank)", 15, 3, cd=1.2, area=800))
     f7.append(_drag("Water drag (L shank)", 15, 4, cd=1.2, area=800))
     conditions.append({"id": uid(), "name": "aquatic_standing", "poseId": r.saved_pose_id,
-                        "forces": f7, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
+                        "forces": f7, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil(f7)})
 
     return conditions
 HILL_EQ = "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]"
@@ -2995,12 +3244,26 @@ def gen_derivation_graph() -> dict:
 
 
 def gen_constitutive_laws() -> dict:
+    # P0.3: Tendon slack length ratios (L_T_slack / L_opt) per muscle.
+    # Source: Delp et al., IEEE Trans Biomed Eng 37(8):757-767, 1990, Table I;
+    #         Thelen, J Biomech Eng 125(1):70-77, 2003, Table 2.
+    _TENDON_SLACK: dict[str, float] = {
+        "Rectus Femoris": 3.46, "Biceps Femoris": 3.26, "Biceps Brachii": 2.43,
+        "Triceps Brachii": 1.43, "Pectoralis Major": 0.85, "Deltoid": 1.15,
+    }
+
     def _hill(name, mn):
+        base = mn.replace(" (R)", "").replace(" (L)", "")
+        slack = _TENDON_SLACK.get(base, 1.5)
         return {"lawType": "hill_muscle_model", "id": uid(), "name": name,
                 "constrainedFields": {k: f"muscles[name={mn}].{k}" for k in ["muscleForce", "activation", "currentLength", "contractionVelocity", "maxIsometricForce", "optimalFiberLength", "maxContractionVelocity"]},
                 "forceLength": {"widthParameter": 0.56, "minActiveForceLengthRatio": 0.5, "maxActiveForceLengthRatio": 1.5},
                 "forceVelocity": {"concentricCurveShape": 0.25, "eccentricForceMax": 1.4, "eccentricCurveShape": 0.15},
                 "passiveElement": {"strainAtMaxForce": 0.6, "exponentialShape": 4.0},
+                "tendonCompliance": {
+                    "normalizedSlackLength": round(slack, 2),
+                    "strainAtMaxIsometricForce": 0.033,
+                },
                 "constraint": {"equation": HILL_EQ, "violationSeverity": "error", "toleranceFraction": 0.1}, "validityBoundaries": HILL_V}
     def _lig(name, ln):
         return {"lawType": "ligament_force_strain", "id": uid(), "name": name,
