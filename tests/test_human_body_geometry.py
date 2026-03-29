@@ -25,7 +25,12 @@ def test_csg_builder_branches():
     assert geometry._csg_long_bone(35, 4, 4, "Humerus (R)")["nodeType"] == "operation"
     assert geometry._csg_long_bone(32, 4, 4, "Tibia (R)")["nodeType"] == "operation"
     assert geometry._csg_long_bone(30, 4, 4, "Ulna (R)")["nodeType"] == "operation"
-    assert geometry._csg_long_bone(10, 2, 2, "Metacarpal I (R)")["nodeType"] == "operation"
+    metacarpal = geometry._csg_long_bone(10, 2, 2, "Metacarpal I (R)")
+    metatarsal = geometry._csg_long_bone(10, 2, 2, "Metatarsal I (R)")
+    assert metacarpal["nodeType"] == "operation"
+    assert metatarsal["nodeType"] == "operation"
+    assert metacarpal["children"][1]["primitive"]["position"]["y"] < 0
+    assert metatarsal["children"][1]["primitive"]["position"]["y"] > 0
     assert geometry._csg_long_bone(3, 1, 1, "Thumb distal phalanx (R)")["nodeType"] == "primitive"
 
     frontal_flat = geometry._csg_flat_bone(10, 10, 1, "Frontal bone")
@@ -42,7 +47,7 @@ def test_csg_builder_branches():
     assert len(rib_1["children"]) == 2
     assert len(rib_7["children"]) == 3
     assert len(rib_12["children"]) == 2
-    assert geometry._csg_flat_bone(2, 1, 0.1, "Nasal bone (R)")["primitive"]["primitiveType"] == "box"
+    assert geometry._csg_flat_bone(2, 1, 0.1, "Nasal bone (R)")["operation"] == "union"
     assert geometry._csg_flat_bone(5, 5, 2, "Flat bone")["primitive"]["primitiveType"] == "box"
 
     t1 = geometry._csg_irregular_bone(4, 4, 4, "T1 vertebra")
@@ -76,7 +81,7 @@ def test_csg_builder_branches():
     assert sphenoid["operation"] == "union"
     assert len(sphenoid["children"]) >= 3
     assert geometry._csg_irregular_bone(5, 5, 5, "Hyoid")["operation"] == "union"
-    assert geometry._csg_irregular_bone(1, 1, 1, "Malleus (R)")["primitive"]["primitiveType"] == "ellipsoid"
+    assert geometry._csg_irregular_bone(1, 1, 1, "Malleus (R)")["operation"] == "union"
     maxilla = geometry._csg_irregular_bone(3, 3, 3, "Maxilla (R)")
     assert maxilla["operation"] == "union"
     zygomatic = geometry._csg_irregular_bone(3, 3, 3, "Zygomatic bone (R)")
@@ -85,7 +90,9 @@ def test_csg_builder_branches():
 
     assert geometry._csg_short_bone(8, 4, 4, "Calcaneus (R)")["operation"] == "union"
     assert geometry._csg_short_bone(6, 4, 3, "Talus (R)")["operation"] == "union"
-    assert geometry._csg_short_bone(3, 3, 3, "Scaphoid (R)")["primitive"]["primitiveType"] == "ellipsoid"
+    assert geometry._csg_short_bone(3, 3, 3, "Scaphoid (R)")["operation"] == "union"
+    assert geometry._csg_short_bone(3, 3, 3, "Capitate (R)")["operation"] == "union"
+    assert geometry._csg_short_bone(3, 3, 3, "Hamate (R)")["operation"] == "union"
     assert geometry._csg_sesamoid_bone(4, 4, 2, "Patella (R)")["operation"] == "union"
 
 
@@ -143,10 +150,17 @@ def test_mesh_and_skull_helpers_cover_branches():
     assert geometry._mesh_for_bone("Femur (R)", "long", 40, 4, 4, 8, 6)[0]
     assert geometry._mesh_for_bone("Frontal bone", "flat", 10, 8, 1, 8, 6)[0]
     assert geometry._mesh_for_bone("Scapula (R)", "flat", 10, 8, 1, 8, 6)[0]
+    assert geometry._mesh_for_bone("Nasal bone (R)", "flat", 2, 1, 0.1, 8, 6)[0]
     rib_1_mesh = geometry._mesh_for_bone("Rib 1 (R)", "flat", 10, 2, 1, 8, 6)
     rib_7_mesh = geometry._mesh_for_bone("Rib 7 (R)", "flat", 14, 2, 1, 8, 6)
     rib_12_mesh = geometry._mesh_for_bone("Rib 12 (R)", "flat", 8, 2, 1, 8, 6)
-    assert geometry._mesh_for_bone("Scaphoid (R)", "short", 3, 3, 3, 8, 6)[0]
+    scaphoid_mesh = geometry._mesh_for_bone("Scaphoid (R)", "short", 3, 3, 3, 8, 6)
+    capitate_mesh = geometry._mesh_for_bone("Capitate (R)", "short", 3, 3, 3, 8, 6)
+    hamate_mesh = geometry._mesh_for_bone("Hamate (R)", "short", 3, 3, 3, 8, 6)
+    metacarpal_mesh = geometry._mesh_for_bone("Metacarpal I (R)", "long", 10, 2, 2, 8, 6)
+    metatarsal_mesh = geometry._mesh_for_bone("Metatarsal I (R)", "long", 10, 2, 2, 8, 6)
+    malleus_mesh = geometry._mesh_for_bone("Malleus (R)", "irregular", 1, 1, 1, 8, 6)
+    incus_mesh = geometry._mesh_for_bone("Incus (R)", "irregular", 1, 1, 1, 8, 6)
     assert geometry._mesh_for_bone("Patella (R)", "sesamoid", 3, 3, 3, 8, 6)[0]
     assert geometry._mesh_for_bone("Mandible", "irregular", 10, 8, 4, 8, 6)[0]
     atlas_mesh = geometry._mesh_for_bone("C1 atlas", "irregular", 4, 4, 4, 8, 6)
@@ -158,6 +172,10 @@ def test_mesh_and_skull_helpers_cover_branches():
     hip_mesh = geometry._mesh_for_bone("Hip bone (R)", "irregular", 10, 8, 6, 8, 6)
     assert len(rib_1_mesh[0]) != len(rib_7_mesh[0]) or rib_1_mesh[0] != rib_7_mesh[0]
     assert len(rib_12_mesh[0]) == len(rib_1_mesh[0])
+    assert scaphoid_mesh[0] != capitate_mesh[0]
+    assert hamate_mesh[0] != scaphoid_mesh[0]
+    assert metacarpal_mesh[0] != metatarsal_mesh[0]
+    assert malleus_mesh[0] != incus_mesh[0]
     assert len(atlas_mesh[0]) > len(axis_mesh[0])
     assert len(c7_mesh[0]) > len(c3_mesh[0])
     assert len(t1_mesh[0]) > len(c3_mesh[0])

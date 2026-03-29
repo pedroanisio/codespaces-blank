@@ -1,7 +1,5 @@
 from ..shared import *
 from ..skeleton import *
-
-
 def _prim(ptype: str, **kw) -> dict:
     """Create a CSG primitive leaf node."""
     return {"nodeType": "primitive", "primitive": {"primitiveType": ptype, **kw}}
@@ -9,8 +7,6 @@ def _prim(ptype: str, **kw) -> dict:
 def _op(operation: str, children: list[dict]) -> dict:
     """Create a CSG operation node."""
     return {"nodeType": "operation", "operation": operation, "children": children}
-
-
 def _rib_number(name: str) -> int | None:
     parts = name.split()
     if len(parts) < 2 or parts[0] != "Rib":
@@ -19,14 +15,8 @@ def _rib_number(name: str) -> int | None:
         return int(parts[1])
     except ValueError:
         return None
-
 def _csg_long_bone(l: float, w: float, d: float, name: str) -> dict:
-    """CSG tree for long bones: shaft capsule + epiphyseal spheres.
-
-    Major long bones (femur, humerus, tibia, ulna, radius, fibula) get
-    proximal + distal epiphyses. Smaller ones (metacarpals, metatarsals,
-    phalanges, clavicles) get a simpler capsule-only or capsule+sphere.
-    """
+    """CSG tree for long bones."""
     r_shaft = (w + d) / 4
     is_major = l > 20
     is_medium = 5 < l <= 20
@@ -75,6 +65,14 @@ def _csg_long_bone(l: float, w: float, d: float, name: str) -> dict:
         ])
 
     if is_medium:
+        if "Metacarpal" in name or "Metatarsal" in name:
+            head_bias = -1 if "Metacarpal" in name else 1
+            shaft_h = l * (0.7 if "Metacarpal" in name else 0.78)
+            return _op("union", [
+                _prim("capsule", radius=round(r_shaft * 0.92, 2), height=round(shaft_h, 2), position=vec3(0, 0, 0)),
+                _prim("ellipsoid", radii=vec3(round(r_shaft * 1.2, 2), round(r_shaft * 0.9, 2), round(r_shaft, 2)),
+                      position=vec3(0, round(head_bias * l * 0.32, 1), 0)),
+            ])
         shaft_h = l * 0.75
         r_end = r_shaft * 1.15
         return _op("union", [
@@ -166,6 +164,8 @@ def _csg_flat_bone(l: float, w: float, d: float, name: str) -> dict:
             _prim("ellipsoid", radii=vec3(round(r_shaft * 0.7, 2), round(l * 0.12, 2), round(r_shaft * 0.85, 2)),
                   position=vec3(0, round(-l * 0.34, 2), round(d * 0.1, 2))),
         ])
+    if any(k in name for k in ["Nasal bone", "Lacrimal bone", "Vomer"]):
+        return _op("union", [_prim("box", halfExtents=vec3(round(w * 0.42, 2), round(l * 0.46, 2), round(max(d, 0.1) * 0.5, 2)), position=vec3(0, 0, 0)), _prim("capsule", radius=round(max(d * 0.12, 0.03), 2), height=round(l * 0.28, 2), position=vec3(0, round(-l * 0.08, 2), round(d * 0.22, 2)))])
 
     if d < 0.5 or (l < 3 and w < 2):
         return _prim("box", halfExtents=vec3(round(w / 2, 2), round(l / 2, 2), round(max(d, 0.1) / 2, 2)),
@@ -299,7 +299,6 @@ def _csg_irregular_bone(l: float, w: float, d: float, name: str) -> dict:
                   position=vec3(0, round(-l * 0.1, 1), round(d * 0.62, 1))),
         ])
 
-    # Sphenoid: body + broad greater wings + pterygoid processes.
     if "Sphenoid" in name:
         return _op("union", [
             _prim("box", halfExtents=vec3(round(w * 0.2, 2), round(l * 0.3, 2), round(d * 0.25, 2)),
@@ -312,7 +311,6 @@ def _csg_irregular_bone(l: float, w: float, d: float, name: str) -> dict:
                   position=vec3(round(w * 0.18, 2), round(l * 0.18, 2), round(-d * 0.08, 2))),
         ])
 
-    # Hyoid: U-shaped
     if "Hyoid" in name:
         return _op("union", [
             _prim("box", halfExtents=vec3(round(w * 0.35, 2), round(l * 0.2, 2), round(d * 0.3, 2)),
@@ -323,12 +321,8 @@ def _csg_irregular_bone(l: float, w: float, d: float, name: str) -> dict:
                   height=round(l * 0.3, 2), position=vec3(round(-w * 0.3, 1), round(l * 0.15, 1), 0)),
         ])
 
-    # Ear ossicles: tiny spheres/ellipsoids
     if any(k in name for k in ["Malleus", "Incus", "Stapes"]):
-        return _prim("ellipsoid", radii=vec3(round(w / 2, 3), round(l / 2, 3), round(d / 2, 3)),
-                      position=vec3(0, 0, 0))
-
-    # Maxilla: body with frontal and alveolar processes.
+        return _op("union", [_prim("ellipsoid", radii=vec3(round(w / 2, 3), round(l / 2, 3), round(d / 2, 3)), position=vec3(0, 0, 0)), _prim("capsule", radius=round(max(d * 0.08, 0.02), 3), height=round(l * (0.3 if "Stapes" in name else 0.45), 3), position=vec3(round(w * (0.12 if "Incus" in name else 0.18), 3), round(-l * 0.12, 3), 0))])
     if "Maxilla" in name:
         side = -1 if "(R)" in name else 1
         return _op("union", [
@@ -340,7 +334,6 @@ def _csg_irregular_bone(l: float, w: float, d: float, name: str) -> dict:
                   position=vec3(0, round(-l * 0.22, 2), round(d * 0.45, 2))),
         ])
 
-    # Zygomatic: cheek prominence with an arch-like lateral process.
     if "Zygomatic" in name:
         side = -1 if "(R)" in name else 1
         return _op("union", [
@@ -350,19 +343,13 @@ def _csg_irregular_bone(l: float, w: float, d: float, name: str) -> dict:
                   position=vec3(round(side * w * 0.22, 2), round(l * 0.04, 2), round(d * 0.18, 2))),
         ])
 
-    # Inferior concha, ethmoid, palatine — simple irregular facial elements.
     if any(k in name for k in ["Inferior nasal", "Ethmoid", "Palatine"]):
         return _prim("ellipsoid", radii=vec3(round(w / 2, 2), round(l / 2, 2), round(d / 2, 2)),
                       position=vec3(0, 0, 0))
-
-    # Default irregular: ellipsoid
     return _prim("ellipsoid", radii=vec3(round(w / 2, 2), round(l / 2, 2), round(d / 2, 2)),
                   position=vec3(0, 0, 0))
-
-
 def _csg_short_bone(l: float, w: float, d: float, name: str) -> dict:
     """CSG tree for short bones: carpals, tarsals."""
-    # Calcaneus: largest tarsal, box-like with tuberosity
     if "Calcaneus" in name:
         return _op("union", [
             _prim("box", halfExtents=vec3(round(w / 2, 2), round(l * 0.4, 2), round(d / 2, 2)),
@@ -370,8 +357,6 @@ def _csg_short_bone(l: float, w: float, d: float, name: str) -> dict:
             _prim("ellipsoid", radii=vec3(round(w * 0.35, 2), round(l * 0.2, 2), round(d * 0.4, 2)),
                   position=vec3(0, round(-l * 0.3, 1), 0)),
         ])
-
-    # Talus: dome-shaped for ankle joint
     if "Talus" in name:
         return _op("union", [
             _prim("ellipsoid", radii=vec3(round(w / 2, 2), round(l * 0.35, 2), round(d * 0.4, 2)),
@@ -379,15 +364,27 @@ def _csg_short_bone(l: float, w: float, d: float, name: str) -> dict:
             _prim("sphere", radius=round(min(w, d) * 0.25, 2),
                   position=vec3(0, round(l * 0.25, 1), 0)),
         ])
-
-    # Default short: ellipsoid
+    if any(k in name for k in ["Scaphoid", "Navicular", "Cuneiform"]):
+        return _op("union", [
+            _prim("ellipsoid", radii=vec3(round(w * 0.44, 2), round(l * 0.42, 2), round(d * 0.36, 2)), position=vec3(0, 0, 0)),
+            _prim("sphere", radius=round(min(w, d) * 0.16, 2), position=vec3(round(w * 0.18, 2), round(l * 0.12, 2), 0)),
+        ])
+    if any(k in name for k in ["Lunate", "Capitate", "Cuboid"]):
+        return _op("union", [
+            _prim("box", halfExtents=vec3(round(w * 0.36, 2), round(l * 0.34, 2), round(d * 0.34, 2)), position=vec3(0, 0, 0)),
+            _prim("ellipsoid", radii=vec3(round(w * 0.22, 2), round(l * 0.16, 2), round(d * 0.2, 2)), position=vec3(0, round(l * 0.18, 2), 0)),
+        ])
+    if any(k in name for k in ["Hamate", "Pisiform"]):
+        return _op("union", [
+            _prim("ellipsoid", radii=vec3(round(w * 0.42, 2), round(l * 0.38, 2), round(d * 0.34, 2)), position=vec3(0, 0, 0)),
+            _prim("capsule", radius=round(max(d * 0.12, 0.06), 2), height=round(l * 0.28, 2), position=vec3(round(w * 0.2, 2), round(-l * 0.12, 2), 0)),
+        ])
     return _prim("ellipsoid", radii=vec3(round(w / 2, 2), round(l / 2, 2), round(d / 2, 2)),
                   position=vec3(0, 0, 0))
 
 
 def _csg_sesamoid_bone(l: float, w: float, d: float, _name: str) -> dict:
-    """CSG tree for sesamoid bones: patella."""
-    # Flattened ellipsoid with articular facet
+    """CSG tree for sesamoid bones."""
     return _op("union", [
         _prim("ellipsoid", radii=vec3(round(w / 2, 2), round(l / 2, 2), round(d / 2, 2)),
               position=vec3(0, 0, 0)),

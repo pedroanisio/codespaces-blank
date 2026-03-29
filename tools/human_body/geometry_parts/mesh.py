@@ -223,6 +223,12 @@ def _name_perturb(name: str, offset: int = 0) -> float:
 def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: float,
                    radial_segments: int, axial_segments: int) -> tuple[list[float], list[int], list[float]]:
     if cls == "long":
+        if "Metacarpal" in name or "Metatarsal" in name:
+            half = length / 2.0
+            profile = [(0.01, -half), (depth * 0.22, -half * 0.72), (depth * 0.26, 0.0), (depth * 0.22, half * 0.56), (depth * 0.12, half)]
+            mesh = _lathe_mesh(profile, radial_segments, scale_x=width * (0.82 if "Metacarpal" in name else 0.92), scale_z=depth * 0.95)
+            shift = -0.12 if "Metacarpal" in name else 0.12
+            return _deform_positions(mesh[0], lambda x, y, z: (x, y + half * shift * (1.0 - abs(y) / max(half, 1e-6)), z)), mesh[1], mesh[2]
         half = length / 2.0
         shaft_r = max(min(width, depth) * 0.18, 0.12)
         head_r = max(width * 0.36, shaft_r * 1.4)
@@ -239,14 +245,11 @@ def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: floa
         return _lathe_mesh(profile, radial_segments, scale_x=width / max(width, depth), scale_z=depth / max(width, depth))
 
     if cls == "flat":
-        # Cranial vault bones: use a hemisphere shell (open half-sphere) so they
-        # look like curved skull plates rather than solid discs.
-        # Depth is increased to ~20% of width for visible thickness.
         is_cranial = any(k in name for k in ["Frontal", "Parietal", "Occipital", "Temporal"])
         if is_cranial:
-            shell_depth = max(width * 0.2, depth)
-            return _uv_sphere_mesh(width / 2.0, length / 2.0, shell_depth,
-                                   radial_segments, axial_segments)
+            return _uv_sphere_mesh(width / 2.0, length / 2.0, max(width * 0.2, depth), radial_segments, axial_segments)
+        if any(k in name for k in ["Nasal bone", "Lacrimal bone", "Vomer"]):
+            mesh = _uv_sphere_mesh(width * 0.42, length * 0.46, max(depth, 0.1) * 0.5, radial_segments, axial_segments); return _deform_positions(mesh[0], lambda x, y, z: (x, y, z + max(0.0, 1.0 - abs(y) / max(length, 1e-6)) * 0.08)), mesh[1], mesh[2]
         if "Rib" in name:
             half = length / 2.0
             if "Rib 1 " in name:
@@ -260,20 +263,23 @@ def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: floa
             profile = [(0.01, -half), (depth * 0.34, -half * 0.7), (depth * 0.46, -half * 0.1), (depth * 0.42, half * 0.32), (depth * 0.18, half * 0.72), (0.01, half)]
             mesh = _lathe_mesh(profile, radial_segments, scale_x=width * 0.72, scale_z=depth * 0.82)
             return _deform_positions(mesh[0], lambda x, y, z: (x + (1.6 - abs(y) / max(half, 1e-6)) * 0.9, y, z + y * 0.1)), mesh[1], mesh[2]
-
         if "Scapula" in name:
-            return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth, width * 0.08),
-                                   radial_segments, axial_segments)
-        return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth / 2.0, 0.15),
-                               radial_segments, axial_segments)
+            return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth, width * 0.08), radial_segments, axial_segments)
+        return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth / 2.0, 0.15), radial_segments, axial_segments)
 
     if cls == "short":
-        return _uv_sphere_mesh(width / 2.0, length / 2.0, depth / 2.0,
-                               radial_segments, axial_segments)
-
-    if cls == "sesamoid":
-        return _uv_sphere_mesh(width / 2.0, length / 2.0, depth / 2.0,
-                               radial_segments, axial_segments)
+        if any(k in name for k in ["Scaphoid", "Navicular", "Cuneiform"]):
+            mesh = _uv_sphere_mesh(width * 0.44, length * 0.42, depth * 0.36, radial_segments, axial_segments); return _deform_positions(mesh[0], lambda x, y, z: (x + max(0.0, y / max(length, 1e-6)) * 0.35, y, z)), mesh[1], mesh[2]
+        if any(k in name for k in ["Lunate", "Capitate", "Cuboid"]):
+            return _merge_meshes(_uv_sphere_mesh(width * 0.38, length * 0.34, depth * 0.34, radial_segments, axial_segments), _translate_mesh(_uv_sphere_mesh(width * 0.18, length * 0.14, depth * 0.16, radial_segments, axial_segments), 0.0, length * 0.16, 0.0))
+        if any(k in name for k in ["Hamate", "Pisiform"]):
+            return _merge_meshes(_uv_sphere_mesh(width * 0.42, length * 0.38, depth * 0.34, radial_segments, axial_segments), _translate_mesh(_uv_sphere_mesh(width * 0.14, length * 0.12, depth * 0.12, radial_segments, axial_segments), width * 0.18, -length * 0.12, 0.0))
+        return _uv_sphere_mesh(width / 2.0, length / 2.0, depth / 2.0, radial_segments, axial_segments)
+    if cls == "sesamoid": return _uv_sphere_mesh(width / 2.0, length / 2.0, depth / 2.0, radial_segments, axial_segments)
+    if any(k in name for k in ["Malleus", "Incus", "Stapes"]):
+        core = _uv_sphere_mesh(width * 0.48, length * 0.48, depth * 0.48, radial_segments, axial_segments)
+        stem = _translate_mesh(_uv_sphere_mesh(width * 0.12, length * (0.18 if "Stapes" in name else 0.24), depth * 0.12, radial_segments, axial_segments), width * (0.12 if "Incus" in name else 0.18), -length * 0.12, 0.0)
+        return _merge_meshes(core, stem)
 
     if "C1 atlas" in name:
         arch_rx = width * 0.22
