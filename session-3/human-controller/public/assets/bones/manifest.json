@@ -1,0 +1,405 @@
+{
+  "Hip bone (R)": {
+    "file": "hip_bone_r.glb",
+    "hash": "9f1fe557b69cbb1bc56fed7e7b6f0911eab7feb55bc0dce66e1b958fec9c55b6",
+    "byteSize": 6816,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 332,
+        "vertices": 170
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Hip bone (L)": {
+    "file": "hip_bone_l.glb",
+    "hash": "9f1fe557b69cbb1bc56fed7e7b6f0911eab7feb55bc0dce66e1b958fec9c55b6",
+    "byteSize": 6816,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 332,
+        "vertices": 170
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Sacrum": {
+    "file": "sacrum.glb",
+    "hash": "335cd1cb39b6eb92d17a53cd91ca84e52f538dde7abba8a1ddea1b8924fa8c4c",
+    "byteSize": 960,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 12,
+        "vertices": 8
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Frontal bone": {
+    "file": "frontal_bone.glb",
+    "hash": "3d6b3c2ccfdd414898745b4dc5484b8b2def95ebc085040c58b81b1401363d56",
+    "byteSize": 20336,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 1280,
+        "vertices": 353
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Parietal bone (R)": {
+    "file": "parietal_bone_r.glb",
+    "hash": "45596663120e8aba5ff36541105c433574dcfb27fe54f6f3e463ae5106180584",
+    "byteSize": 20336,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 1280,
+        "vertices": 353
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Parietal bone (L)": {
+    "file": "parietal_bone_l.glb",
+    "hash": "45596663120e8aba5ff36541105c433574dcfb27fe54f6f3e463ae5106180584",
+    "byteSize": 20336,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 1280,
+        "vertices": 353
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Occipital bone": {
+    "file": "occipital_bone.glb",
+    "hash": "edc05c60589e1b1616fecd2ebfdd711383d301a1a7cd6ee2fb783bd17768062a",
+    "byteSize": 20336,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 1280,
+        "vertices": 353
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Mandible": {
+    "file": "mandible.glb",
+    "hash": "e22bcdc5d5aee162150d37e053f680b2ecbaa2b100c973851c1332c79cca704f",
+    "byteSize": 1480,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 36,
+        "vertices": 24
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Sternum": {
+    "file": "sternum.glb",
+    "hash": "68c93742836860c15784f6508d09c731afdeac63b7fd9bc2f07598adf05fbc14",
+    "byteSize": 960,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 12,
+        "vertices": 8
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Scapula (R)": {
+    "file": "scapula_r.glb",
+    "hash": "83bc2a0bc06077b321d88bfa0ca2566a1df3e9fb9b606bdb32acc1367588ff19",
+    "byteSize": 864,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 8,
+        "vertices": 6
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Scapula (L)": {
+    "file": "scapula_l.glb",
+    "hash": "83bc2a0bc06077b321d88bfa0ca2566a1df3e9fb9b606bdb32acc1367588ff19",
+    "byteSize": 864,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 8,
+        "vertices": 6
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Clavicle (R)": {
+    "file": "clavicle_r.glb",
+    "hash": "e8c47d45c8fab1c8ee8a4f78313096edfcd2bf8b13b082a9ae5777aeb810995a",
+    "byteSize": 5400,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 256,
+        "vertices": 130
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Clavicle (L)": {
+    "file": "clavicle_l.glb",
+    "hash": "e8c47d45c8fab1c8ee8a4f78313096edfcd2bf8b13b082a9ae5777aeb810995a",
+    "byteSize": 5400,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 256,
+        "vertices": 130
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Humerus (R)": {
+    "file": "humerus_r.glb",
+    "hash": "b008a0a69bff1dceead04e4f96b435a2f514e3585262e2394b317380e962cead",
+    "byteSize": 14620,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 768,
+        "vertices": 386
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Humerus (L)": {
+    "file": "humerus_l.glb",
+    "hash": "b008a0a69bff1dceead04e4f96b435a2f514e3585262e2394b317380e962cead",
+    "byteSize": 14620,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 768,
+        "vertices": 386
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Radius (R)": {
+    "file": "radius_r.glb",
+    "hash": "551ea7de61e6f0d1ad8d5f26f0a75e17c7cc80ad4f47115d4b466da3561d7ec5",
+    "byteSize": 9388,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 480,
+        "vertices": 242
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Radius (L)": {
+    "file": "radius_l.glb",
+    "hash": "551ea7de61e6f0d1ad8d5f26f0a75e17c7cc80ad4f47115d4b466da3561d7ec5",
+    "byteSize": 9388,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 480,
+        "vertices": 242
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Ulna (R)": {
+    "file": "ulna_r.glb",
+    "hash": "4702ffbeeeb79243d21dd4e5bd1d559553373559d6d966e57baf1e970a172f68",
+    "byteSize": 9436,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 480,
+        "vertices": 242
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Ulna (L)": {
+    "file": "ulna_l.glb",
+    "hash": "4702ffbeeeb79243d21dd4e5bd1d559553373559d6d966e57baf1e970a172f68",
+    "byteSize": 9436,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 480,
+        "vertices": 242
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Femur (R)": {
+    "file": "femur_r.glb",
+    "hash": "82cea3c93001ff14d983ba61a311934728adbfc17574294dc790dc059bcee0f1",
+    "byteSize": 14568,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 768,
+        "vertices": 386
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Femur (L)": {
+    "file": "femur_l.glb",
+    "hash": "82cea3c93001ff14d983ba61a311934728adbfc17574294dc790dc059bcee0f1",
+    "byteSize": 14568,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 768,
+        "vertices": 386
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Patella (R)": {
+    "file": "patella_r.glb",
+    "hash": "36f49b68c7f1b11d42dd6aaeb9ddff4b287626282910e26c120163f8c70f994b",
+    "byteSize": 4872,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 224,
+        "vertices": 114
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Patella (L)": {
+    "file": "patella_l.glb",
+    "hash": "36f49b68c7f1b11d42dd6aaeb9ddff4b287626282910e26c120163f8c70f994b",
+    "byteSize": 4872,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 224,
+        "vertices": 114
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Tibia (R)": {
+    "file": "tibia_r.glb",
+    "hash": "b8c2f07276acd39b54442840933b1b097996f7bf1904f02d3b0c80d73553d65c",
+    "byteSize": 14620,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 768,
+        "vertices": 386
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Tibia (L)": {
+    "file": "tibia_l.glb",
+    "hash": "b8c2f07276acd39b54442840933b1b097996f7bf1904f02d3b0c80d73553d65c",
+    "byteSize": 14620,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 768,
+        "vertices": 386
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Fibula (R)": {
+    "file": "fibula_r.glb",
+    "hash": "ebe1f210522bd64e59b98b41ee1de1a8a5e01988e1a92c0efe42988e65367784",
+    "byteSize": 5400,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 256,
+        "vertices": 130
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Fibula (L)": {
+    "file": "fibula_l.glb",
+    "hash": "ebe1f210522bd64e59b98b41ee1de1a8a5e01988e1a92c0efe42988e65367784",
+    "byteSize": 5400,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 256,
+        "vertices": 130
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Calcaneus (R)": {
+    "file": "calcaneus_r.glb",
+    "hash": "7800abe2ab85426fcae5fd1503fa42bd0a73e2d622805b4dec268f8d416b1e26",
+    "byteSize": 960,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 12,
+        "vertices": 8
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Calcaneus (L)": {
+    "file": "calcaneus_l.glb",
+    "hash": "7800abe2ab85426fcae5fd1503fa42bd0a73e2d622805b4dec268f8d416b1e26",
+    "byteSize": 960,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 12,
+        "vertices": 8
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Talus (R)": {
+    "file": "talus_r.glb",
+    "hash": "b7bec0191b67ef41e08ca97dac7d410e6c99ae5a0d46334640db0ac4f3587550",
+    "byteSize": 20336,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 1280,
+        "vertices": 353
+      }
+    ],
+    "source": "procedural_placeholder"
+  },
+  "Talus (L)": {
+    "file": "talus_l.glb",
+    "hash": "b7bec0191b67ef41e08ca97dac7d410e6c99ae5a0d46334640db0ac4f3587550",
+    "byteSize": 20336,
+    "lods": [
+      {
+        "level": 0,
+        "triangles": 1280,
+        "vertices": 353
+      }
+    ],
+    "source": "procedural_placeholder"
+  }
+}

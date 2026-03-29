@@ -2678,12 +2678,51 @@ def _indexed_mesh_geometry(name: str, cls: str, region: str, bone_id: str,
     return geometry
 
 
-def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh") -> list[dict]:
+def _load_mesh_manifest(assets_dir: str | None = None) -> dict[str, dict]:
+    """Load the mesh manifest from the assets directory if it exists."""
+    if assets_dir:
+        manifest_path = Path(assets_dir) / "manifest.json"
+    else:
+        manifest_path = (Path(__file__).parent.parent
+                         / "session-3" / "human-controller" / "public" / "assets" / "bones" / "manifest.json")
+    if manifest_path.exists():
+        with open(manifest_path) as f:
+            return json.load(f)
+    return {}
+
+
+def _load_bone_mesh_map() -> dict[str, str]:
+    """Load bone name → filename mapping from bone_mesh_map.json."""
+    map_path = (Path(__file__).parent.parent
+                / "session-3" / "human-controller" / "tools" / "bone_mesh_map.json")
+    if not map_path.exists():
+        return {}
+    with open(map_path) as f:
+        data = json.load(f)
+    mapping: dict[str, str] = {}
+    for section in ["bones", "vertebrae_pattern", "ribs_pattern"]:
+        for name, info in data.get(section, {}).items():
+            if isinstance(info, dict) and "file" in info:
+                mapping[name] = info["file"]
+    return mapping
+
+
+def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh",
+                        assets_dir: str | None = None,
+                        asset_base_uri: str = "asset:///bones/") -> list[dict]:
     """Generate bone geometry for all 206 bones.
 
-    `indexed_mesh` is the default because it provides watertight triangle
-    topology, UVs, vertex normals, and built-in LODs. `parametric_csg`
-    remains available as a lighter fallback.
+    Priority order:
+      1. `external_asset` — if a GLB mesh file exists in the manifest
+         (from BodyParts3D, Visible Human, or placeholder generation).
+         This gives medical-grade bone shapes.
+      2. `indexed_mesh` — procedurally generated inline triangle mesh.
+         Watertight, UVs, normals, 2 LOD levels. Fallback.
+      3. `parametric_csg` — compact CSG tree. Lightest weight.
+
+    When `assets_dir` is provided (or manifest.json exists in the default
+    location), bones with matching mesh files get `external_asset` geometry
+    pointing to the GLB URI. Remaining bones get inline `indexed_mesh`.
     """
     _CSG_BUILDERS = {
         "long": _csg_long_bone,
@@ -2693,20 +2732,62 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh") -> list[d
         "sesamoid": _csg_sesamoid_bone,
     }
 
+    # Load external mesh manifest and name→file mapping
+    manifest = _load_mesh_manifest(assets_dir)
+    mesh_map = _load_bone_mesh_map()
+
     geometries: list[dict] = []
     for i, (name, cls, _region, _parent, length, width, depth, _mass, _pos) in enumerate(BONE_DEFS):
-        if geometry_format == "parametric_csg":
+        bone_id = r.bone_ids[i]
+
+        # Try external_asset first
+        mesh_filename = mesh_map.get(name)
+        manifest_entry = manifest.get(name) if manifest else None
+
+        if mesh_filename and manifest_entry:
+            # External mesh available — use it
+            geo: dict[str, Any] = {
+                "geometryType": "external_asset",
+                "id": uid(),
+                "boneId": bone_id,
+                "uri": f"{asset_base_uri}{mesh_filename}",
+                "format": "glb",
+                "contentHash": manifest_entry.get("hash", ""),
+                "byteSize": manifest_entry.get("byteSize"),
+                "coordinateSpace": {
+                    "upAxis": "Y",
+                    "units": "cm",
+                    "handedness": "right",
+                },
+            }
+            # LOD variants
+            lod_entries = manifest_entry.get("lods", [])
+            if len(lod_entries) > 1:
+                lod_vars = []
+                for le in lod_entries[1:]:
+                    lod_level = le["level"]
+                    lod_file = mesh_filename.replace(".glb", f"_lod{lod_level}.glb")
+                    lod_vars.append({
+                        "level": lod_level,
+                        "uri": f"{asset_base_uri}{lod_file}",
+                        "format": "glb",
+                        "approximateTriangleCount": le.get("triangles"),
+                    })
+                geo["lodVariants"] = lod_vars
+            geometries.append(geo)
+
+        elif geometry_format == "parametric_csg":
             builder = _CSG_BUILDERS.get(cls, _csg_irregular_bone)
             csg_tree = builder(length, width, depth, name)
             geometries.append({
                 "geometryType": "parametric_csg",
                 "id": uid(),
-                "boneId": r.bone_ids[i],
+                "boneId": bone_id,
                 "csgTree": csg_tree,
                 "collisionHull": "convex_hull" if cls in ("long", "irregular") else "aabb",
             })
         else:
-            geometries.append(_indexed_mesh_geometry(name, cls, _region, r.bone_ids[i], length, width, depth))
+            geometries.append(_indexed_mesh_geometry(name, cls, _region, bone_id, length, width, depth))
 
     # ── P0.4: Anatomical landmarks (ISB recommendations) ────────────────
     # Named points on bone surfaces required for reproducible joint

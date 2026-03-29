@@ -380,8 +380,7 @@ def _blade_mesh(l: float, w: float, d: float) -> trimesh.Trimesh:
         [1, 4, 2], [2, 4, 5],  # right
         [0, 2, 3], [3, 2, 5],  # left
     ])
-    mesh = trimesh.Trimesh(vertices=pts, faces=faces)
-    return trimesh.smoothing.filter_laplacian(mesh, iterations=2)
+    return trimesh.Trimesh(vertices=pts, faces=faces)
 
 
 def _plate_mesh(l: float, w: float, d: float) -> trimesh.Trimesh:
@@ -390,15 +389,15 @@ def _plate_mesh(l: float, w: float, d: float) -> trimesh.Trimesh:
 
 
 def _jaw_mesh(l: float, w: float, d: float) -> trimesh.Trimesh:
-    """U-shaped mandible."""
-    # Create a torus section for the U shape
-    torus = trimesh.creation.torus(major_radius=w * 0.4, minor_radius=d * 0.3,
-                                   sections=24, count=16)
-    # Keep only the front half
-    mask = torus.vertices[:, 1] >= -d * 0.1
-    torus.update_vertices(mask)
-    torus.vertices[:, 1] *= l / (2 * d * 0.3) if d > 0 else 1
-    return torus
+    """U-shaped mandible — box body + two ramus pillars."""
+    body_box = trimesh.creation.box(extents=[w * 0.8, l * 0.3, d * 0.6])
+    ramus_r = trimesh.creation.box(extents=[d * 0.4, l * 0.6, d * 0.4])
+    ramus_r.vertices[:, 0] += w * 0.35
+    ramus_r.vertices[:, 1] += l * 0.2
+    ramus_l = trimesh.creation.box(extents=[d * 0.4, l * 0.6, d * 0.4])
+    ramus_l.vertices[:, 0] -= w * 0.35
+    ramus_l.vertices[:, 1] += l * 0.2
+    return trimesh.util.concatenate([body_box, ramus_r, ramus_l])
 
 
 def _sculpted_pelvis(l: float, w: float, d: float) -> trimesh.Trimesh:

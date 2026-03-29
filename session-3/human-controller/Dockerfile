@@ -7,6 +7,7 @@ RUN npm ci
 
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src/ src/
+COPY public/ public/
 
 RUN npm run build
 
@@ -23,7 +24,7 @@ RUN printf 'server {\n\
     try_files $uri $uri/ /index.html;\n\
   }\n\
   # Cache static assets aggressively\n\
-  location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {\n\
+  location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|glb|gltf)$ {\n\
     expires 1y;\n\
     add_header Cache-Control "public, immutable";\n\
   }\n\
