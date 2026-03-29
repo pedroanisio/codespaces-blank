@@ -27,7 +27,9 @@ def test_csg_builder_branches():
     assert geometry._csg_long_bone(10, 2, 2, "Metacarpal I (R)")["nodeType"] == "operation"
     assert geometry._csg_long_bone(3, 1, 1, "Thumb distal phalanx (R)")["nodeType"] == "primitive"
 
-    assert geometry._csg_flat_bone(10, 10, 1, "Frontal bone")["primitive"]["primitiveType"] == "ellipsoid"
+    frontal_flat = geometry._csg_flat_bone(10, 10, 1, "Frontal bone")
+    assert frontal_flat["operation"] == "union"
+    assert len(frontal_flat["children"]) >= 5
     temporal_flat = geometry._csg_flat_bone(6, 5, 1, "Temporal bone (R)")
     assert temporal_flat["operation"] == "union"
     assert geometry._csg_flat_bone(10, 10, 1, "Scapula (R)")["operation"] == "union"
