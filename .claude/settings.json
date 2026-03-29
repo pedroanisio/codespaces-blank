@@ -8,7 +8,8 @@
       "Bash(node session-3/examples/validate-david.mjs)",
       "Bash(grep -n '\\\\$defs' /home/admin/codebases/codespaces-blank/session-02/schemas/active/gvpp-v3.schema.json)",
       "Bash(npx ajv:*)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(ls -lh active/*.json)"
     ]
   }
 }

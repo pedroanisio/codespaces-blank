@@ -199,6 +199,26 @@ J_L5S1 = 8
 J_WRIST_R, J_WRIST_L = 20, 21
 J_ANKLE_R, J_ANKLE_L = 22, 23
 
+# Round 3 joint indices (appended after original 24)
+J_SC_R, J_SC_L = 24, 25           # Sternoclavicular
+J_AC_R, J_AC_L = 26, 27           # Acromioclavicular
+J_SI_R, J_SI_L = 28, 29           # Sacroiliac
+J_RU_PROX_R, J_RU_PROX_L = 30, 31 # Radioulnar proximal
+J_TMJ_R, J_TMJ_L = 32, 33        # Temporomandibular
+J_ATLANTO_OCC = 34                 # Atlanto-occipital
+J_SUBTALAR_R, J_SUBTALAR_L = 35, 36
+# IVDs: T11-T10=37, T10-T9=38, T8-T7=39, T7-T6=40, T6-T5=41, T4-T3=42, T3-T2=43
+J_IVD_START = 37
+# Hand/foot joints are generated programmatically starting at index 44
+J_HAND_FOOT_START = 44
+
+# Hand R phalanx bone indices for joint generation
+_HR_MP = [None, 116, 119, 122, 125]  # middle phalanges (thumb has none)
+_HL_MP = [None, 143, 146, 149, 152]  # Hand L middle phalanges (+27)
+# Foot R phalanx middle bones
+_FR_MP = [None, 169, 172, 175, 178]  # toe middle phalanges (hallux has none)
+_FL_MP = [None, 195, 198, 201, 204]  # Foot L middle phalanges (+26)
+
 
 # ---------------------------------------------------------------------------
 # ID Registry
@@ -486,37 +506,39 @@ BONE_DEFS = _build_bone_defs()
 assert len(BONE_DEFS) == 206, f"Expected 206 bones, got {len(BONE_DEFS)}"
 
 
-def gen_skeleton(r: Reg) -> list[dict]:
-    """Generate skeleton with inertial properties.
+def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
+    """Generate skeleton with proportions-driven mass scaling and inertial properties.
 
-    Adds centerOfMass and inertiaTensor to each bone based on:
-    - CoM at geometric center (local frame) — positioned at 50% of length
-      along the bone's long axis, which is standard for long bones.
-    - Inertia tensor approximated as a uniform-density ellipsoid with
-      semi-axes = (width/2, length/2, depth/2).
-      I_xx = m/5 * (b² + c²), I_yy = m/5 * (a² + c²), I_zz = m/5 * (a² + b²)
-      where a=width/2, b=length/2, c=depth/2 and m is mass in grams.
-      Reference: Goldstein, 'Classical Mechanics', 3rd ed., Ch. 5.
+    Bone masses in BONE_DEFS are for a 75 kg, 175 cm reference male (ICRP 89, 2002).
+    All masses scale linearly by (weight / 75), dimensions by (height / 175).
+
+    Inertia tensor: uniform-density ellipsoid approximation.
+      I_xx = m/5 * (b^2 + c^2) where a=w/2, b=l/2, c=d/2
+      Reference: Goldstein, Classical Mechanics, 3rd ed., Ch. 5.
     """
-    # Allocate all IDs first (allows forward references)
+    REF_W = 75.0
+    REF_H = 175.0
+    ms = weight / REF_W
+    ds = height / REF_H
+
     for _ in BONE_DEFS:
         r.bone_ids.append(uid())
     bones = []
     for i, (name, cls, region, parent_idx, length, width, depth, mass, pos) in enumerate(BONE_DEFS):
-        # Inertia tensor for uniform ellipsoid: I_ii = m/5 * (rj² + rk²)
-        a = width / 2   # half-width (cm)
-        b = length / 2  # half-length (cm)
-        c = depth / 2   # half-depth (cm)
-        # Mass in grams, dimensions in cm → units are g·cm²
-        ixx = round(mass / 5 * (b * b + c * c), 2)
-        iyy = round(mass / 5 * (a * a + c * c), 2)
-        izz = round(mass / 5 * (a * a + b * b), 2)
-
+        sl = round(length * ds, 2)
+        sw = round(width * ds, 2)
+        sd = round(depth * ds, 2)
+        sm = round(mass * ms, 2)
+        sp = (round(pos[0] * ds, 1), round(pos[1] * ds, 1), round(pos[2] * ds, 1))
+        a, b, c = sw / 2, sl / 2, sd / 2
+        ixx = round(sm / 5 * (b * b + c * c), 2)
+        iyy = round(sm / 5 * (a * a + c * c), 2)
+        izz = round(sm / 5 * (a * a + b * b), 2)
         bone: dict[str, Any] = {
             "id": r.bone_ids[i], "name": name, "classification": cls, "region": region,
-            "transform": tf(*pos),
-            "length": length, "width": width, "depth": depth, "mass": mass,
-            "centerOfMass": vec3(0, 0, 0),  # geometric center in local frame
+            "transform": tf(*sp),
+            "length": sl, "width": sw, "depth": sd, "mass": sm,
+            "centerOfMass": vec3(0, 0, 0),
             "inertiaTensor": sym_tensor(ixx, iyy, izz),
             "parentBoneId": r.bone_ids[parent_idx] if parent_idx is not None else None,
         }
@@ -579,30 +601,95 @@ JOINT_DEFS: list[tuple[str, str, list[int], int, dict | None, dict | None]] = [
      {"flexionExtension": {"min": -20, "max": 50}}),
     ("Ankle (L)", "hinge", [B_TIB_L, B_FIB_L, B_FOOT_L_START + 1], 1, None,
      {"flexionExtension": {"min": -20, "max": 50}}),
+    # === GIRDLE JOINTS (Round 3) ===
+    ("Sternoclavicular (R)", "saddle", [B_STERNUM, B_CLAV_R], 3, None,
+     {"flexionExtension": {"min": -15, "max": 15}, "abductionAdduction": {"min": -15, "max": 15}, "internalExternalRotation": {"min": -45, "max": 45}}),
+    ("Sternoclavicular (L)", "saddle", [B_STERNUM, B_CLAV_L], 3, None,
+     {"flexionExtension": {"min": -15, "max": 15}, "abductionAdduction": {"min": -15, "max": 15}, "internalExternalRotation": {"min": -45, "max": 45}}),
+    ("Acromioclavicular (R)", "plane", [B_CLAV_R, B_SCAP_R], 3, None,
+     {"flexionExtension": {"min": -10, "max": 10}, "abductionAdduction": {"min": -10, "max": 10}, "internalExternalRotation": {"min": -20, "max": 20}}),
+    ("Acromioclavicular (L)", "plane", [B_CLAV_L, B_SCAP_L], 3, None,
+     {"flexionExtension": {"min": -10, "max": 10}, "abductionAdduction": {"min": -10, "max": 10}, "internalExternalRotation": {"min": -20, "max": 20}}),
+    ("Sacroiliac (R)", "plane", [B_SACRUM, B_HIP_R], 1, None,
+     {"flexionExtension": {"min": -4, "max": 4}}),
+    ("Sacroiliac (L)", "plane", [B_SACRUM, B_HIP_L], 1, None,
+     {"flexionExtension": {"min": -4, "max": 4}}),
+    ("Radioulnar proximal (R)", "pivot", [B_RAD_R, B_ULNA_R], 1, None,
+     {"internalExternalRotation": {"min": -80, "max": 85}}),
+    ("Radioulnar proximal (L)", "pivot", [B_RAD_L, B_ULNA_L], 1, None,
+     {"internalExternalRotation": {"min": -80, "max": 85}}),
+    # === CRANIAL JOINTS ===
+    ("TMJ (R)", "condyloid", [B_TEMPORAL_R, B_MANDIBLE], 2, None,
+     {"flexionExtension": {"min": 0, "max": 50}, "abductionAdduction": {"min": -10, "max": 10}}),
+    ("TMJ (L)", "condyloid", [B_TEMPORAL_L, B_MANDIBLE], 2, None,
+     {"flexionExtension": {"min": 0, "max": 50}, "abductionAdduction": {"min": -10, "max": 10}}),
+    ("Atlanto-occipital", "condyloid", [B_C1, B_OCCIPITAL], 2,
+     {"primary": vec3(0, 0, 1), "secondary": vec3(1, 0, 0)},
+     {"flexionExtension": {"min": -10, "max": 25}, "abductionAdduction": {"min": -5, "max": 5}}),
+    # === SUBTALAR ===
+    ("Subtalar (R)", "plane", [B_FOOT_R_TALUS, B_FOOT_R_CALCANEUS], 1, None,
+     {"flexionExtension": {"min": -20, "max": 30}}),
+    ("Subtalar (L)", "plane", [B_FOOT_L_START + 1, B_FOOT_L_START], 1, None,
+     {"flexionExtension": {"min": -20, "max": 30}}),
+    # === MISSING INTERVERTEBRAL JOINTS (7) ===
+    ("T11-T10 intervertebral", "cartilaginous", [B_T12 + 1, B_T12 + 2], 3, None,
+     {"flexionExtension": {"min": -2, "max": 5}}),
+    ("T10-T9 intervertebral", "cartilaginous", [B_T12 + 2, B_T12 + 3], 3, None,
+     {"flexionExtension": {"min": -2, "max": 5}}),
+    ("T8-T7 intervertebral", "cartilaginous", [B_T12 + 4, B_T12 + 5], 3, None,
+     {"flexionExtension": {"min": -2, "max": 5}}),
+    ("T7-T6 intervertebral", "cartilaginous", [B_T12 + 5, B_T12 + 6], 3, None,
+     {"flexionExtension": {"min": -2, "max": 5}}),
+    ("T6-T5 intervertebral", "cartilaginous", [B_T12 + 6, B_T12 + 7], 3, None,
+     {"flexionExtension": {"min": -2, "max": 5}}),
+    ("T4-T3 intervertebral", "cartilaginous", [B_T12 + 8, B_T12 + 9], 3, None,
+     {"flexionExtension": {"min": -2, "max": 5}}),
+    ("T3-T2 intervertebral", "cartilaginous", [B_T12 + 9, B_T12 + 10], 3, None,
+     {"flexionExtension": {"min": -2, "max": 5}}),
+    # === COSTOVERTEBRAL JOINTS (24: R1-R12 + L1-L12) ===
+    # Reference: Standring, Gray's Anatomy 42nd ed., Ch. 54
+] + [
+    (f"Costovertebral R{i+1}", "plane", [B_RIB_R[i], B_T1 - i], 1, None,
+     {"flexionExtension": {"min": -3, "max": 3}})
+    for i in range(12)
+] + [
+    (f"Costovertebral L{i+1}", "plane", [B_RIB_L[i], B_T1 - i], 1, None,
+     {"flexionExtension": {"min": -3, "max": 3}})
+    for i in range(12)
+] + [
+    # === CERVICAL IVDs (C6-C5 through C3-C2) ===
+    ("C6-C5 intervertebral", "cartilaginous", [B_C7 + 1, B_C7 + 2], 3, None,
+     {"flexionExtension": {"min": -5, "max": 15}, "abductionAdduction": {"min": -5, "max": 5}}),
+    ("C5-C4 intervertebral", "cartilaginous", [B_C7 + 2, B_C7 + 3], 3, None,
+     {"flexionExtension": {"min": -5, "max": 15}, "abductionAdduction": {"min": -5, "max": 5}}),
+    ("C4-C3 intervertebral", "cartilaginous", [B_C7 + 3, B_C7 + 4], 3, None,
+     {"flexionExtension": {"min": -5, "max": 15}, "abductionAdduction": {"min": -5, "max": 5}}),
+    ("C3-C2 intervertebral", "cartilaginous", [B_C7 + 4, B_C7 + 5], 3, None,
+     {"flexionExtension": {"min": -5, "max": 15}, "abductionAdduction": {"min": -5, "max": 5}}),
 ]
-assert len(JOINT_DEFS) == 24
+assert len(JOINT_DEFS) == 72
 
 
 def gen_joints(r: Reg) -> list[dict]:
-    """Generate joints with transforms derived from connected bone positions.
+    """Generate joints: 44 named joints from JOINT_DEFS + ~58 programmatic hand/foot joints.
 
-    Joint position is computed as the midpoint between the proximal ends
-    of the two primary connected bones. This replaces the previous
-    placeholder tf() = (0,0,0) for all joints.
+    Joint position is computed as the midpoint between the primary connected bones.
+    Hand joints (MCP, PIP, DIP, CMC, IP) and foot joints (MTP, PIP, DIP, IP) are
+    generated programmatically from bone index arrays to avoid 58 static entries.
+
+    Hand ROM from: Hume et al., J Hand Surg Am 15(2):240-243, 1990.
+    Foot ROM from: Nawoczenski et al., Foot Ankle 9(5):232-238, 1989.
     """
     joints = []
-    for name, jtype, bone_idxs, dof, axes, limits in JOINT_DEFS:
+
+    def _add_joint(name, jtype, bone_idxs, dof, axes=None, limits=None):
         jid = uid()
         r.joint_ids.append(jid)
-
-        # Compute joint position from connected bone positions
-        bone_positions = [BONE_DEFS[i][8] for i in bone_idxs]  # (x,y,z) tuples
-        # Joint center = midpoint of first two connected bones
+        bone_positions = [BONE_DEFS[i][8] for i in bone_idxs]
         b0, b1 = bone_positions[0], bone_positions[1]
         jx = (b0[0] + b1[0]) / 2
         jy = (b0[1] + b1[1]) / 2
         jz = (b0[2] + b1[2]) / 2
-
         j: dict[str, Any] = {
             "id": jid, "name": name, "type": jtype,
             "transform": tf(round(jx, 1), round(jy, 1), round(jz, 1)),
@@ -614,6 +701,67 @@ def gen_joints(r: Reg) -> list[dict]:
         if limits:
             j["limits"] = limits
         joints.append(j)
+
+    # Static named joints from JOINT_DEFS (44)
+    for name, jtype, bone_idxs, dof, axes, limits in JOINT_DEFS:
+        _add_joint(name, jtype, bone_idxs, dof, axes, limits)
+
+    # === HAND JOINTS (15 per side × 2 = 30) ===
+    finger_names = ["Thumb", "Index", "Middle", "Ring", "Little"]
+    for side, mc, pp, mp, dp, trap in [
+        ("R", _HR_MC, _HR_PP, _HR_MP, _HR_DP, _HR_TRAP),
+        ("L", [i + 27 for i in _HR_MC], [i + 27 for i in _HR_PP],
+         [None if v is None else v + 27 for v in _HR_MP],
+         [i + 27 for i in _HR_DP], _HR_TRAP + 27),
+    ]:
+        # CMC thumb — saddle joint
+        _add_joint(f"CMC thumb ({side})", "saddle", [trap, mc[0]], 2, limits={
+            "flexionExtension": {"min": -15, "max": 60},
+            "abductionAdduction": {"min": -10, "max": 50}})
+        # MCP joints (5): condyloid for fingers, condyloid for thumb
+        for d in range(5):
+            fe_max = 60 if d == 0 else 90
+            _add_joint(f"MCP {finger_names[d]} ({side})", "condyloid", [mc[d], pp[d]], 2, limits={
+                "flexionExtension": {"min": -30 if d > 0 else -10, "max": fe_max},
+                "abductionAdduction": {"min": -20, "max": 20}})
+        # IP thumb — hinge
+        _add_joint(f"IP thumb ({side})", "hinge", [pp[0], dp[0]], 1, limits={
+            "flexionExtension": {"min": 0, "max": 80}})
+        # PIP joints (4): hinge — index through little
+        for d in range(1, 5):
+            _add_joint(f"PIP {finger_names[d]} ({side})", "hinge", [pp[d], mp[d]], 1, limits={
+                "flexionExtension": {"min": 0, "max": 110}})
+        # DIP joints (4): hinge — index through little
+        for d in range(1, 5):
+            _add_joint(f"DIP {finger_names[d]} ({side})", "hinge", [mp[d], dp[d]], 1, limits={
+                "flexionExtension": {"min": 0, "max": 80}})
+
+    # === FOOT JOINTS (14 per side × 2 = 28) ===
+    toe_names = ["Hallux", "2nd toe", "3rd toe", "4th toe", "5th toe"]
+    for side, mt, pp, mp_arr, dp in [
+        ("R", _FR_MT, _FR_PP, _FR_MP, _FR_DP),
+        ("L", [i + 26 for i in _FR_MT], [i + 26 for i in _FR_PP],
+         [None if v is None else v + 26 for v in _FR_MP],
+         [i + 26 for i in _FR_DP]),
+    ]:
+        # MTP joints (5): condyloid
+        for d in range(5):
+            fe_max = 70 if d == 0 else 40
+            _add_joint(f"MTP {toe_names[d]} ({side})", "condyloid", [mt[d], pp[d]], 2, limits={
+                "flexionExtension": {"min": -30, "max": fe_max},
+                "abductionAdduction": {"min": -10, "max": 10}})
+        # IP hallux — hinge
+        _add_joint(f"IP {toe_names[0]} ({side})", "hinge", [pp[0], dp[0]], 1, limits={
+            "flexionExtension": {"min": 0, "max": 60}})
+        # PIP toes 2-5 (4): hinge
+        for d in range(1, 5):
+            _add_joint(f"PIP {toe_names[d]} ({side})", "hinge", [pp[d], mp_arr[d]], 1, limits={
+                "flexionExtension": {"min": 0, "max": 40}})
+        # DIP toes 2-5 (4): hinge
+        for d in range(1, 5):
+            _add_joint(f"DIP {toe_names[d]} ({side})", "hinge", [mp_arr[d], dp[d]], 1, limits={
+                "flexionExtension": {"min": 0, "max": 30}})
+
     return joints
 # =============================================================================
 # TENDONS + MUSCLES — 94 tendons, 48 muscles
@@ -1118,72 +1266,159 @@ NERVE_DEFS = [
     ("Posterior rami", "mixed", "none", ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12", "L1", "L2", "L3", "L4", "L5"], None),
     ("Ansa cervicalis", "motor", "cervical", ["C1", "C2", "C3"], None),
     ("Cervical plexus", "mixed", "cervical", ["C1", "C2", "C3", "C4"], None),
+    # === CRANIAL NERVES (12 pairs, I-XII) ===
+    # Reference: Standring, Gray's Anatomy 42nd ed., Ch. 33-38
+    # CN V (Trigeminal V3) already present above; CN VII (Facial VII) already present above;
+    # CN XI (Spinal accessory nerve) already present above.
+    ("Olfactory nerve (I)", "sensory", "none", ["C1"], None),
+    ("Optic nerve (II)", "sensory", "none", ["C1"], None),
+    ("Oculomotor nerve (III)", "motor", "none", ["C1"], None),
+    ("Trochlear nerve (IV)", "motor", "none", ["C1"], None),
+    ("Trigeminal V1 (ophthalmic)", "sensory", "none", ["C5", "C6", "C7"], None),
+    ("Trigeminal V2 (maxillary)", "sensory", "none", ["C5", "C6", "C7"], None),
+    ("Abducens nerve (VI)", "motor", "none", ["C1"], None),
+    ("Vestibulocochlear nerve (VIII)", "sensory", "none", ["C1"], None),
+    ("Glossopharyngeal nerve (IX)", "mixed", "none", ["C1"], None),
+    ("Vagus nerve (X)", "mixed", "none", ["C1"], None),
+    ("Hypoglossal nerve (XII)", "motor", "none", ["C1"], None),
+    # === ADDITIONAL PERIPHERAL ===
+    ("Deep peroneal nerve", "mixed", "sacral", ["L4", "L5", "S1"], "Common peroneal nerve"),
+    ("Superficial peroneal nerve", "mixed", "sacral", ["L5", "S1"], "Common peroneal nerve"),
+    ("Lateral femoral cutaneous nerve", "sensory", "lumbar", ["L2", "L3"], None),
+    ("Saphenous nerve", "sensory", "lumbar", ["L3", "L4"], "Femoral nerve"),
+    ("Sural nerve", "sensory", "sacral", ["S1", "S2"], "Tibial nerve"),
+    ("Digital nerves (hand)", "mixed", "brachial", ["C6", "C7", "C8"], "Median nerve"),
 ]
 
 def gen_nerves(r: Reg) -> list[dict]:
+    """Generate nerves with anatomically-derived path waypoints.
+
+    Nerve paths computed from spinal exit levels and terminal distribution.
+    Each path has 4 waypoints interpolated from the nerve's origin (spinal
+    exit or brainstem) to its terminal region.
+    """
+    _SY: dict[str, float] = {}
+    for lv in range(1, 8): _SY[f"C{lv}"] = 155 + (7 - lv) * 1.7
+    for lv in range(1, 13): _SY[f"T{lv}"] = 113 + (12 - lv) * 2.3
+    for lv in range(1, 6): _SY[f"L{lv}"] = 95 + (5 - lv) * 3.6
+    for lv in range(1, 5): _SY[f"S{lv}"] = 90 - lv * 2
+
+    _TY = {"brachial": 90, "lumbar": 50, "sacral": 30, "cervical": 155, "none": 165}
+
     nerves = []
     for name, ntype, plexus, roots, parent_name in NERVE_DEFS:
         nid = uid()
         r.nerve_ids.append(nid)
         r.nerve_name_to_idx[name] = len(r.nerve_ids) - 1
         parent_id = r.nerve_ids[r.nerve_name_to_idx[parent_name]] if parent_name else None
+        oy = _SY.get(roots[0], 120)
+        ty = _TY.get(plexus, 100)
+        lx = -15.0 if plexus == "brachial" else (-6.0 if plexus in ("lumbar", "sacral") else 0.0)
+        path = []
+        for pi in range(4):
+            t = pi / 3.0
+            path.append(vec3(
+                round(lx * t + random.uniform(-0.5, 0.5), 1),
+                round(oy + (ty - oy) * t, 1),
+                round(-2 + random.uniform(-0.5, 0.5), 1)))
         nerves.append({
             "id": nid, "name": name, "type": ntype, "plexus": plexus,
-            "spinalRoots": roots, "parentNerveId": parent_id,
-            "path": [vec3(random.uniform(-5, 5), random.uniform(60, 120), random.uniform(-3, 3)),
-                     vec3(random.uniform(-5, 5), random.uniform(10, 60), random.uniform(-3, 3))],
+            "spinalRoots": roots, "parentNerveId": parent_id, "path": path,
         })
     return nerves
-
-
 # =============================================================================
 # ORGANS — 9
 # =============================================================================
 
-def gen_organs(r: Reg) -> list[dict]:
-    defs = [
+def gen_organs(r: Reg, sex: str = "male") -> list[dict]:
+    """Generate organs including sex-specific reproductive anatomy.
+
+    Organ masses from ICRP Publication 89, 'Basic Anatomical and
+    Physiological Data for Use in Radiological Protection', 2002.
+    Reproductive organ data sex-specific per biologicalSex field.
+    """
+    defs: list[tuple[str, str, float, float, bool, bool, str, tuple]] = [
+        # === CARDIOVASCULAR ===
         ("Heart", "cardiovascular", 300, 310, True, False, "midline", (0, 130, 3)),
+        # === RESPIRATORY ===
         ("Lung (R)", "respiratory", 1400, 600, True, True, "right", (-10, 135, 0)),
         ("Lung (L)", "respiratory", 1200, 530, True, True, "left", (10, 135, 0)),
+        ("Trachea", "respiratory", 30, 30, False, False, "midline", (0, 150, 4)),
+        ("Larynx", "respiratory", 20, 25, False, False, "midline", (0, 153, 5)),
+        # === DIGESTIVE ===
         ("Liver", "digestive", 1500, 1400, True, False, "right", (-8, 115, 3)),
-        ("Kidney (R)", "urinary", 150, 140, False, True, "right", (-6, 110, -5)),
-        ("Kidney (L)", "urinary", 150, 140, False, True, "left", (6, 110, -5)),
-        ("Brain", "nervous", 1400, 1400, True, False, "midline", (0, 168, 0)),
         ("Stomach", "digestive", 950, 150, False, False, "left", (5, 118, 3)),
-        ("Spleen", "lymphatic", 200, 180, False, False, "left", (10, 115, -2)),
         ("Pancreas", "digestive", 70, 100, False, False, "midline", (0, 112, -1)),
         ("Gallbladder", "digestive", 50, 30, False, False, "right", (-6, 112, 4)),
-        ("Thyroid gland", "endocrine", 20, 25, False, False, "midline", (0, 155, 5)),
-        ("Adrenal gland (R)", "endocrine", 6, 5, False, True, "right", (-4, 112, -4)),
-        ("Adrenal gland (L)", "endocrine", 6, 5, False, True, "left", (4, 112, -4)),
-        ("Bladder", "urinary", 500, 50, False, False, "midline", (0, 88, 4)),
-        ("Eye (R)", "nervous", 7, 7.5, False, True, "right", (-3, 170, 7)),
-        ("Eye (L)", "nervous", 7, 7.5, False, True, "left", (3, 170, 7)),
         ("Small intestine", "digestive", 900, 1000, False, False, "midline", (0, 100, 3)),
         ("Large intestine", "digestive", 700, 500, False, False, "midline", (0, 98, 2)),
         ("Esophagus", "digestive", 40, 50, False, False, "midline", (0, 140, -1)),
-        ("Trachea", "respiratory", 30, 30, False, False, "midline", (0, 150, 4)),
-        ("Larynx", "respiratory", 20, 25, False, False, "midline", (0, 153, 5)),
+        ("Appendix", "digestive", 7, 8, False, False, "right", (-7, 94, 4)),
+        ("Tongue", "digestive", 60, 70, False, False, "midline", (0, 163, 5)),
+        ("Pharynx", "digestive", 30, 35, False, False, "midline", (0, 158, 2)),
+        # === NERVOUS ===
+        ("Brain", "nervous", 1400, 1400, True, False, "midline", (0, 168, 0)),
+        ("Spinal cord", "nervous", 30, 35, True, False, "midline", (0, 120, -2)),
+        ("Eye (R)", "nervous", 7, 7.5, False, True, "right", (-3, 170, 7)),
+        ("Eye (L)", "nervous", 7, 7.5, False, True, "left", (3, 170, 7)),
+        # === URINARY ===
+        ("Kidney (R)", "urinary", 150, 140, False, True, "right", (-6, 110, -5)),
+        ("Kidney (L)", "urinary", 150, 140, False, True, "left", (6, 110, -5)),
+        ("Bladder", "urinary", 500, 50, False, False, "midline", (0, 88, 4)),
+        ("Ureter (R)", "urinary", 5, 6, False, True, "right", (-5, 100, -3)),
+        ("Ureter (L)", "urinary", 5, 6, False, True, "left", (5, 100, -3)),
+        # === ENDOCRINE ===
+        ("Thyroid gland", "endocrine", 20, 25, False, False, "midline", (0, 155, 5)),
+        ("Adrenal gland (R)", "endocrine", 6, 5, False, True, "right", (-4, 112, -4)),
+        ("Adrenal gland (L)", "endocrine", 6, 5, False, True, "left", (4, 112, -4)),
+        ("Parathyroid glands", "endocrine", 0.5, 0.12, False, False, "midline", (0, 154, 4)),
+        ("Pituitary gland", "endocrine", 0.6, 0.6, True, False, "midline", (0, 168, 1)),
+        ("Pineal gland", "endocrine", 0.2, 0.15, False, False, "midline", (0, 170, -1)),
+        # === LYMPHATIC ===
+        ("Spleen", "lymphatic", 200, 180, False, False, "left", (10, 115, -2)),
+        ("Thymus", "lymphatic", 25, 30, False, False, "midline", (0, 138, 4)),
+        # === INTEGUMENTARY ===
+        ("Skin", "integumentary", 3000, 4000, False, False, "midline", (0, 95, 0)),
     ]
+
+    # Sex-specific reproductive organs
+    # Masses from ICRP 89 (2002) Table 2.9
+    if sex == "male":
+        defs += [
+            ("Prostate", "reproductive", 20, 16, False, False, "midline", (0, 86, 3)),
+            ("Testis (R)", "reproductive", 20, 20, False, True, "right", (-2, 80, 6)),
+            ("Testis (L)", "reproductive", 20, 20, False, True, "left", (2, 80, 6)),
+            ("Seminal vesicle (R)", "reproductive", 4, 5, False, True, "right", (-2, 87, 2)),
+            ("Seminal vesicle (L)", "reproductive", 4, 5, False, True, "left", (2, 87, 2)),
+        ]
+    elif sex == "female":
+        defs += [
+            ("Uterus", "reproductive", 80, 90, False, False, "midline", (0, 88, 3)),
+            ("Ovary (R)", "reproductive", 6, 7, False, True, "right", (-3, 89, 2)),
+            ("Ovary (L)", "reproductive", 6, 7, False, True, "left", (3, 89, 2)),
+            ("Fallopian tube (R)", "reproductive", 3, 4, False, True, "right", (-4, 89, 2)),
+            ("Fallopian tube (L)", "reproductive", 3, 4, False, True, "left", (4, 89, 2)),
+        ]
+
     organs = []
     for name, system, vol, mass, vital, paired, lat, pos in defs:
         oid = uid(); r.organ_ids.append(oid)
         organs.append({"id": oid, "name": name, "system": system, "transform": tf(*pos),
                         "volume": vol, "mass": mass, "isVital": vital, "pairedOrgan": paired, "laterality": lat})
     return organs
-
-
 # =============================================================================
 # VASCULAR — 20 vessels
 # =============================================================================
 
 def gen_vascular(r: Reg) -> list[dict]:
-    """Generate vascular system: ~40 vessels including coronary, pulmonary, portal, and cerebral.
+    """Generate ~70 vessels: complete arterial tree from aorta to terminal branches,
+    venous return, portal circulation, coronary, pulmonary, and cerebral.
 
-    Vessel radii from:
-      - Aorta: ~1.5 cm (Redheuil et al., Radiology 2011)
-      - Coronary: 1.5-2.5 mm (Dodge et al., Circulation 1992)
-      - Cerebral: 1-3 mm (Kochanowicz et al., Med Sci Monit 2009)
+    Vessel calibers from:
+      - Aorta: Redheuil et al., Radiology 260(2):454-462, 2011
+      - Coronary: Dodge et al., Circulation 86(1):232-246, 1992
+      - Cerebral: Kochanowicz et al., Med Sci Monit 15(10):MT135-139, 2009
+      - Peripheral: Gray's Anatomy 42nd ed. (2020), Ch. 72-80
     """
     vessels: list[dict] = []
 
@@ -1200,63 +1435,124 @@ def gen_vascular(r: Reg) -> list[dict]:
                     "hasValves": kw.pop("hasValves", True)}
         v.update(kw); vessels.append(v)
 
-    # === ARTERIAL TREE (indices 0-25) ===
-    _art("Aorta", None, 1.5, [vec3(0,135,3), vec3(0,120,0), vec3(0,100,0), vec3(0,70,-2)],                 # 0
+    # =======================  ARTERIAL TREE  =======================
+    _art("Aorta", None, 1.5, [vec3(0,135,3), vec3(0,125,1), vec3(0,110,0), vec3(0,95,-1), vec3(0,70,-2)],  # 0
          systolicPressure=120, diastolicPressure=80, oxygenSaturation=98)
-    _art("Common iliac (R)", 0, 0.8, [vec3(-3,70,-2), vec3(-7,60,-1)])                                      # 1
-    _art("Common iliac (L)", 0, 0.8, [vec3(3,70,-2), vec3(7,60,-1)])                                        # 2
-    _art("Femoral artery (R)", 1, 0.5, [vec3(-9,60,0), vec3(-9,45,0), vec3(-9,30,0)])                       # 3
-    _art("Femoral artery (L)", 2, 0.5, [vec3(9,60,0), vec3(9,45,0), vec3(9,30,0)])                          # 4
-    _art("Popliteal artery (R)", 3, 0.3, [vec3(-9,30,0), vec3(-9,25,-1)])                                   # 5
-    _art("Popliteal artery (L)", 4, 0.3, [vec3(9,30,0), vec3(9,25,-1)])                                     # 6
-    _art("Posterior tibial artery (R)", 5, 0.2, [vec3(-9,25,0), vec3(-9,15,1), vec3(-9,5,2)])                # 7
-    _art("Posterior tibial artery (L)", 6, 0.2, [vec3(9,25,0), vec3(9,15,1), vec3(9,5,2)])                   # 8
-    _art("Anterior tibial artery (R)", 5, 0.18, [vec3(-9,25,1), vec3(-9,15,3), vec3(-9,5,5)])                # 9
-    _art("Anterior tibial artery (L)", 6, 0.18, [vec3(9,25,1), vec3(9,15,3), vec3(9,5,5)])                   # 10
-    _art("Subclavian artery (R)", 0, 0.55, [vec3(-2,140,2), vec3(-12,145,1)])                                # 11
-    _art("Subclavian artery (L)", 0, 0.55, [vec3(2,140,2), vec3(12,145,1)])                                  # 12
-    _art("Brachial artery (R)", 11, 0.35, [vec3(-18,145,0), vec3(-23,130,0), vec3(-25,112,0)])               # 13
-    _art("Brachial artery (L)", 12, 0.35, [vec3(18,145,0), vec3(23,130,0), vec3(25,112,0)])                  # 14
-    _art("Radial artery (R)", 13, 0.15, [vec3(-25,112,2), vec3(-26,95,3)])                                   # 15
-    _art("Ulnar artery (R)", 13, 0.15, [vec3(-24,112,-1), vec3(-26,95,1)])                                   # 16
-    _art("Carotid artery (R)", 0, 0.4, [vec3(-2,135,3), vec3(-3,150,2), vec3(-3,160,2)])                     # 17
-    _art("Carotid artery (L)", 0, 0.4, [vec3(2,135,3), vec3(3,150,2), vec3(3,160,2)])                        # 18
-    _art("Celiac trunk", 0, 0.6, [vec3(0,115,3), vec3(0,112,5)])                                            # 19
-    _art("Superior mesenteric artery", 0, 0.5, [vec3(0,113,3), vec3(0,105,5)])                               # 20
-    _art("Inferior mesenteric artery", 0, 0.3, [vec3(0,95,2), vec3(0,85,4)])                                 # 21
-    _art("Renal artery (R)", 0, 0.35, [vec3(-2,110,-2), vec3(-6,110,-5)])                                    # 22
-    _art("Renal artery (L)", 0, 0.35, [vec3(2,110,-2), vec3(6,110,-5)])                                     # 23
-    # Coronary arteries
-    _art("Left coronary artery (LCA)", 0, 0.2, [vec3(-1,133,4), vec3(-3,131,5), vec3(-4,128,4)])             # 24
-    _art("Right coronary artery (RCA)", 0, 0.18, [vec3(1,133,4), vec3(2,131,5), vec3(3,128,3)])              # 25
-    # Pulmonary arteries
-    _art("Pulmonary trunk", None, 1.3, [vec3(1,132,5), vec3(0,130,4)], oxygenSaturation=75)                  # 26
-    _art("Pulmonary artery (R)", 26, 0.9, [vec3(-2,130,3), vec3(-8,132,1)])                                  # 27
-    _art("Pulmonary artery (L)", 26, 0.9, [vec3(2,130,3), vec3(8,132,1)])                                    # 28
+    # --- Abdominal branches ---
+    _art("Celiac trunk", 0, 0.6, [vec3(0,115,3), vec3(0,112,5)])                                            # 1
+    _art("Hepatic artery", 1, 0.3, [vec3(0,112,5), vec3(-5,112,4)])                                         # 2
+    _art("Splenic artery", 1, 0.35, [vec3(0,112,5), vec3(8,112,0)])                                         # 3
+    _art("Left gastric artery", 1, 0.2, [vec3(0,112,5), vec3(3,116,4)])                                     # 4
+    _art("Superior mesenteric artery", 0, 0.5, [vec3(0,113,3), vec3(0,105,5)])                               # 5
+    _art("Inferior mesenteric artery", 0, 0.3, [vec3(0,95,2), vec3(0,85,4)])                                 # 6
+    _art("Renal artery (R)", 0, 0.35, [vec3(-2,110,-2), vec3(-6,110,-5)])                                    # 7
+    _art("Renal artery (L)", 0, 0.35, [vec3(2,110,-2), vec3(6,110,-5)])                                     # 8
+    _art("Gonadal artery (R)", 0, 0.1, [vec3(-2,105,-1), vec3(-3,92,2)])                                    # 9
+    _art("Gonadal artery (L)", 0, 0.1, [vec3(2,105,-1), vec3(3,92,2)])                                     # 10
+    # --- Iliac and lower limb ---
+    _art("Common iliac (R)", 0, 0.8, [vec3(-3,70,-2), vec3(-7,60,-1)])                                      # 11
+    _art("Common iliac (L)", 0, 0.8, [vec3(3,70,-2), vec3(7,60,-1)])                                        # 12
+    _art("Internal iliac (R)", 11, 0.4, [vec3(-7,60,-1), vec3(-6,55,-3)])                                    # 13
+    _art("Internal iliac (L)", 12, 0.4, [vec3(7,60,-1), vec3(6,55,-3)])                                     # 14
+    _art("External iliac (R)", 11, 0.5, [vec3(-7,60,-1), vec3(-9,55,0)])                                     # 15
+    _art("External iliac (L)", 12, 0.5, [vec3(7,60,-1), vec3(9,55,0)])                                      # 16
+    _art("Femoral artery (R)", 15, 0.5, [vec3(-9,55,0), vec3(-9,45,0), vec3(-9,30,0)])                       # 17
+    _art("Femoral artery (L)", 16, 0.5, [vec3(9,55,0), vec3(9,45,0), vec3(9,30,0)])                          # 18
+    _art("Deep femoral artery (R)", 17, 0.35, [vec3(-9,52,0), vec3(-10,45,-2)])                              # 19
+    _art("Deep femoral artery (L)", 18, 0.35, [vec3(9,52,0), vec3(10,45,-2)])                                # 20
+    _art("Popliteal artery (R)", 17, 0.3, [vec3(-9,30,0), vec3(-9,25,-1)])                                   # 21
+    _art("Popliteal artery (L)", 18, 0.3, [vec3(9,30,0), vec3(9,25,-1)])                                     # 22
+    _art("Posterior tibial artery (R)", 21, 0.2, [vec3(-9,25,0), vec3(-9,15,1), vec3(-9,5,2)])                # 23
+    _art("Posterior tibial artery (L)", 22, 0.2, [vec3(9,25,0), vec3(9,15,1), vec3(9,5,2)])                   # 24
+    _art("Anterior tibial artery (R)", 21, 0.18, [vec3(-9,25,1), vec3(-9,15,3), vec3(-9,5,5)])                # 25
+    _art("Anterior tibial artery (L)", 22, 0.18, [vec3(9,25,1), vec3(9,15,3), vec3(9,5,5)])                   # 26
+    _art("Dorsalis pedis (R)", 25, 0.12, [vec3(-9,3,6), vec3(-9,0,10)])                                      # 27
+    _art("Dorsalis pedis (L)", 26, 0.12, [vec3(9,3,6), vec3(9,0,10)])                                        # 28
+    # --- Upper limb ---
+    _art("Subclavian artery (R)", 0, 0.55, [vec3(-2,140,2), vec3(-12,145,1)])                                # 29
+    _art("Subclavian artery (L)", 0, 0.55, [vec3(2,140,2), vec3(12,145,1)])                                  # 30
+    _art("Brachial artery (R)", 29, 0.35, [vec3(-18,145,0), vec3(-23,130,0), vec3(-25,112,0)])               # 31
+    _art("Brachial artery (L)", 30, 0.35, [vec3(18,145,0), vec3(23,130,0), vec3(25,112,0)])                  # 32
+    _art("Radial artery (R)", 31, 0.15, [vec3(-25,112,2), vec3(-26,95,3)])                                   # 33
+    _art("Radial artery (L)", 32, 0.15, [vec3(25,112,2), vec3(26,95,3)])                                     # 34
+    _art("Ulnar artery (R)", 31, 0.15, [vec3(-24,112,-1), vec3(-26,95,1)])                                   # 35
+    _art("Ulnar artery (L)", 32, 0.15, [vec3(24,112,-1), vec3(26,95,1)])                                     # 36
+    # --- Head and neck ---
+    _art("Common carotid (R)", 0, 0.4, [vec3(-2,135,3), vec3(-3,150,2)])                                     # 37
+    _art("Common carotid (L)", 0, 0.4, [vec3(2,135,3), vec3(3,150,2)])                                       # 38
+    _art("Internal carotid (R)", 37, 0.25, [vec3(-3,150,2), vec3(-3,160,1), vec3(-2,168,0)])                  # 39
+    _art("Internal carotid (L)", 38, 0.25, [vec3(3,150,2), vec3(3,160,1), vec3(2,168,0)])                     # 40
+    _art("External carotid (R)", 37, 0.25, [vec3(-3,150,3), vec3(-4,158,4)])                                  # 41
+    _art("External carotid (L)", 38, 0.25, [vec3(3,150,3), vec3(4,158,4)])                                    # 42
+    _art("Vertebral artery (R)", 29, 0.2, [vec3(-5,145,-2), vec3(-3,155,-2), vec3(-1,165,-3)])                # 43
+    _art("Vertebral artery (L)", 30, 0.2, [vec3(5,145,-2), vec3(3,155,-2), vec3(1,165,-3)])                   # 44
+    _art("Basilar artery", 43, 0.22, [vec3(0,165,-3), vec3(0,168,-2)])                                       # 45
+    # Circle of Willis
+    _art("Anterior cerebral artery (R)", 39, 0.12, [vec3(-1,168,1), vec3(0,170,2)])                           # 46
+    _art("Anterior cerebral artery (L)", 40, 0.12, [vec3(1,168,1), vec3(0,170,2)])                            # 47
+    _art("Middle cerebral artery (R)", 39, 0.16, [vec3(-2,168,0), vec3(-5,170,0)])                            # 48
+    _art("Middle cerebral artery (L)", 40, 0.16, [vec3(2,168,0), vec3(5,170,0)])                              # 49
+    _art("Posterior cerebral artery (R)", 45, 0.1, [vec3(-1,168,-1), vec3(-3,170,-1)])                        # 50
+    _art("Posterior cerebral artery (L)", 45, 0.1, [vec3(1,168,-1), vec3(3,170,-1)])                          # 51
+    # --- Coronary ---
+    _art("Left coronary artery (LCA)", 0, 0.2, [vec3(-1,133,4), vec3(-3,131,5), vec3(-4,128,4)])             # 52
+    _art("Left anterior descending", 52, 0.15, [vec3(-3,131,5), vec3(-2,127,5)])                              # 53
+    _art("Left circumflex", 52, 0.12, [vec3(-3,131,5), vec3(-5,130,3)])                                       # 54
+    _art("Right coronary artery (RCA)", 0, 0.18, [vec3(1,133,4), vec3(2,131,5), vec3(3,128,3)])              # 55
+    # --- Pulmonary ---
+    _art("Pulmonary trunk", None, 1.3, [vec3(1,132,5), vec3(0,130,4)], oxygenSaturation=75)                  # 56
+    _art("Pulmonary artery (R)", 56, 0.9, [vec3(-2,130,3), vec3(-8,132,1)])                                  # 57
+    _art("Pulmonary artery (L)", 56, 0.9, [vec3(2,130,3), vec3(8,132,1)])                                    # 58
 
-    # === VENOUS TREE (indices 29+) ===
-    _vein("Inferior vena cava", None, 1.8, [vec3(1,70,-2), vec3(1,100,0), vec3(1,135,3)], hasValves=False)   # 29
-    _vein("Superior vena cava", None, 1.2, [vec3(-1,145,2), vec3(-1,135,3)], hasValves=False)                # 30
-    _vein("Great saphenous (R)", 29, 0.4, [vec3(-10,5,2), vec3(-9,30,0), vec3(-9,60,0)])                     # 31
-    _vein("Great saphenous (L)", 29, 0.4, [vec3(10,5,2), vec3(9,30,0), vec3(9,60,0)])                        # 32
-    _vein("Femoral vein (R)", 29, 0.55, [vec3(-9,50,0), vec3(-9,70,0)])                                      # 33
-    _vein("Femoral vein (L)", 29, 0.55, [vec3(9,50,0), vec3(9,70,0)])                                        # 34
-    _vein("Popliteal vein (R)", 33, 0.5, [vec3(-9,25,-1), vec3(-9,45,-1)])                                   # 35
-    _vein("Popliteal vein (L)", 34, 0.5, [vec3(9,25,-1), vec3(9,45,-1)])                                     # 36
-    _vein("Internal jugular vein (R)", 30, 0.7, [vec3(-3,160,2), vec3(-2,145,3)])                            # 37
-    _vein("Internal jugular vein (L)", 30, 0.7, [vec3(3,160,2), vec3(2,145,3)])                              # 38
-    # Portal venous system
-    _vein("Portal vein", 29, 0.6, [vec3(0,108,4), vec3(-5,112,3)], hasValves=False)                          # 39
-    _vein("Hepatic vein (R)", 29, 0.5, [vec3(-8,115,2), vec3(-4,120,3)])                                     # 40
-    _vein("Hepatic vein (L)", 29, 0.5, [vec3(4,115,2), vec3(2,120,3)])                                       # 41
-    # Renal veins
-    _vein("Renal vein (R)", 29, 0.4, [vec3(-6,110,-4), vec3(-2,110,-2)])                                     # 42
-    _vein("Renal vein (L)", 29, 0.45, [vec3(6,110,-4), vec3(2,110,-2)])                                      # 43
-    # Pulmonary veins
+    # =======================  VENOUS TREE  =======================
+    ivc_i = len(vessels)  # IVC index
+    _vein("Inferior vena cava", None, 1.8, [vec3(1,70,-2), vec3(1,100,0), vec3(1,135,3)], hasValves=False)   # 59
+    svc_i = len(vessels)
+    _vein("Superior vena cava", None, 1.2, [vec3(-1,145,2), vec3(-1,135,3)], hasValves=False)                # 60
+    # --- Lower limb veins ---
+    _vein("Great saphenous (R)", ivc_i, 0.4, [vec3(-10,5,2), vec3(-9,30,0), vec3(-9,60,0)])                  # 61
+    _vein("Great saphenous (L)", ivc_i, 0.4, [vec3(10,5,2), vec3(9,30,0), vec3(9,60,0)])                     # 62
+    _vein("Small saphenous (R)", ivc_i, 0.3, [vec3(-11,5,-2), vec3(-10,25,-2)])                              # 63
+    _vein("Small saphenous (L)", ivc_i, 0.3, [vec3(11,5,-2), vec3(10,25,-2)])                                # 64
+    _vein("Popliteal vein (R)", ivc_i, 0.5, [vec3(-9,25,-1), vec3(-9,45,-1)])                                # 65
+    _vein("Popliteal vein (L)", ivc_i, 0.5, [vec3(9,25,-1), vec3(9,45,-1)])                                  # 66
+    _vein("Femoral vein (R)", ivc_i, 0.55, [vec3(-9,50,0), vec3(-9,70,0)])                                   # 67
+    _vein("Femoral vein (L)", ivc_i, 0.55, [vec3(9,50,0), vec3(9,70,0)])                                     # 68
+    # --- Upper limb veins ---
+    _vein("Subclavian vein (R)", svc_i, 0.6, [vec3(-15,145,1), vec3(-5,145,2)])                              # 69
+    _vein("Subclavian vein (L)", svc_i, 0.6, [vec3(15,145,1), vec3(5,145,2)])                                # 70
+    _vein("Basilic vein (R)", 69, 0.25, [vec3(-25,112,0), vec3(-20,135,-1)])                                 # 71
+    _vein("Basilic vein (L)", 70, 0.25, [vec3(25,112,0), vec3(20,135,-1)])                                   # 72
+    _vein("Cephalic vein (R)", 69, 0.25, [vec3(-25,112,2), vec3(-15,140,2)])                                 # 73
+    _vein("Cephalic vein (L)", 70, 0.25, [vec3(25,112,2), vec3(15,140,2)])                                   # 74
+    # --- Head and neck veins ---
+    _vein("Internal jugular vein (R)", svc_i, 0.7, [vec3(-3,160,2), vec3(-2,145,3)])                         # 75
+    _vein("Internal jugular vein (L)", svc_i, 0.7, [vec3(3,160,2), vec3(2,145,3)])                           # 76
+    _vein("External jugular vein (R)", svc_i, 0.3, [vec3(-5,158,3), vec3(-4,145,3)])                         # 77
+    _vein("External jugular vein (L)", svc_i, 0.3, [vec3(5,158,3), vec3(4,145,3)])                           # 78
+    # --- Visceral veins ---
+    _vein("Portal vein", ivc_i, 0.6, [vec3(0,108,4), vec3(-5,112,3)], hasValves=False)                       # 79
+    _vein("Hepatic vein (R)", ivc_i, 0.5, [vec3(-8,115,2), vec3(-4,120,3)])                                  # 80
+    _vein("Hepatic vein (L)", ivc_i, 0.5, [vec3(4,115,2), vec3(2,120,3)])                                    # 81
+    _vein("Hepatic vein (middle)", ivc_i, 0.4, [vec3(-2,115,3), vec3(-1,120,3)])                             # 82
+    _vein("Splenic vein", 79, 0.4, [vec3(10,112,-1), vec3(3,110,3)])                                         # 83
+    _vein("Superior mesenteric vein", 79, 0.5, [vec3(0,105,5), vec3(0,108,4)])                               # 84
+    _vein("Renal vein (R)", ivc_i, 0.4, [vec3(-6,110,-4), vec3(-2,110,-2)])                                  # 85
+    _vein("Renal vein (L)", ivc_i, 0.45, [vec3(6,110,-4), vec3(2,110,-2)])                                   # 86
+    # --- Pulmonary veins ---
     _vein("Pulmonary vein (R superior)", None, 0.6, [vec3(-8,133,1), vec3(-1,133,3)],
-          hasValves=False, oxygenSaturation=98)                                                               # 44
+          hasValves=False, oxygenSaturation=98)                                                               # 87
+    _vein("Pulmonary vein (R inferior)", None, 0.5, [vec3(-8,130,0), vec3(-1,132,3)],
+          hasValves=False, oxygenSaturation=98)                                                               # 88
     _vein("Pulmonary vein (L superior)", None, 0.6, [vec3(8,133,1), vec3(1,133,3)],
-          hasValves=False, oxygenSaturation=98)                                                               # 45
+          hasValves=False, oxygenSaturation=98)                                                               # 89
+    _vein("Pulmonary vein (L inferior)", None, 0.5, [vec3(8,130,0), vec3(1,132,3)],
+          hasValves=False, oxygenSaturation=98)                                                               # 90
+    # --- Cerebral veins ---
+    _vein("Superior sagittal sinus", svc_i, 0.5, [vec3(0,174,0), vec3(0,170,-4)], hasValves=False)           # 91
+    _vein("Transverse sinus (R)", 91, 0.4, [vec3(0,170,-4), vec3(-5,168,-3)], hasValves=False)               # 92
+    _vein("Transverse sinus (L)", 91, 0.4, [vec3(0,170,-4), vec3(5,168,-3)], hasValves=False)                # 93
+
     return vessels
 # =============================================================================
 # LIGAMENTS — 12
@@ -1290,6 +1586,27 @@ def gen_ligaments(r: Reg) -> list[dict]:
         ("Coracoacromial ligament (L)", B_SCAP_L, B_SCAP_L, J_SHOULDER_L, 3),
         ("Medial collateral ligament (L)", B_FEM_L, B_TIB_L, J_KNEE_L, 8),
         ("Lateral collateral ligament (L)", B_FEM_L, B_TIB_L, J_KNEE_L, 5.5),
+        # Spinal ligaments for new IVD joints (Round 3)
+        ("Ligamentum flavum (L5-L4)", B_L5, B_L5 + 1, 9, 3),
+        ("Ligamentum flavum (L4-L3)", B_L5 + 1, B_L5 + 2, 10, 3),
+        ("Ligamentum flavum (L3-L2)", B_L5 + 2, B_L5 + 3, 11, 3),
+        ("Ligamentum flavum (L2-L1)", B_L5 + 3, B_L1, 12, 3),
+        ("Ligamentum flavum (T12-L1)", B_L1, B_T12, 13, 2.5),
+        ("Interspinous ligament (lumbar)", B_SACRUM, B_L1, J_L5S1, 12),
+        ("Supraspinous ligament (thoracolumbar)", B_L5, B_T1, J_L5S1, 35),
+        # Sacroiliac ligaments
+        ("Anterior sacroiliac ligament (R)", B_SACRUM, B_HIP_R, J_SI_R, 4),
+        ("Anterior sacroiliac ligament (L)", B_SACRUM, B_HIP_L, J_SI_L, 4),
+        ("Posterior sacroiliac ligament (R)", B_SACRUM, B_HIP_R, J_SI_R, 5),
+        ("Posterior sacroiliac ligament (L)", B_SACRUM, B_HIP_L, J_SI_L, 5),
+        # Sternoclavicular ligaments
+        ("Costoclavicular ligament (R)", B_RIB_R[0], B_CLAV_R, J_SC_R, 2.5),
+        ("Costoclavicular ligament (L)", B_RIB_L[0], B_CLAV_L, J_SC_L, 2.5),
+        # Foot ligaments
+        ("Plantar fascia (R)", B_FOOT_R_CALCANEUS, B_FOOT_R_MT[0], J_SUBTALAR_R, 15),
+        ("Plantar fascia (L)", B_FOOT_L_START, B_FOOT_L_START + 7, J_SUBTALAR_L, 15),
+        ("Spring ligament (R)", B_FOOT_R_CALCANEUS, B_FOOT_R_NAVICULAR, J_SUBTALAR_R, 3),
+        ("Spring ligament (L)", B_FOOT_L_START, B_FOOT_L_START + 2, J_SUBTALAR_L, 3),
     ]
     ligs = []
     for name, ob, ib, ji, length in defs:
@@ -1343,34 +1660,41 @@ def gen_cartilage(r: Reg) -> list[dict]:
         ("Glenoid labrum (L)", "fibrocartilage", None, J_SHOULDER_L, 3.5, 4),
     ]
 
-    # Intervertebral discs: L5-S1 through C2-C3 (23 discs)
-    # Thickness increases from cervical (~3mm) to lumbar (~10mm), then drops at L5-S1 (~9mm)
-    # Reference: Shao et al., Eur Spine J (2002)
-    ivd_joints = [
-        # (joint_idx, disc_name, thickness_mm, area_cm2)
+    # Intervertebral discs for ALL vertebral joints
+    # Thickness: Shao et al., Eur Spine J (2002); area estimated from body size
+    # Original joints 8-19: L5-S1(8), L5-L4(9)..L2-L1(12), T12-L1(13),
+    #   T12-T11(14), T9-T8(15), T5-T4(16), T2-T1(17), C7-T1(18), C1-C2(19)
+    # Round 3 joints 37-43: T11-T10(37), T10-T9(38), T8-T7(39), T7-T6(40),
+    #   T6-T5(41), T4-T3(42), T3-T2(43)
+    ivd_data = [
         (J_L5S1, "L5-S1 intervertebral disc", 9, 16),
+        (9,  "L5-L4 intervertebral disc", 10, 16),
+        (10, "L4-L3 intervertebral disc", 10.5, 15),
+        (11, "L3-L2 intervertebral disc", 10, 14),
+        (12, "L2-L1 intervertebral disc", 9, 13),
+        (13, "T12-L1 intervertebral disc", 8, 12),
+        (14, "T12-T11 intervertebral disc", 7, 10),
+        (37, "T11-T10 intervertebral disc", 6.5, 9.5),
+        (38, "T10-T9 intervertebral disc", 6, 9),
+        (15, "T9-T8 intervertebral disc", 5.5, 8.5),
+        (39, "T8-T7 intervertebral disc", 5.5, 8),
+        (40, "T7-T6 intervertebral disc", 5, 7.5),
+        (41, "T6-T5 intervertebral disc", 5, 7),
+        (16, "T5-T4 intervertebral disc", 5, 7),
+        (42, "T4-T3 intervertebral disc", 4.5, 6.5),
+        (43, "T3-T2 intervertebral disc", 4.5, 6),
+        (17, "T2-T1 intervertebral disc", 4, 5.5),
+        (18, "C7-T1 intervertebral disc", 4, 5),
     ]
-    # L5-L4 through L2-L1 intervertebral joints are indices 9-12
-    lumbar_thicknesses = [10, 10.5, 10, 9]
-    lumbar_areas = [16, 15, 14, 13]
-    for i in range(4):
-        ivd_joints.append((9 + i, f"L{5-i}-L{4-i} intervertebral disc", lumbar_thicknesses[i], lumbar_areas[i]))
-    # T12-L1 = index 13
-    ivd_joints.append((13, "T12-L1 intervertebral disc", 8, 12))
-    # Remaining thoracic discs at indices 14-17 (only 4 thoracic joints modeled)
-    t_ji = [14, 15, 16, 17]
-    t_names = ["T12-T11", "T9-T8", "T5-T4", "T2-T1"]
-    for i, ji in enumerate(t_ji):
-        if ji < len(r.joint_ids):
-            defs.append((f"{t_names[i]} intervertebral disc", "fibrocartilage", None, ji, 5 + i * 0.5, 8))
-    # C7-T1 = index 18, C1-C2 = index 19
-    if 18 < len(r.joint_ids):
-        defs.append(("C7-T1 intervertebral disc", "fibrocartilage", None, 18, 4, 5))
-
-    # Add IVD joints to defs
-    for ji, name, thick, area in ivd_joints:
+    for ji, name, thick, area in ivd_data:
         if ji < len(r.joint_ids):
             defs.append((name, "fibrocartilage", None, ji, thick, area))
+
+    # TMJ disc cartilage (bilateral)
+    if J_TMJ_R < len(r.joint_ids):
+        defs.append(("TMJ disc (R)", "fibrocartilage", None, J_TMJ_R, 3, 3))
+    if J_TMJ_L < len(r.joint_ids):
+        defs.append(("TMJ disc (L)", "fibrocartilage", None, J_TMJ_L, 3, 3))
 
     carts = []
     for name, ctype, bone_idx, joint_idx, thickness, area in defs:
@@ -1530,16 +1854,22 @@ def gen_segments(r: Reg, weight: float, sex: str = "male") -> list[dict]:
 def gen_current_pose(r: Reg) -> dict:
     r.pose_id = uid()
     joint_states = []
-    for i in range(24):
-        dof = JOINT_DEFS[i][3]
-        angles: dict = {"flexionExtension": round(random.uniform(-5, 15), 1), "abductionAdduction": 0, "internalExternalRotation": 0}
-        if dof >= 2: angles["abductionAdduction"] = round(random.uniform(-5, 5), 1)
-        if dof >= 3: angles["internalExternalRotation"] = round(random.uniform(-5, 5), 1)
+    n_static = len(JOINT_DEFS)  # statically defined joints
+    n_total = len(r.joint_ids)  # all joints including programmatic hand/foot
+    for i in range(n_total):
+        if i < n_static:
+            dof = JOINT_DEFS[i][3]
+        else:
+            dof = 1  # programmatic joints default to 1-DOF hinge
+        angles: dict = {"flexionExtension": round(random.uniform(-5, 15), 1),
+                        "abductionAdduction": 0, "internalExternalRotation": 0}
+        if dof >= 2:
+            angles["abductionAdduction"] = round(random.uniform(-5, 5), 1)
+        if dof >= 3:
+            angles["internalExternalRotation"] = round(random.uniform(-5, 5), 1)
         joint_states.append({"jointId": r.joint_ids[i], "angles": angles})
     return {"id": r.pose_id, "name": "contrapposto", "rootSegmentId": r.segment_ids[0],
             "rootPose": rigid_pose(0, 95, 0, small_tilt_quat(2, 5, 1)), "jointStates": joint_states}
-
-
 def gen_saved_poses(r: Reg) -> list[dict]:
     """Generate named poses: anatomical, T-pose, seated, mid-stance gait.
 
@@ -1820,6 +2150,252 @@ def gen_constitutive_laws() -> dict:
 
 # =============================================================================
 # ROOT ENTITY
+
+
+def _gen_motion_sequences(r: Reg) -> list[dict]:
+    """Generate a full gait cycle motion sequence (12 keyframes at ~100ms intervals).
+
+    Joint angles interpolated through the gait cycle phases:
+      0%   = heel-strike (R)     →  initial contact
+      12%  = loading response    →  weight acceptance
+      31%  = mid-stance          →  single-limb support
+      50%  = terminal stance     →  heel rise
+      62%  = pre-swing (toe-off) →  push-off
+      75%  = mid-swing           →  limb advancement
+      87%  = terminal swing      →  deceleration
+      100% = heel-strike (next)  →  cycle repeats
+
+    Data from: Winter DA, 'Biomechanics and Motor Control of Human Movement',
+    4th ed., Ch. 3, Table 3.1, Fig. 3.2 (2009).
+
+    Gait cycle duration: ~1.1s at normal walking speed (1.3 m/s).
+    """
+    all_joints = list(range(len(r.joint_ids)))
+
+    def _pose_at(name, pct, angles_dict):
+        states = []
+        for ji in all_joints:
+            a = angles_dict.get(ji, {})
+            states.append({"jointId": r.joint_ids[ji], "angles": {
+                "flexionExtension": a.get("fe", 0),
+                "abductionAdduction": a.get("aa", 0),
+                "internalExternalRotation": a.get("ie", 0),
+            }})
+        return {
+            "id": uid(), "name": name,
+            "rootSegmentId": r.segment_ids[0],
+            "rootPose": rigid_pose(0, 95, 0),
+            "jointStates": states,
+            "timestamp": round(pct / 100 * 1.1, 3),  # seconds into cycle
+        }
+
+    # Winter (2009) Table 3.1 — sagittal plane joint angles at % gait cycle
+    # Format: {joint_idx: {"fe": degrees, "aa": degrees}}
+    gait_keyframes = [
+        ("heel_strike", 0, {
+            J_HIP_R: {"fe": 30, "aa": -3}, J_HIP_L: {"fe": -10},
+            J_KNEE_R: {"fe": 5}, J_KNEE_L: {"fe": 40},
+            J_ANKLE_R: {"fe": 0}, J_ANKLE_L: {"fe": -20},
+            J_SHOULDER_R: {"fe": -25}, J_SHOULDER_L: {"fe": 30},
+            J_ELBOW_R: {"fe": 20}, J_ELBOW_L: {"fe": 30},
+        }),
+        ("loading_response", 12, {
+            J_HIP_R: {"fe": 25, "aa": -5}, J_HIP_L: {"fe": -5},
+            J_KNEE_R: {"fe": 18}, J_KNEE_L: {"fe": 35},
+            J_ANKLE_R: {"fe": -5}, J_ANKLE_L: {"fe": -15},
+            J_SHOULDER_R: {"fe": -20}, J_SHOULDER_L: {"fe": 25},
+            J_ELBOW_R: {"fe": 18}, J_ELBOW_L: {"fe": 28},
+        }),
+        ("mid_stance", 31, {
+            J_HIP_R: {"fe": 8, "aa": -5}, J_HIP_L: {"fe": 25, "aa": 3},
+            J_KNEE_R: {"fe": 15}, J_KNEE_L: {"fe": 60},
+            J_ANKLE_R: {"fe": 5}, J_ANKLE_L: {"fe": -15},
+            J_SHOULDER_R: {"fe": -10}, J_SHOULDER_L: {"fe": 15},
+            J_ELBOW_R: {"fe": 12}, J_ELBOW_L: {"fe": 22},
+        }),
+        ("terminal_stance", 50, {
+            J_HIP_R: {"fe": -5, "aa": -4}, J_HIP_L: {"fe": 30, "aa": 2},
+            J_KNEE_R: {"fe": 8}, J_KNEE_L: {"fe": 25},
+            J_ANKLE_R: {"fe": -10}, J_ANKLE_L: {"fe": 5},
+            J_SHOULDER_R: {"fe": 5}, J_SHOULDER_L: {"fe": -5},
+            J_ELBOW_R: {"fe": 10}, J_ELBOW_L: {"fe": 15},
+        }),
+        ("pre_swing", 62, {
+            J_HIP_R: {"fe": -10}, J_HIP_L: {"fe": 30},
+            J_KNEE_R: {"fe": 40}, J_KNEE_L: {"fe": 5},
+            J_ANKLE_R: {"fe": -20}, J_ANKLE_L: {"fe": 5},
+            J_SHOULDER_R: {"fe": 20}, J_SHOULDER_L: {"fe": -15},
+            J_ELBOW_R: {"fe": 25}, J_ELBOW_L: {"fe": 12},
+        }),
+        ("initial_swing", 72, {
+            J_HIP_R: {"fe": 10, "aa": 2}, J_HIP_L: {"fe": 15},
+            J_KNEE_R: {"fe": 65}, J_KNEE_L: {"fe": 8},
+            J_ANKLE_R: {"fe": -10}, J_ANKLE_L: {"fe": 3},
+            J_SHOULDER_R: {"fe": 25}, J_SHOULDER_L: {"fe": -20},
+            J_ELBOW_R: {"fe": 28}, J_ELBOW_L: {"fe": 10},
+        }),
+        ("mid_swing", 81, {
+            J_HIP_R: {"fe": 25, "aa": 3}, J_HIP_L: {"fe": 8, "aa": -5},
+            J_KNEE_R: {"fe": 60}, J_KNEE_L: {"fe": 15},
+            J_ANKLE_R: {"fe": -5}, J_ANKLE_L: {"fe": 5},
+            J_SHOULDER_R: {"fe": 28}, J_SHOULDER_L: {"fe": -22},
+            J_ELBOW_R: {"fe": 30}, J_ELBOW_L: {"fe": 8},
+        }),
+        ("terminal_swing", 93, {
+            J_HIP_R: {"fe": 30, "aa": -2}, J_HIP_L: {"fe": -5},
+            J_KNEE_R: {"fe": 8}, J_KNEE_L: {"fe": 25},
+            J_ANKLE_R: {"fe": 0}, J_ANKLE_L: {"fe": -8},
+            J_SHOULDER_R: {"fe": -22}, J_SHOULDER_L: {"fe": 28},
+            J_ELBOW_R: {"fe": 18}, J_ELBOW_L: {"fe": 28},
+        }),
+    ]
+
+    poses = [_pose_at(name, pct, angles) for name, pct, angles in gait_keyframes]
+
+    return [{
+        "id": uid(),
+        "name": "normal_gait_cycle",
+        "description": "Full gait cycle at self-selected speed (~1.3 m/s). R leg stance → swing → stance.",
+        "sampleRate": round(len(poses) / 1.1, 1),  # ~7.3 Hz
+        "duration": 1.1,
+        "poses": poses,
+    }]
+
+
+def _gen_rendering_layer(r: Reg) -> dict:
+    """Generate a rendering layer with per-subsystem color and opacity defaults.
+
+    Rendering is separated from anatomy per Rule 30 (access patterns should
+    not dictate structure). This layer overlays visual properties on entities
+    referenced by ID.
+    """
+    bone_overrides = []
+    for i, bone_id in enumerate(r.bone_ids):
+        bone_overrides.append({
+            "entityId": bone_id,
+            "color": color(240, 230, 210, 1.0),  # ivory
+            "opacity": 1.0,
+            "visible": True,
+        })
+
+    muscle_overrides = []
+    for i, muscle_id in enumerate(r.muscle_ids):
+        muscle_overrides.append({
+            "entityId": muscle_id,
+            "color": color(180, 60, 50, 1.0),  # deep red
+            "opacity": 0.7,
+            "visible": True,
+        })
+
+    organ_overrides = []
+    for i, organ_id in enumerate(r.organ_ids):
+        organ_overrides.append({
+            "entityId": organ_id,
+            "color": color(200, 140, 120, 1.0),  # fleshy pink
+            "opacity": 0.6,
+            "visible": True,
+        })
+
+    vessel_overrides = []
+    for i, vessel_id in enumerate(r.vessel_ids):
+        vessel_overrides.append({
+            "entityId": vessel_id,
+            "color": color(180, 50, 50, 1.0),  # default to arterial red
+            "opacity": 0.8,
+            "visible": True,
+        })
+
+    return {
+        "boneOverrides": bone_overrides,
+        "muscleOverrides": muscle_overrides,
+        "organOverrides": organ_overrides,
+        "vesselOverrides": vessel_overrides,
+        "globalOpacity": 1.0,
+    }
+
+
+def _gen_clothing(height: float) -> list[dict]:
+    """Generate basic clothing items."""
+    return [
+        {"id": uid(), "name": "T-shirt", "type": "top",
+         "color": color(60, 80, 120, 1.0), "transform": tf(0, height * 0.75, 0),
+         "fabric": "cotton jersey", "fit": "regular"},
+        {"id": uid(), "name": "Jeans", "type": "bottom",
+         "color": color(50, 60, 90, 1.0), "transform": tf(0, height * 0.48, 0),
+         "fabric": "denim", "fit": "regular"},
+        {"id": uid(), "name": "Sneakers", "type": "footwear",
+         "color": color(220, 220, 220, 1.0), "transform": tf(0, 0, 5),
+         "fabric": "synthetic mesh", "fit": "regular"},
+    ]
+# =============================================================================
+
+def _gen_reference_frames(r: Reg) -> list[dict]:
+    """Generate ISB reference frames: global lab frame + per-segment ACS.
+
+    Global frame: +X anterior, +Y superior, +Z right lateral.
+    Reference: Wu & Cavanagh, J Biomech 28(10):1257-1261, 1995.
+    """
+    frames = []
+    gid = uid()
+    frames.append({"id": gid, "name": "Global (lab)", "type": "global",
+                    "parentFrameId": None, "poseInParent": rigid_pose(0, 0, 0),
+                    "axisLabels": {"x": "anterior", "y": "superior", "z": "right_lateral"}})
+    for si, (name, bone_idxs, prox_j, distal_js, _, seg_len, _) in enumerate(SEG_DEFS):
+        fid = uid()
+        if prox_j is not None and prox_j < len(JOINT_DEFS):
+            jdef = JOINT_DEFS[prox_j]
+            bp = [BONE_DEFS[bi][8] for bi in jdef[2][:2]]
+            fx = round((bp[0][0] + bp[1][0]) / 2, 1)
+            fy = round((bp[0][1] + bp[1][1]) / 2, 1)
+            fz = round((bp[0][2] + bp[1][2]) / 2, 1)
+        else:
+            fx, fy, fz = 0, 95, 0
+        frames.append({"id": fid, "name": f"{name} ACS", "type": "segment_anatomical",
+                        "parentFrameId": gid, "poseInParent": rigid_pose(fx, fy, fz),
+                        "axisLabels": {"x": "anterior", "y": "proximal_to_distal", "z": "right_lateral"}})
+    return frames
+
+
+def _gen_free_body_diagrams(r: Reg, loading: list[dict], weight: float) -> list[dict]:
+    """Generate per-segment FBDs from the first loading condition.
+
+    Each FBD isolates a segment with its gravitational, proximal, and
+    distal joint reaction forces plus translational/rotational residuals.
+    Reference: Winter, Biomechanics and Motor Control, 4th ed., Ch. 5.
+    """
+    if not loading:
+        return []
+    lc = loading[0]
+    fbds = []
+    for si, (name, bone_idxs, prox_j, distal_js, mass_frac, seg_len, _) in enumerate(SEG_DEFS):
+        seg_mass = round(weight * mass_frac, 2)
+        seg_w = round(seg_mass * G / 100, 2)
+        forces = [{"id": uid(), "name": f"Weight {name}", "forceType": "gravitational",
+                    "magnitude": seg_w, "direction": unit_vec3(0, -1, 0),
+                    "targetSegmentId": r.segment_ids[si], "gravitationalAcceleration": G}]
+        if prox_j is not None:
+            forces.append({"id": uid(), "name": f"{name} proximal JRF",
+                            "forceType": "joint_reaction", "magnitude": round(seg_w * 1.5, 2),
+                            "direction": unit_vec3(0, 1, 0), "jointId": r.joint_ids[prox_j],
+                            "applicationPoint": vec3()})
+        for dj in distal_js:
+            forces.append({"id": uid(), "name": f"{name} distal JRF",
+                            "forceType": "joint_reaction", "magnitude": round(seg_w * 0.8, 2),
+                            "direction": unit_vec3(0, -1, 0), "jointId": r.joint_ids[dj],
+                            "applicationPoint": vec3()})
+        fbds.append({"id": uid(), "name": f"FBD {name}", "segmentId": r.segment_ids[si],
+                      "loadingConditionId": lc["id"], "forces": forces, "moments": [],
+                      "translationalResidual": vec3(round(random.uniform(-0.5, 0.5), 2),
+                                                      round(random.uniform(-0.5, 0.5), 2),
+                                                      round(random.uniform(-0.2, 0.2), 2)),
+                      "rotationalResidual": vec3(round(random.uniform(-1, 1), 2),
+                                                   round(random.uniform(-0.5, 0.5), 2),
+                                                   round(random.uniform(-0.5, 0.5), 2))})
+    return fbds
+
+
+# =============================================================================
+# ROOT ENTITY
 # =============================================================================
 
 def generate_human_body(variation: int = 0) -> dict:
@@ -1827,33 +2403,40 @@ def generate_human_body(variation: int = 0) -> dict:
     proportions = gen_proportions(variation)
     weight = proportions["weight"]
     height = proportions["totalHeight"]
+    sex = proportions.get("biologicalSex", "male")
 
-    skeleton = gen_skeleton(r)
+    skeleton = gen_skeleton(r, weight, height)
     joints = gen_joints(r)
     nerves = gen_nerves(r)
     tendons, muscles = gen_tendons_and_muscles(r)
-    organs = gen_organs(r)
+    organs = gen_organs(r, sex)
     vascular = gen_vascular(r)
     ligaments = gen_ligaments(r)
     cartilage = gen_cartilage(r)
-    sex = proportions.get("biologicalSex", "male")
     segments = gen_segments(r, weight, sex)
     current_pose = gen_current_pose(r)
     saved_poses = gen_saved_poses(r)
     loading = gen_loading_conditions(r, weight)
+    ref_frames = _gen_reference_frames(r)
+    fbds = _gen_free_body_diagrams(r, loading, weight)
+    motion_seqs = _gen_motion_sequences(r)
+    rendering = _gen_rendering_layer(r)
+    clothing = _gen_clothing(height)
 
     return {
         "schemaVersion": SCHEMA_VERSION, "id": uid(), "name": f"generated_body_{variation:03d}",
         "proportions": proportions, "skeleton": skeleton, "joints": joints,
         "tendons": tendons, "muscles": muscles, "organs": organs,
         "vascularSystem": vascular, "ligaments": ligaments, "cartilage": cartilage,
-        "nerves": nerves, "hair": gen_hair(height), "clothing": [],
+        "nerves": nerves, "hair": gen_hair(height), "clothing": clothing,
         "segments": segments, "currentPose": current_pose, "savedPoses": saved_poses,
         "loadingConditions": loading, "derivationGraph": gen_derivation_graph(),
         "constitutiveLaws": gen_constitutive_laws(),
+        "referenceFrames": ref_frames,
+        "freeBodyDiagrams": fbds,
+        "motionSequences": motion_seqs,
+        "rendering": rendering,
     }
-
-
 # =============================================================================
 # CLI
 # =============================================================================
