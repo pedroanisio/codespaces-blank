@@ -51,11 +51,11 @@ export const NerveSchema = z.object({
   type: NerveTypeEnum,
   plexus: NervePlexusEnum.default("none"),
 
-  // Spinal root composition — which spinal levels contribute to this nerve
+  // Nerve root composition — spinal levels or cranial nerve numbers
   spinalRoots: z
-    .array(z.string().regex(/^[CTLS]\d{1,2}$/))
+    .array(z.string().regex(/^([CTLS]\d{1,2}|CN\d{1,2})$/))
     .min(1)
-    .describe("Contributing spinal nerve roots (e.g. ['C5', 'C6'] for musculocutaneous nerve)"),
+    .describe("Contributing nerve roots: spinal (e.g. 'C5','L4') or cranial (e.g. 'CN5','CN10')"),
 
   // Parent nerve — nerves branch from larger trunks
   parentNerveId: NerveId

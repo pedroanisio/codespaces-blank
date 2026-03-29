@@ -1,9 +1,9 @@
 /**
  * High-fidelity anatomical renderer for HumanBody schema v3.0.0.
  *
- * Renders all 206 bones, 322 muscles, 94 vessels, 51 nerves, 38 organs,
- * 43 ligaments, and 36 cartilage structures with PBR materials, anatomical
- * coloring, and interactive layer toggling.
+ * Renders all 206 bones, 616 muscles, 1230 tendons, 94 vessels, 51 nerves,
+ * 38 organs, 43 ligaments, and 36 cartilage structures with PBR materials,
+ * anatomical coloring, and interactive layer toggling.
  *
  * Coordinate system: positions in cm, Y-up. Body range ≈ X[-30,30] Y[0,180] Z[-5,21].
  * All geometry is generated from the schema data — no hardcoded meshes.
@@ -482,6 +482,79 @@ export const DEFAULT_VISIBLE: Set<LayerName> = new Set(["skeleton", "joints", "m
 // 6. SCENE ASSEMBLY — builds Three.js scene from HumanBody JSON
 // ═══════════════════════════════════════════════════════════════════════
 
+export type ThemeMode = "dark" | "light";
+
+interface ThemeConfig {
+  sceneBg: number;
+  fogColor: number;
+  fogDensity: number;
+  groundColor: number;
+  gridA: number;
+  gridB: number;
+  hemiSky: number;
+  hemiGround: number;
+  hemiIntensity: number;
+  ambientColor: number;
+  ambientIntensity: number;
+  keyIntensity: number;
+  fillIntensity: number;
+  rimIntensity: number;
+  exposure: number;
+  bloomStrength: number;
+}
+
+const THEMES: Record<ThemeMode, ThemeConfig> = {
+  dark: {
+    sceneBg: 0x0c0c14, fogColor: 0x0c0c14, fogDensity: 0.0008,
+    groundColor: 0x111118, gridA: 0x222244, gridB: 0x181828,
+    hemiSky: 0xb0c8e8, hemiGround: 0x2a1a0a, hemiIntensity: 0.5,
+    ambientColor: 0x303848, ambientIntensity: 0.4,
+    keyIntensity: 1.2, fillIntensity: 0.5, rimIntensity: 0.35,
+    exposure: 1.1, bloomStrength: 0.15,
+  },
+  light: {
+    sceneBg: 0xeef2f7, fogColor: 0xeef2f7, fogDensity: 0.0004,
+    groundColor: 0xd8dce4, gridA: 0xbbc0cc, gridB: 0xd0d4dc,
+    hemiSky: 0xffffff, hemiGround: 0x8899aa, hemiIntensity: 0.8,
+    ambientColor: 0xc0c8d4, ambientIntensity: 0.7,
+    keyIntensity: 1.0, fillIntensity: 0.6, rimIntensity: 0.25,
+    exposure: 1.3, bloomStrength: 0.05,
+  },
+};
+
+export interface UITheme {
+  bg: string;
+  bgOverlay: string;
+  border: string;
+  text: string;
+  textMuted: string;
+  textDim: string;
+  panelBg: string;
+  panelBorder: string;
+  btnBg: string;
+  btnBorder: string;
+  btnText: string;
+  btnActiveText: string;
+  inactiveText: string;
+}
+
+const UI_THEMES: Record<ThemeMode, UITheme> = {
+  dark: {
+    bg: "#0c0c14", bgOverlay: "rgba(12,12,20,.92)", border: "rgba(100,120,180,.15)",
+    text: "#e8e8f0", textMuted: "#556688", textDim: "#334455",
+    panelBg: "rgba(12,12,20,.92)", panelBorder: "rgba(100,120,180,.15)",
+    btnBg: "rgba(60,80,120,.12)", btnBorder: "rgba(80,100,140,.2)",
+    btnText: "#8899bb", btnActiveText: "#c8ccd4", inactiveText: "#556677",
+  },
+  light: {
+    bg: "#eef2f7", bgOverlay: "rgba(255,255,255,.94)", border: "rgba(100,120,160,.2)",
+    text: "#1a1e2a", textMuted: "#6678889", textDim: "#8899aa",
+    panelBg: "rgba(255,255,255,.94)", panelBorder: "rgba(100,120,160,.18)",
+    btnBg: "rgba(100,120,160,.08)", btnBorder: "rgba(100,120,160,.2)",
+    btnText: "#4a5568", btnActiveText: "#1a1e2a", inactiveText: "#8899aa",
+  },
+};
+
 export interface SceneHandle {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -491,7 +564,49 @@ export interface SceneHandle {
   layers: Record<LayerName, THREE.Group>;
   boneMap: Map<string, THREE.Mesh>;
   jointMap: Map<string, THREE.Mesh>;
+  themeRefs: {
+    hemi: THREE.HemisphereLight;
+    ambient: THREE.AmbientLight;
+    keyLight: THREE.DirectionalLight;
+    fillLight: THREE.DirectionalLight;
+    rimLight: THREE.DirectionalLight;
+    ground: THREE.Mesh;
+    grid: THREE.GridHelper; // mutable — replaced on theme swap
+    bloom: UnrealBloomPass;
+  };
   dispose: () => void;
+}
+
+export function applyTheme(handle: SceneHandle, mode: ThemeMode): void {
+  const t = THEMES[mode];
+  const { scene, renderer, themeRefs } = handle;
+
+  scene.background = new THREE.Color(t.sceneBg);
+  (scene.fog as THREE.FogExp2).color.set(t.fogColor);
+  (scene.fog as THREE.FogExp2).density = t.fogDensity;
+
+  renderer.toneMappingExposure = t.exposure;
+
+  themeRefs.hemi.color.set(t.hemiSky);
+  themeRefs.hemi.groundColor.set(t.hemiGround);
+  themeRefs.hemi.intensity = t.hemiIntensity;
+
+  themeRefs.ambient.color.set(t.ambientColor);
+  themeRefs.ambient.intensity = t.ambientIntensity;
+
+  themeRefs.keyLight.intensity = t.keyIntensity;
+  themeRefs.fillLight.intensity = t.fillIntensity;
+  themeRefs.rimLight.intensity = t.rimIntensity;
+
+  ((themeRefs.ground as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(t.groundColor);
+
+  scene.remove(themeRefs.grid);
+  const newGrid = new THREE.GridHelper(200, 40, t.gridA, t.gridB);
+  newGrid.position.y = 0.05;
+  scene.add(newGrid);
+  themeRefs.grid = newGrid;
+
+  themeRefs.bloom.strength = t.bloomStrength;
 }
 
 function toV3(v: Vec3): THREE.Vector3 {
@@ -577,7 +692,7 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const grid = new THREE.GridHelper(200, 40, 0x222244, 0x181828);
+  let grid = new THREE.GridHelper(200, 40, 0x222244, 0x181828);
   grid.position.y = 0.05;
   scene.add(grid);
 
@@ -856,7 +971,9 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
     }
   }
 
-  return { scene, camera, renderer, composer, controls, layers, boneMap, jointMap, dispose };
+  const themeRefs = { hemi, ambient, keyLight, fillLight, rimLight, ground, grid, bloom: bloomPass };
+
+  return { scene, camera, renderer, composer, controls, layers, boneMap, jointMap, themeRefs, dispose };
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -932,7 +1049,17 @@ export default function AnatomyViewer({ body }: AnatomyViewerProps) {
   const [visibleLayers, setVisibleLayers] = useState<Set<LayerName>>(new Set(DEFAULT_VISIBLE));
   const [hovered, setHovered] = useState<PickResult | null>(null);
   const [stats, setStats] = useState({ fps: 0, tris: 0 });
+  const [theme, setTheme] = useState<ThemeMode>("dark");
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2(-10, -10));
+  const ui = UI_THEMES[theme];
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next: ThemeMode = prev === "dark" ? "light" : "dark";
+      if (handleRef.current) applyTheme(handleRef.current, next);
+      return next;
+    });
+  }, []);
 
   const toggleLayer = useCallback((layer: LayerName) => {
     setVisibleLayers((prev: Set<LayerName>) => {

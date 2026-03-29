@@ -15,7 +15,13 @@
       "Bash(jq .segments[0] /home/admin/codebases/codespaces-blank/session-3/examples/david.json)",
       "Bash(find /home/admin/codebases/codespaces-blank/session-3/schemas/ -type f -name *.ts -o -name *.tsx)",
       "Bash(grep -E \"\\\\.ts$|\\\\.json$|\\\\.md$|\\\\.zip$\")",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(docker rm:*)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} — %{size_download} bytes\\\\n\" http://localhost:8090/)",
+      "Bash(docker compose:*)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8090/)"
     ]
   }
 }

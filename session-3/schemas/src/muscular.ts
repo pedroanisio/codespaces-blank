@@ -112,9 +112,9 @@ export const InnervationSchema = z.object({
   nerveId: NerveId.optional().describe("Reference to a Nerve entity if the nervous system is modeled"),
   nerveName: z.string().min(1).describe("Anatomical nerve name (e.g. 'musculocutaneous nerve')"),
   spinalRoots: z
-    .array(z.string().regex(/^[CTLS]\d{1,2}$/))
+    .array(z.string().regex(/^([CTLS]\d{1,2}|CN\d{1,2})$/))
     .min(1)
-    .describe("Spinal nerve roots (e.g. ['C5', 'C6']). Format: C=cervical, T=thoracic, L=lumbar, S=sacral + level number"),
+    .describe("Nerve roots: spinal (C/T/L/S + level, e.g. 'C5') or cranial (CN + number, e.g. 'CN5')"),
 });
 
 // --- Muscle Schema ---

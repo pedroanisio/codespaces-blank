@@ -295,8 +295,8 @@ def _build_bone_defs() -> list[BoneDef]:
     add("Frontal bone", "flat", "axial_cranium", None, 12, 12, 0.7, 90, (0, 174, 4))                  # 4  parent set later→C1
     add("Parietal bone (R)", "flat", "axial_cranium", 4, 12, 11, 0.5, 55, (-5, 176, 0))               # 5
     add("Parietal bone (L)", "flat", "axial_cranium", 4, 12, 11, 0.5, 55, (5, 176, 0))                # 6
-    add("Temporal bone (R)", "flat", "axial_cranium", 5, 5, 4, 0.4, 30, (-6, 170, 0))                 # 7
-    add("Temporal bone (L)", "flat", "axial_cranium", 6, 5, 4, 0.4, 30, (6, 170, 0))                  # 8
+    add("Temporal bone (R)", "irregular", "axial_cranium", 5, 5, 4, 0.4, 30, (-6, 170, 0))             # 7
+    add("Temporal bone (L)", "irregular", "axial_cranium", 6, 5, 4, 0.4, 30, (6, 170, 0))              # 8
     add("Occipital bone", "flat", "axial_cranium", 4, 10, 10, 0.8, 80, (0, 172, -5))                  # 9
     add("Sphenoid bone", "irregular", "axial_cranium", 4, 5, 7, 3, 30, (0, 168, 1))                   # 10
     add("Ethmoid bone", "irregular", "axial_cranium", 4, 3, 2.5, 3, 8, (0, 170, 4))                   # 11
@@ -528,7 +528,7 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
         sl = round(length * ds, 2)
         sw = round(width * ds, 2)
         sd = round(depth * ds, 2)
-        sm = round(mass * ms, 2)
+        sm = max(0.01, round(mass * ms, 2))
         sp = (round(pos[0] * ds, 1), round(pos[1] * ds, 1), round(pos[2] * ds, 1))
         a, b, c = sw / 2, sl / 2, sd / 2
         ixx = round(sm / 5 * (b * b + c * c), 2)
@@ -628,9 +628,9 @@ JOINT_DEFS: list[tuple[str, str, list[int], int, dict | None, dict | None]] = [
      {"flexionExtension": {"min": -10, "max": 25}, "abductionAdduction": {"min": -5, "max": 5}}),
     # === SUBTALAR ===
     ("Subtalar (R)", "plane", [B_FOOT_R_TALUS, B_FOOT_R_CALCANEUS], 1, None,
-     {"flexionExtension": {"min": -20, "max": 30}}),
+     {"flexionExtension": {"min": -15, "max": 30}}),
     ("Subtalar (L)", "plane", [B_FOOT_L_START + 1, B_FOOT_L_START], 1, None,
-     {"flexionExtension": {"min": -20, "max": 30}}),
+     {"flexionExtension": {"min": -15, "max": 30}}),
     # === MISSING INTERVERTEBRAL JOINTS (7) ===
     ("T11-T10 intervertebral", "cartilaginous", [B_T12 + 1, B_T12 + 2], 3, None,
      {"flexionExtension": {"min": -2, "max": 5}}),
@@ -837,7 +837,7 @@ def _bilateral(defs: list[MuscleSpec]) -> list[MuscleSpec]:
 # Compact format: (name, region, arch, ob, ib, actions, spinal, nerve, L, vol, fmax, penn)
 # • fdir defaults to (0,-1,0), overridden via _FDIR dict
 # • artery derived from region via _ARTERY dict
-# • optimalFiberLength = L × 0.6 (computed)
+# • optimalFiberLength = L × architecture-specific ratio (0.25–0.6)
 # • pcsa = vol / optimalFiberLength (computed)
 # • mass = vol × 1.06 (muscle density)
 # • maxContractionVelocity = 5.0–8.0 L_opt/s (randomized)
@@ -887,20 +887,20 @@ _FDIR: dict[str, tuple] = {
 # Compact raw muscle data: (name, region, arch, ob, ib, actions_str, spinal_str, nerve, L, vol, fmax, penn)
 _RAW: list[tuple] = [
     # === HEAD / FACE / JAW ===
-    ("Masseter", "face", "multipennate", B_ZYGOMATIC_R, B_MANDIBLE, "elevation", "C5,C6,C7", "Trigeminal V3", 4, 25, 800, 20),
-    ("Temporalis", "face", "convergent", B_TEMPORAL_R, B_MANDIBLE, "elevation", "C5,C6,C7", "Trigeminal V3", 6, 20, 600, None),
-    ("Medial Pterygoid", "face", "multipennate", B_SPHENOID, B_MANDIBLE, "elevation", "C5,C6,C7", "Trigeminal V3", 3, 10, 400, 15),
-    ("Lateral Pterygoid", "face", "parallel", B_SPHENOID, B_MANDIBLE, "protraction", "C5,C6,C7", "Trigeminal V3", 3, 8, 300, None),
-    ("Digastric", "head_and_neck", "parallel", B_TEMPORAL_R, B_MANDIBLE, "depression", "C1,C2", "Facial VII", 10, 5, 100, None),
-    ("Platysma", "face", "parallel", B_MANDIBLE, B_CLAV_R, "depression", "C2,C3", "Facial VII", 15, 8, 50, None),
-    ("Orbicularis Oculi", "face", "circular", B_FRONTAL, B_MAXILLA_R, "flexion", "C7", "Facial VII", 3, 3, 30, None),
-    ("Frontalis", "face", "parallel", B_FRONTAL, B_FRONTAL, "elevation", "C7", "Facial VII", 6, 4, 30, None),
-    ("Buccinator", "face", "parallel", B_MAXILLA_R, B_MANDIBLE, "flexion", "C7", "Facial VII", 4, 4, 40, None),
-    ("Orbicularis Oris", "face", "circular", B_MAXILLA_R, B_MANDIBLE, "flexion", "C7", "Facial VII", 3, 3, 30, None),
-    ("Zygomaticus Major", "face", "parallel", B_ZYGOMATIC_R, B_MANDIBLE, "elevation", "C7", "Facial VII", 5, 3, 30, None),
-    ("Mentalis", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "elevation", "C7", "Facial VII", 2, 2, 20, None),
-    ("Corrugator Supercilii", "face", "parallel", B_FRONTAL, B_FRONTAL, "depression", "C7", "Facial VII", 3, 2, 20, None),
-    ("Nasalis", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "flexion", "C7", "Facial VII", 2, 1, 15, None),
+    ("Masseter", "face", "multipennate", B_ZYGOMATIC_R, B_MANDIBLE, "elevation", "CN5", "Trigeminal V3", 4, 25, 800, 20),
+    ("Temporalis", "face", "convergent", B_TEMPORAL_R, B_MANDIBLE, "elevation", "CN5", "Trigeminal V3", 6, 20, 600, None),
+    ("Medial Pterygoid", "face", "multipennate", B_SPHENOID, B_MANDIBLE, "elevation", "CN5", "Trigeminal V3", 3, 10, 400, 15),
+    ("Lateral Pterygoid", "face", "parallel", B_SPHENOID, B_MANDIBLE, "protraction", "CN5", "Trigeminal V3", 3, 8, 300, None),
+    ("Digastric", "head_and_neck", "parallel", B_TEMPORAL_R, B_MANDIBLE, "depression", "CN5,CN7", "Facial VII", 10, 5, 100, None),
+    ("Platysma", "face", "parallel", B_MANDIBLE, B_CLAV_R, "depression", "CN7", "Facial VII", 15, 8, 50, None),
+    ("Orbicularis Oculi", "face", "circular", B_FRONTAL, B_MAXILLA_R, "flexion", "CN7", "Facial VII", 3, 3, 30, None),
+    ("Frontalis", "face", "parallel", B_FRONTAL, B_FRONTAL, "elevation", "CN7", "Facial VII", 6, 4, 30, None),
+    ("Buccinator", "face", "parallel", B_MAXILLA_R, B_MANDIBLE, "flexion", "CN7", "Facial VII", 4, 4, 40, None),
+    ("Orbicularis Oris", "face", "circular", B_MAXILLA_R, B_MANDIBLE, "flexion", "CN7", "Facial VII", 3, 3, 30, None),
+    ("Zygomaticus Major", "face", "parallel", B_ZYGOMATIC_R, B_MANDIBLE, "elevation", "CN7", "Facial VII", 5, 3, 30, None),
+    ("Mentalis", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "elevation", "CN7", "Facial VII", 2, 2, 20, None),
+    ("Corrugator Supercilii", "face", "parallel", B_FRONTAL, B_FRONTAL, "depression", "CN7", "Facial VII", 3, 2, 20, None),
+    ("Nasalis", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "flexion", "CN7", "Facial VII", 2, 1, 15, None),
     # === NECK ===
     ("Sternocleidomastoid", "head_and_neck", "parallel", B_STERNUM, B_OCCIPITAL, "flexion", "C2,C3", "Spinal accessory nerve (XI)", 20, 80, 400, None),
     ("Scalene Anterior", "head_and_neck", "parallel", B_C7, B_RIB_R[0], "lateral_flexion", "C4,C5,C6", "Cervical plexus", 8, 15, 200, None),
@@ -911,9 +911,9 @@ _RAW: list[tuple] = [
     ("Splenius Cervicis", "back_deep", "parallel", _T6, B_C7, "extension", "C4,C5,C6", "Posterior rami", 12, 20, 200, None),
     ("Omohyoid", "head_and_neck", "parallel", B_SCAP_R, B_HYOID, "depression", "C1,C2,C3", "Ansa cervicalis", 12, 5, 50, None),
     ("Sternohyoid", "head_and_neck", "parallel", B_STERNUM, B_HYOID, "depression", "C1,C2,C3", "Ansa cervicalis", 10, 5, 50, None),
-    ("Mylohyoid", "head_and_neck", "parallel", B_MANDIBLE, B_HYOID, "elevation", "C5,C6,C7", "Trigeminal V3", 5, 5, 60, None),
+    ("Mylohyoid", "head_and_neck", "parallel", B_MANDIBLE, B_HYOID, "elevation", "CN5", "Trigeminal V3", 5, 5, 60, None),
     ("Thyrohyoid", "head_and_neck", "parallel", B_HYOID, B_HYOID, "depression", "C1,C2", "Ansa cervicalis", 4, 3, 30, None),
-    ("Stylohyoid", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "elevation", "C7", "Facial VII", 5, 3, 30, None),
+    ("Stylohyoid", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "elevation", "CN7", "Facial VII", 5, 3, 30, None),
     # === TRUNK — BACK ===
     ("Trapezius Upper", "back_superficial", "convergent", B_OCCIPITAL, B_CLAV_R, "elevation", "C1,C2,C3,C4", "Spinal accessory nerve (XI)", 15, 80, 500, None),
     ("Trapezius Middle", "back_superficial", "convergent", _T6, B_SCAP_R, "retraction", "C3,C4", "Spinal accessory nerve (XI)", 15, 60, 400, None),
@@ -953,7 +953,7 @@ _RAW: list[tuple] = [
     ("Teres Major", "shoulder", "parallel", B_SCAP_R, B_HUMER_R, "adduction,medial_rotation", "C5,C6,C7", "Subscapular nerve", 12, 80, 600, None),
     ("Coracobrachialis", "arm_anterior", "parallel", B_SCAP_R, B_HUMER_R, "flexion,adduction", "C5,C6,C7", "Musculocutaneous nerve", 10, 30, 250, None),
     # === ARM ===
-    ("Biceps Brachii", "arm_anterior", "fusiform", B_SCAP_R, B_RAD_R, "flexion,supination", "C5,C6,C7", "Musculocutaneous nerve", 32, 280, 2800, None),
+    ("Biceps Brachii", "arm_anterior", "fusiform", B_SCAP_R, B_RAD_R, "flexion,supination", "C5,C6,C7", "Musculocutaneous nerve", 32, 150, 1100, None),
     ("Brachialis", "arm_anterior", "parallel", B_HUMER_R, B_ULNA_R, "flexion", "C5,C6", "Musculocutaneous nerve", 12, 160, 1500, None),
     ("Triceps Brachii", "arm_posterior", "multipennate", B_SCAP_R, B_ULNA_R, "extension", "C6,C7,C8", "Radial nerve", 28, 320, 3100, 12),
     ("Brachioradialis", "forearm_anterior", "fusiform", B_HUMER_R, B_RAD_R, "flexion", "C5,C6", "Radial nerve", 20, 50, 400, None),
@@ -1027,14 +1027,14 @@ _RAW: list[tuple] = [
     # ===========================================================================
     # === ADDITIONAL FACIAL MUSCLES (8) ===
     # Ref: Gray's Ch. 28 (muscles of facial expression)
-    ("Levator Labii Superioris", "face", "parallel", B_MAXILLA_R, B_MAXILLA_R, "elevation", "C7", "Facial VII", 3, 2, 20, None),
-    ("Levator Labii Superioris Alaeque Nasi", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "elevation", "C7", "Facial VII", 4, 2, 20, None),
-    ("Depressor Labii Inferioris", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "depression", "C7", "Facial VII", 2, 1.5, 15, None),
-    ("Depressor Anguli Oris", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "depression", "C7", "Facial VII", 3, 2, 20, None),
-    ("Risorius", "face", "parallel", B_ZYGOMATIC_R, B_MANDIBLE, "retraction", "C7", "Facial VII", 4, 1, 10, None),
-    ("Procerus", "face", "parallel", B_NASAL_R, B_FRONTAL, "depression", "C7", "Facial VII", 2, 1, 10, None),
-    ("Levator Anguli Oris", "face", "parallel", B_MAXILLA_R, B_MANDIBLE, "elevation", "C7", "Facial VII", 3, 2, 15, None),
-    ("Zygomaticus Minor", "face", "parallel", B_ZYGOMATIC_R, B_MAXILLA_R, "elevation", "C7", "Facial VII", 4, 1.5, 15, None),
+    ("Levator Labii Superioris", "face", "parallel", B_MAXILLA_R, B_MAXILLA_R, "elevation", "CN7", "Facial VII", 3, 2, 20, None),
+    ("Levator Labii Superioris Alaeque Nasi", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "elevation", "CN7", "Facial VII", 4, 2, 20, None),
+    ("Depressor Labii Inferioris", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "depression", "CN7", "Facial VII", 2, 1.5, 15, None),
+    ("Depressor Anguli Oris", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "depression", "CN7", "Facial VII", 3, 2, 20, None),
+    ("Risorius", "face", "parallel", B_ZYGOMATIC_R, B_MANDIBLE, "retraction", "CN7", "Facial VII", 4, 1, 10, None),
+    ("Procerus", "face", "parallel", B_NASAL_R, B_FRONTAL, "depression", "CN7", "Facial VII", 2, 1, 10, None),
+    ("Levator Anguli Oris", "face", "parallel", B_MAXILLA_R, B_MANDIBLE, "elevation", "CN7", "Facial VII", 3, 2, 15, None),
+    ("Zygomaticus Minor", "face", "parallel", B_ZYGOMATIC_R, B_MAXILLA_R, "elevation", "CN7", "Facial VII", 4, 1.5, 15, None),
     # === EXTRAOCULAR MUSCLES (7 per side) ===
     # Ref: Gray's Ch. 39 (orbit)
     ("Superior Rectus", "face", "parallel", B_SPHENOID, B_FRONTAL, "elevation", "C1", "Oculomotor nerve (III)", 4, 1, 60, None),
@@ -1101,12 +1101,12 @@ _RAW: list[tuple] = [
     ("Deep Transverse Perineal", "hip", "parallel", B_HIP_R, B_HIP_L, "elevation", "S2,S3,S4", "Pudendal nerve", 4, 3, 30, None),
     ("Superficial Transverse Perineal", "hip", "parallel", B_HIP_R, B_HIP_L, "elevation", "S2,S3,S4", "Pudendal nerve", 3, 2, 20, None),
     # === PALATE (3) Ref: Gray's Ch.29-30 ===
-    ("Tensor Veli Palatini", "head_and_neck", "parallel", B_SPHENOID, B_MAXILLA_R, "elevation", "C5,C6,C7", "Trigeminal V3", 3, 2, 25, None),
+    ("Tensor Veli Palatini", "head_and_neck", "parallel", B_SPHENOID, B_MAXILLA_R, "elevation", "CN5", "Trigeminal V3", 3, 2, 25, None),
     ("Levator Veli Palatini", "head_and_neck", "parallel", B_TEMPORAL_R, B_MAXILLA_R, "elevation", "C1", "Vagus nerve (X)", 3, 2, 25, None),
     ("Musculus Uvulae", "head_and_neck", "parallel", B_MAXILLA_R, B_MAXILLA_R, "elevation", "C1", "Vagus nerve (X)", 2, 0.5, 10, None),
     # === MIDDLE EAR (2) Ref: Gray's Ch.37 ===
-    ("Tensor Tympani", "face", "parallel", B_SPHENOID, B_MALLEUS_R, "flexion", "C5,C6,C7", "Trigeminal V3", 2, 0.1, 5, None),
-    ("Stapedius", "face", "parallel", B_TEMPORAL_R, B_STAPES_R, "flexion", "C7", "Facial VII", 0.6, 0.03, 2, None),
+    ("Tensor Tympani", "face", "parallel", B_SPHENOID, B_MALLEUS_R, "flexion", "CN5", "Trigeminal V3", 2, 0.1, 5, None),
+    ("Stapedius", "face", "parallel", B_TEMPORAL_R, B_STAPES_R, "flexion", "CN7", "Facial VII", 0.6, 0.03, 2, None),
     # === PHARYNGEAL LONGITUDINAL (2) Ref: Gray's Ch.30 ===
     ("Stylopharyngeus", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "elevation", "C1", "Glossopharyngeal nerve (IX)", 6, 3, 30, None),
     ("Salpingopharyngeus", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "elevation", "C1", "Vagus nerve (X)", 3, 1, 10, None),
@@ -1116,11 +1116,11 @@ _RAW: list[tuple] = [
     ("Transverse Tongue", "head_and_neck", "parallel", B_HYOID, B_HYOID, "adduction", "C1", "Hypoglossal nerve (XII)", 4, 2, 15, None),
     ("Vertical Tongue", "head_and_neck", "parallel", B_HYOID, B_HYOID, "depression", "C1", "Hypoglossal nerve (XII)", 4, 2, 15, None),
     # === ADDITIONAL FACIAL (5) Ref: Gray's Ch.28 ===
-    ("Auricularis Anterior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "protraction", "C7", "Facial VII", 2, 0.5, 5, None),
-    ("Auricularis Superior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "elevation", "C7", "Facial VII", 2, 0.5, 5, None),
-    ("Auricularis Posterior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "retraction", "C7", "Facial VII", 2, 0.5, 5, None),
-    ("Occipitalis", "face", "parallel", B_OCCIPITAL, B_OCCIPITAL, "retraction", "C7", "Facial VII", 4, 3, 20, None),
-    ("Depressor Septi Nasi", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "depression", "C7", "Facial VII", 1.5, 0.5, 8, None),
+    ("Auricularis Anterior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "protraction", "CN7", "Facial VII", 2, 0.5, 5, None),
+    ("Auricularis Superior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "elevation", "CN7", "Facial VII", 2, 0.5, 5, None),
+    ("Auricularis Posterior", "face", "parallel", B_TEMPORAL_R, B_TEMPORAL_R, "retraction", "CN7", "Facial VII", 2, 0.5, 5, None),
+    ("Occipitalis", "face", "parallel", B_OCCIPITAL, B_OCCIPITAL, "retraction", "CN7", "Facial VII", 4, 3, 20, None),
+    ("Depressor Septi Nasi", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "depression", "CN7", "Facial VII", 1.5, 0.5, 8, None),
 ]
 
 # === HAND INTRINSIC (18 per side — generated programmatically for R) ===
@@ -1247,11 +1247,18 @@ _ANTAG: dict[str, list[str]] = {
     "Genioglossus": ["Styloglossus"],
     "Styloglossus": ["Genioglossus"],
     "External Oblique": ["Erector Spinae"],
-    "Rectus Abdominis": ["Latissimus Dorsi (R)", "Latissimus Dorsi (L)"],
+    "Rectus Abdominis": ["Erector Spinae"],
+    "Gluteus Maximus": ["Iliopsoas"],
+    "Iliopsoas": ["Gluteus Maximus"],
+    "Deltoid": ["Latissimus Dorsi", "Teres Major"],
+    "Gastrocnemius": ["Tibialis Anterior"], "Soleus": ["Tibialis Anterior"],
 }
 _SYNERG: dict[str, list[str]] = {
-    "Biceps Brachii": ["Deltoid", "Brachialis"], "Deltoid": ["Pectoralis Major"],
+    "Biceps Brachii": ["Brachialis", "Brachioradialis"],
     "Gastrocnemius": ["Soleus"], "Soleus": ["Gastrocnemius"],
+    "Rectus Femoris": ["Vastus Lateralis", "Vastus Medialis", "Vastus Intermedius"],
+    "Gluteus Medius": ["Gluteus Minimus", "Tensor Fasciae Latae"],
+    "Gluteus Maximus": ["Biceps Femoris"],
 }
 
 # Special tendon overrides
@@ -1275,7 +1282,7 @@ def _expand_raw() -> list[MuscleSpec]:
         artery = _ARTERY.get(reg, "Regional artery")
         antag = _ANTAG.get(name, [])
         synerg = _SYNERG.get(name, [])
-        mass = round(vol * 1.06)
+        mass = max(1, round(vol * 1.06))
         otn_pair = _OTN.get(name)
         itn_pair = _ITN.get(name)
         base.append((name, reg, arch, ob, ib, actions, None, spinal, nv, artery,
@@ -1336,7 +1343,18 @@ def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
         r.muscle_name_to_idx[name] = len(r.muscle_ids) - 1
 
         # Computed biomechanical properties
-        opt_fiber_len = round(length * 0.6, 2)
+        # OFL/belly-length ratio depends on fascicle architecture:
+        #   parallel/fusiform: fibers span most of the belly (~0.6)
+        #   unipennate: fibers at angle, shorter (~0.35)
+        #   bipennate/multipennate: fibers much shorter (~0.25)
+        #   convergent: intermediate (~0.4)
+        #   circular: short fibers around lumen (~0.3)
+        # Ref: Ward et al., Clin Biomech 24(1):5-18, 2009, Table 2
+        _OFL_RATIO = {"parallel": 0.6, "fusiform": 0.55, "convergent": 0.4,
+                      "unipennate": 0.35, "bipennate": 0.25, "multipennate": 0.25,
+                      "circular": 0.3}
+        ofl_ratio = _OFL_RATIO.get(arch, 0.4)
+        opt_fiber_len = round(length * ofl_ratio, 2)
         pcsa = round(vol / opt_fiber_len, 2) if opt_fiber_len > 0 else 0
         vmax = round(random.uniform(5.0, 8.0), 1)
 
@@ -1400,7 +1418,7 @@ NERVE_DEFS = [
     ("Inferior gluteal nerve", "motor", "sacral", ["L5", "S1", "S2"], None),
     ("Common peroneal nerve", "mixed", "sacral", ["L4", "L5", "S1", "S2"], "Sciatic nerve"),
     ("Phrenic nerve", "motor", "cervical", ["C3", "C4", "C5"], None),
-    ("Spinal accessory nerve (XI)", "motor", "none", ["C1", "C2", "C3", "C4"], None),
+    ("Spinal accessory nerve (XI)", "motor", "none", ["C1", "C2", "C3", "C4", "C5"], None),
     ("Median nerve", "mixed", "brachial", ["C5", "C6", "C7", "C8", "T1"], None),
     ("Ulnar nerve", "mixed", "brachial", ["C8", "T1"], None),
     ("Obturator nerve", "mixed", "lumbar", ["L2", "L3", "L4"], None),
@@ -1413,10 +1431,10 @@ NERVE_DEFS = [
     ("Medial pectoral nerve", "motor", "brachial", ["C8", "T1"], None),
     ("Subcostal nerve", "mixed", "none", ["T12"], None),
     ("Intercostal nerves", "mixed", "none", ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11"], None),
-    ("Medial plantar nerve", "mixed", "sacral", ["S1", "S2"], "Tibial nerve"),
+    ("Medial plantar nerve", "mixed", "sacral", ["L4", "L5", "S1"], "Tibial nerve"),
     ("Lateral plantar nerve", "mixed", "sacral", ["S1", "S2"], "Tibial nerve"),
-    ("Trigeminal V3", "mixed", "none", ["C5", "C6", "C7"], None),
-    ("Facial VII", "mixed", "none", ["C7"], None),
+    ("Trigeminal V3", "mixed", "none", ["CN5"], None),
+    ("Facial VII", "mixed", "none", ["CN7"], None),
     ("Sacral plexus", "mixed", "sacral", ["L4", "L5", "S1", "S2", "S3"], None),
     ("Lumbar plexus", "mixed", "lumbar", ["L1", "L2", "L3", "L4"], None),
     ("Posterior rami", "mixed", "none", ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12", "L1", "L2", "L3", "L4", "L5"], None),
@@ -1426,17 +1444,17 @@ NERVE_DEFS = [
     # Reference: Standring, Gray's Anatomy 42nd ed., Ch. 33-38
     # CN V (Trigeminal V3) already present above; CN VII (Facial VII) already present above;
     # CN XI (Spinal accessory nerve) already present above.
-    ("Olfactory nerve (I)", "sensory", "none", ["C1"], None),
-    ("Optic nerve (II)", "sensory", "none", ["C1"], None),
-    ("Oculomotor nerve (III)", "motor", "none", ["C1"], None),
-    ("Trochlear nerve (IV)", "motor", "none", ["C1"], None),
-    ("Trigeminal V1 (ophthalmic)", "sensory", "none", ["C5", "C6", "C7"], None),
-    ("Trigeminal V2 (maxillary)", "sensory", "none", ["C5", "C6", "C7"], None),
-    ("Abducens nerve (VI)", "motor", "none", ["C1"], None),
-    ("Vestibulocochlear nerve (VIII)", "sensory", "none", ["C1"], None),
-    ("Glossopharyngeal nerve (IX)", "mixed", "none", ["C1"], None),
-    ("Vagus nerve (X)", "mixed", "none", ["C1"], None),
-    ("Hypoglossal nerve (XII)", "motor", "none", ["C1"], None),
+    ("Olfactory nerve (I)", "sensory", "none", ["CN1"], None),
+    ("Optic nerve (II)", "sensory", "none", ["CN2"], None),
+    ("Oculomotor nerve (III)", "motor", "none", ["CN3"], None),
+    ("Trochlear nerve (IV)", "motor", "none", ["CN4"], None),
+    ("Trigeminal V1 (ophthalmic)", "sensory", "none", ["CN5"], None),
+    ("Trigeminal V2 (maxillary)", "sensory", "none", ["CN5"], None),
+    ("Abducens nerve (VI)", "motor", "none", ["CN6"], None),
+    ("Vestibulocochlear nerve (VIII)", "sensory", "none", ["CN8"], None),
+    ("Glossopharyngeal nerve (IX)", "mixed", "none", ["CN9"], None),
+    ("Vagus nerve (X)", "mixed", "none", ["CN10"], None),
+    ("Hypoglossal nerve (XII)", "motor", "none", ["CN12"], None),
     # === ADDITIONAL PERIPHERAL ===
     ("Deep peroneal nerve", "mixed", "sacral", ["L4", "L5", "S1"], "Common peroneal nerve"),
     ("Superficial peroneal nerve", "mixed", "sacral", ["L5", "S1"], "Common peroneal nerve"),
@@ -1502,7 +1520,7 @@ def gen_organs(r: Reg, sex: str = "male") -> list[dict]:
         ("Trachea", "respiratory", 30, 30, False, False, "midline", (0, 150, 4)),
         ("Larynx", "respiratory", 20, 25, False, False, "midline", (0, 153, 5)),
         # === DIGESTIVE ===
-        ("Liver", "digestive", 1500, 1400, True, False, "right", (-8, 115, 3)),
+        ("Liver", "digestive", 1500, 1800, True, False, "right", (-8, 115, 3)),
         ("Stomach", "digestive", 950, 150, False, False, "left", (5, 118, 3)),
         ("Pancreas", "digestive", 70, 100, False, False, "midline", (0, 112, -1)),
         ("Gallbladder", "digestive", 50, 30, False, False, "right", (-6, 112, 4)),
@@ -1581,13 +1599,13 @@ def gen_vascular(r: Reg) -> list[dict]:
     def _art(name, pi, rad, path, **kw):
         vid = uid(); r.vessel_ids.append(vid)
         v: dict = {"id": vid, "name": name, "vesselType": "artery", "path": path,
-                    "averageLumenRadius": rad, "parentVesselId": r.vessel_ids[pi] if pi is not None else None}
+                    "averageLumenRadius": round(rad * 10, 1), "parentVesselId": r.vessel_ids[pi] if pi is not None else None}
         v.update(kw); vessels.append(v)
 
     def _vein(name, pi, rad, path, **kw):
         vid = uid(); r.vessel_ids.append(vid)
         v: dict = {"id": vid, "name": name, "vesselType": "vein", "path": path,
-                    "averageLumenRadius": rad, "parentVesselId": r.vessel_ids[pi] if pi is not None else None,
+                    "averageLumenRadius": round(rad * 10, 1), "parentVesselId": r.vessel_ids[pi] if pi is not None else None,
                     "hasValves": kw.pop("hasValves", True)}
         v.update(kw); vessels.append(v)
 
@@ -1650,6 +1668,16 @@ def gen_vascular(r: Reg) -> list[dict]:
     _art("Middle cerebral artery (L)", 40, 0.16, [vec3(2,168,0), vec3(5,170,0)])                              # 49
     _art("Posterior cerebral artery (R)", 45, 0.1, [vec3(-1,168,-1), vec3(-3,170,-1)])                        # 50
     _art("Posterior cerebral artery (L)", 45, 0.1, [vec3(1,168,-1), vec3(3,170,-1)])                          # 51
+    # Circle of Willis communicating arteries
+    _art("Anterior communicating artery", 46, 0.08, [vec3(-0.5,170,2), vec3(0.5,170,2)])
+    _art("Posterior communicating artery (R)", 39, 0.06, [vec3(-2,168,0), vec3(-1,168,-1)])
+    _art("Posterior communicating artery (L)", 40, 0.06, [vec3(2,168,0), vec3(1,168,-1)])
+    # --- Axillary arteries (between subclavian and brachial) ---
+    _art("Axillary artery (R)", 29, 0.45, [vec3(-12,145,1), vec3(-18,145,0)])
+    _art("Axillary artery (L)", 30, 0.45, [vec3(12,145,1), vec3(18,145,0)])
+    # --- Peroneal (fibular) arteries ---
+    _art("Peroneal artery (R)", 21, 0.15, [vec3(-11,25,-1), vec3(-12,15,-1), vec3(-12,5,-1)])
+    _art("Peroneal artery (L)", 22, 0.15, [vec3(11,25,-1), vec3(12,15,-1), vec3(12,5,-1)])
     # --- Coronary ---
     _art("Left coronary artery (LCA)", 0, 0.2, [vec3(-1,133,4), vec3(-3,131,5), vec3(-4,128,4)])             # 52
     _art("Left anterior descending", 52, 0.15, [vec3(-3,131,5), vec3(-2,127,5)])                              # 53
@@ -1693,6 +1721,7 @@ def gen_vascular(r: Reg) -> list[dict]:
     _vein("Hepatic vein (middle)", ivc_i, 0.4, [vec3(-2,115,3), vec3(-1,120,3)])                             # 82
     _vein("Splenic vein", 79, 0.4, [vec3(10,112,-1), vec3(3,110,3)])                                         # 83
     _vein("Superior mesenteric vein", 79, 0.5, [vec3(0,105,5), vec3(0,108,4)])                               # 84
+    _vein("Inferior mesenteric vein", 83, 0.3, [vec3(0,90,4), vec3(3,105,2)])                                # → splenic vein
     _vein("Renal vein (R)", ivc_i, 0.4, [vec3(-6,110,-4), vec3(-2,110,-2)])                                  # 85
     _vein("Renal vein (L)", ivc_i, 0.45, [vec3(6,110,-4), vec3(2,110,-2)])                                   # 86
     # --- Pulmonary veins ---
@@ -1841,6 +1870,11 @@ def gen_cartilage(r: Reg) -> list[dict]:
         (43, "T3-T2 intervertebral disc", 4.5, 6),
         (17, "T2-T1 intervertebral disc", 4, 5.5),
         (18, "C7-T1 intervertebral disc", 4, 5),
+        # Cervical IVDs (C6-C5 through C3-C2) — Shao et al., Eur Spine J (2002)
+        (68, "C6-C5 intervertebral disc", 3.5, 4.5),
+        (69, "C5-C4 intervertebral disc", 3.5, 4.5),
+        (70, "C4-C3 intervertebral disc", 3, 4),
+        (71, "C3-C2 intervertebral disc", 3, 3.5),
     ]
     for ji, name, thick, area in ivd_data:
         if ji < len(r.joint_ids):
@@ -1900,22 +1934,24 @@ _HAND_L_BONES = list(range(127, 154))
 _FOOT_R_BONES = list(range(154, 180))
 _FOOT_L_BONES = list(range(180, 206))
 
+# De Leva P (1996) Table 2-4: mass fraction, segment length (cm), CoM ratio (proximal)
+# Trunk = upper + middle trunk only (pelvis is separate segment)
 SEG_DEFS = [
-    ("Pelvis", [B_HIP_R, B_HIP_L, B_SACRUM, B_COCCYX], None, [J_HIP_R, J_HIP_L], 0.113, 18, 0.5),
-    ("Thigh (R)", [B_FEM_R], J_HIP_R, [J_KNEE_R], 0.14, 45, 0.433),
-    ("Thigh (L)", [B_FEM_L], J_HIP_L, [J_KNEE_L], 0.14, 45, 0.433),
-    ("Shank (R)", [B_TIB_R, B_FIB_R, B_PAT_R], J_KNEE_R, [J_ANKLE_R], 0.046, 40, 0.433),
-    ("Shank (L)", [B_TIB_L, B_FIB_L, B_PAT_L], J_KNEE_L, [J_ANKLE_L], 0.046, 40, 0.433),
-    ("Trunk", _TRUNK_BONES, 8, [J_SHOULDER_R, J_SHOULDER_L], 0.4306, 46, 0.5),
-    ("Head-neck", _HEAD_BONES, 18, [], 0.0714, 22, 0.5),
-    ("Upper arm (R)", [B_HUMER_R], J_SHOULDER_R, [J_ELBOW_R], 0.027, 36, 0.436),
-    ("Upper arm (L)", [B_HUMER_L], J_SHOULDER_L, [J_ELBOW_L], 0.027, 36, 0.436),
-    ("Forearm (R)", [B_RAD_R, B_ULNA_R], J_ELBOW_R, [J_WRIST_R], 0.0164, 26, 0.43),
-    ("Forearm (L)", [B_RAD_L, B_ULNA_L], J_ELBOW_L, [J_WRIST_L], 0.0164, 26, 0.43),
-    ("Hand (R)", _HAND_R_BONES, J_WRIST_R, [], 0.0061, 19, 0.506),
-    ("Hand (L)", _HAND_L_BONES, J_WRIST_L, [], 0.0061, 19, 0.506),
-    ("Foot (R)", _FOOT_R_BONES, J_ANKLE_R, [], 0.014, 26, 0.5),
-    ("Foot (L)", _FOOT_L_BONES, J_ANKLE_L, [], 0.014, 26, 0.5),
+    ("Pelvis", [B_HIP_R, B_HIP_L, B_SACRUM, B_COCCYX], None, [J_HIP_R, J_HIP_L], 0.1117, 18, 0.6115),
+    ("Thigh (R)", [B_FEM_R], J_HIP_R, [J_KNEE_R], 0.1416, 45, 0.4095),
+    ("Thigh (L)", [B_FEM_L], J_HIP_L, [J_KNEE_L], 0.1416, 45, 0.4095),
+    ("Shank (R)", [B_TIB_R, B_FIB_R, B_PAT_R], J_KNEE_R, [J_ANKLE_R], 0.0433, 40, 0.4459),
+    ("Shank (L)", [B_TIB_L, B_FIB_L, B_PAT_L], J_KNEE_L, [J_ANKLE_L], 0.0433, 40, 0.4459),
+    ("Trunk", _TRUNK_BONES, 8, [J_SHOULDER_R, J_SHOULDER_L], 0.3229, 46, 0.4486),
+    ("Head-neck", _HEAD_BONES, 18, [], 0.0694, 22, 0.5976),
+    ("Upper arm (R)", [B_HUMER_R], J_SHOULDER_R, [J_ELBOW_R], 0.0271, 36, 0.5772),
+    ("Upper arm (L)", [B_HUMER_L], J_SHOULDER_L, [J_ELBOW_L], 0.0271, 36, 0.5772),
+    ("Forearm (R)", [B_RAD_R, B_ULNA_R], J_ELBOW_R, [J_WRIST_R], 0.0162, 26, 0.4574),
+    ("Forearm (L)", [B_RAD_L, B_ULNA_L], J_ELBOW_L, [J_WRIST_L], 0.0162, 26, 0.4574),
+    ("Hand (R)", _HAND_R_BONES, J_WRIST_R, [], 0.0061, 19, 0.7474),
+    ("Hand (L)", _HAND_L_BONES, J_WRIST_L, [], 0.0061, 19, 0.7474),
+    ("Foot (R)", _FOOT_R_BONES, J_ANKLE_R, [], 0.0137, 26, 0.4415),
+    ("Foot (L)", _FOOT_L_BONES, J_ANKLE_L, [], 0.0137, 26, 0.4415),
 ]
 
 
@@ -1936,34 +1972,34 @@ def gen_segments(r: Reg, weight: float, sex: str = "male") -> list[dict]:
     where ρ is the ratio and L is the segment length.
     """
     # De Leva (1996) female overrides: (mass_frac, com_ratio)
-    # Only segments with >5% difference from male values are overridden
+    # Trunk = upper + middle trunk (excluding pelvis), same as male partitioning
     _FEMALE: dict[str, tuple[float, float]] = {
-        "Pelvis":       (0.1247, 0.5),     # male: 0.113
-        "Thigh (R)":    (0.1478, 0.4283),  # male: 0.14, 0.433
+        "Pelvis":       (0.1247, 0.5920),
+        "Thigh (R)":    (0.1478, 0.4283),
         "Thigh (L)":    (0.1478, 0.4283),
-        "Shank (R)":    (0.0481, 0.4416),  # male: 0.046, 0.433
+        "Shank (R)":    (0.0481, 0.4416),
         "Shank (L)":    (0.0481, 0.4416),
-        "Trunk":        (0.4257, 0.4964),  # male: 0.4306, 0.5
-        "Head-neck":    (0.0668, 0.4841),  # male: 0.0714, 0.5
-        "Upper arm (R)": (0.0255, 0.4559), # male: 0.027, 0.436
+        "Trunk":        (0.3010, 0.4964),  # female upper+middle trunk = 0.4257 - 0.1247
+        "Head-neck":    (0.0668, 0.4841),
+        "Upper arm (R)": (0.0255, 0.4559),
         "Upper arm (L)": (0.0255, 0.4559),
-        "Forearm (R)":  (0.0138, 0.4343),  # male: 0.0164, 0.43
+        "Forearm (R)":  (0.0138, 0.4343),
         "Forearm (L)":  (0.0138, 0.4343),
-        "Hand (R)":     (0.0056, 0.5016),  # male: 0.0061, 0.506
-        "Hand (L)":     (0.0056, 0.5016),
-        "Foot (R)":     (0.0129, 0.4014),  # male: 0.014, 0.5
+        "Hand (R)":     (0.0056, 0.7474),
+        "Hand (L)":     (0.0056, 0.7474),
+        "Foot (R)":     (0.0129, 0.4014),
         "Foot (L)":     (0.0129, 0.4014),
     }
 
     # Radii of gyration ratios (ρ/L): (sagittal, longitudinal, frontal)
-    # De Leva (1996) Table 4 — male values; female values are within ~5%
+    # De Leva (1996) Table 4 — male values
     _GYRATION: dict[str, tuple[float, float, float]] = {
         "Pelvis":       (0.313, 0.157, 0.315),
         "Thigh (R)":    (0.329, 0.149, 0.329),
         "Thigh (L)":    (0.329, 0.149, 0.329),
-        "Shank (R)":    (0.271, 0.093, 0.275),
-        "Shank (L)":    (0.271, 0.093, 0.275),
-        "Trunk":        (0.347, 0.191, 0.362),
+        "Shank (R)":    (0.275, 0.103, 0.271),
+        "Shank (L)":    (0.275, 0.103, 0.271),
+        "Trunk":        (0.372, 0.191, 0.362),
         "Head-neck":    (0.362, 0.312, 0.376),
         "Upper arm (R)": (0.285, 0.158, 0.269),
         "Upper arm (L)": (0.285, 0.158, 0.269),
@@ -2309,7 +2345,7 @@ def gen_constitutive_laws() -> dict:
 
 
 def _gen_motion_sequences(r: Reg) -> list[dict]:
-    """Generate a full gait cycle motion sequence (12 keyframes at ~100ms intervals).
+    """Generate a full gait cycle motion sequence (8 keyframes at ~140ms intervals).
 
     Joint angles interpolated through the gait cycle phases:
       0%   = heel-strike (R)     →  initial contact
