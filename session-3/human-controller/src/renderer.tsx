@@ -1364,14 +1364,12 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   // SKELETON — 206 bones
   //
   // Placement rules:
-  //   - LONG bones: span from parent position to own position (midpoint
-  //     placement, Y axis aligned along parent→child vector). This is
-  //     correct because long bones physically bridge two joints.
+  //   - Each bone's transform.position = its proximal joint (origin).
+  //   - LONG bones span from their OWN position toward their children's
+  //     positions. The mesh is placed at the midpoint, Y axis aligned
+  //     along self→children direction. Span length = bone.length.
   //   - ALL OTHER bones (flat, irregular, short, sesamoid): placed at
-  //     their own anatomical position with NO rotation override. These
-  //     bones sit at fixed locations (skull plates, vertebral bodies,
-  //     carpals) and their CSG is already authored in the correct
-  //     local-frame orientation.
+  //     their own anatomical position with rotation from transform.
   // ════════════════════════════════════════════════════════════════════
 
   const geometryByBoneId = new Map<string, BoneGeometryData>();
@@ -1385,6 +1383,42 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   const muscleOverrideById = new Map((body.rendering?.muscleOverrides ?? []).map((o) => [o.entityId, o]));
   const organOverrideById = new Map((body.rendering?.organOverrides ?? []).map((o) => [o.entityId, o]));
   const vesselOverrideById = new Map((body.rendering?.vesselOverrides ?? []).map((o) => [o.entityId, o]));
+
+  // Build parent→children map for long bone span computation
+  const childrenOfBone = new Map<string, BoneData[]>();
+  for (const b of body.skeleton) {
+    if (b.parentBoneId) {
+      const list = childrenOfBone.get(b.parentBoneId) || [];
+      list.push(b);
+      childrenOfBone.set(b.parentBoneId, list);
+    }
+  }
+
+  // Compute the distal end of a long bone: average position of its children,
+  // or fall back to extending along parent→self direction by bone.length.
+  function longBoneDistalEnd(bone: BoneData): THREE.Vector3 {
+    const bonePos = toV3(bone.transform.position);
+    const children = childrenOfBone.get(bone.id);
+    if (children && children.length > 0) {
+      const avg = new THREE.Vector3();
+      for (const child of children) {
+        avg.add(toV3(child.transform.position));
+      }
+      avg.divideScalar(children.length);
+      return avg;
+    }
+    // No children: extend along parent→self direction by bone.length
+    const parent = bone.parentBoneId ? boneDataById.get(bone.parentBoneId) : undefined;
+    if (parent) {
+      const dir = bonePos.clone().sub(toV3(parent.transform.position));
+      if (dir.lengthSq() > 0.01) {
+        dir.normalize();
+        return bonePos.clone().add(dir.multiplyScalar(bone.length));
+      }
+    }
+    // Last resort: extend downward
+    return bonePos.clone().add(new THREE.Vector3(0, -bone.length, 0));
+  }
 
   // GLTFLoader for external_asset bone meshes
   const gltfLoader = new GLTFLoader();
@@ -1419,19 +1453,21 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
     if (renderOverride?.visible === false) continue;
     const mat = applyRenderOverride(boneMaterial(bone.region), renderOverride, globalOpacity);
     const geometryEntry = geometryByBoneId.get(bone.id);
-    const parent = bone.parentBoneId ? boneDataById.get(bone.parentBoneId) : undefined;
     const bonePos = toV3(bone.transform.position);
 
-    const isLong = bone.classification === "long" && parent;
+    const isLong = bone.classification === "long";
     let meshPos: THREE.Vector3;
     let meshQuat: THREE.Quaternion | undefined;
     let meshEuler: THREE.Euler | undefined;
+    let spanLen: number | undefined;
 
-    if (isLong && parent) {
-      const parentPos = toV3(parent.transform.position);
-      const dir = bonePos.clone().sub(parentPos);
+    if (isLong) {
+      // Long bones span from own position (proximal) to distal end (children avg)
+      const distalEnd = longBoneDistalEnd(bone);
+      const dir = distalEnd.clone().sub(bonePos);
       const dist = dir.length();
-      meshPos = parentPos.clone().add(bonePos).multiplyScalar(0.5);
+      spanLen = Math.max(1, dist);
+      meshPos = bonePos.clone().add(distalEnd).multiplyScalar(0.5);
       if (dist > 0.1) {
         const d = dir.normalize();
         const up = new THREE.Vector3(0, 1, 0);
@@ -1463,6 +1499,7 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
       const extGeo = geometryEntry as ExternalAssetGeometryData;
       const url = resolveAssetUri(extGeo.uri);
       const capturedMesh = mesh;
+      const capturedSpanLen = spanLen;
       gltfLoader.load(
         url,
         (gltf) => {
@@ -1479,15 +1516,13 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
         undefined,
         () => {
           // Load failed — replace with inline fallback
-          const fallbackGeo = buildInlineGeometry(undefined, bone,
-            isLong && parent ? Math.max(toV3(parent.transform.position).distanceTo(bonePos), 1) : undefined);
+          const fallbackGeo = buildInlineGeometry(undefined, bone, capturedSpanLen);
           capturedMesh.geometry.dispose();
           capturedMesh.geometry = fallbackGeo;
         },
       );
     } else {
       // Inline geometry (indexed_mesh, parametric_csg, or procedural fallback)
-      const spanLen = isLong && parent ? Math.max(toV3(parent.transform.position).distanceTo(bonePos), 1) : undefined;
       const geo = buildInlineGeometry(geometryEntry, bone, spanLen);
       mesh = new THREE.Mesh(geo, mat);
       mesh.position.copy(meshPos);
@@ -1552,15 +1587,38 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
     // Muscle belly: curved spindle tube between origin and insertion
     // Multiple control points for anatomical curvature
     const mid = oPos.clone().add(iPos).multiplyScalar(0.5);
-    const fiberDir = toV3(muscle.fiberDirection);
     const span = oPos.distanceTo(iPos);
     const bulge = span * 0.15;
 
+    // Compute a bulge direction perpendicular to the muscle span.
+    // fiberDirection points along the fiber axis (roughly parallel to span),
+    // so using it directly as the bulge offset creates loops/twists.
+    // Instead: cross(spanDir, fiberDir) gives a perpendicular direction,
+    // and we bias it outward from the body centerline (x=0, z≈10).
+    const spanDir = iPos.clone().sub(oPos);
+    if (spanDir.lengthSq() > 0) spanDir.normalize();
+    const fiberDir = toV3(muscle.fiberDirection).normalize();
+    const bulgeDir = new THREE.Vector3().crossVectors(spanDir, fiberDir);
+    if (bulgeDir.lengthSq() < 1e-6) {
+      // fiberDir is parallel to span — pick an arbitrary perpendicular
+      const ref = Math.abs(spanDir.y) < 0.9
+        ? new THREE.Vector3(0, 1, 0)
+        : new THREE.Vector3(1, 0, 0);
+      bulgeDir.crossVectors(spanDir, ref);
+    }
+    bulgeDir.normalize();
+
+    // Ensure bulge pushes outward from body center (x=0, z≈10)
+    const outward = new THREE.Vector3(mid.x, 0, mid.z - 10);
+    if (outward.lengthSq() > 0.01 && bulgeDir.dot(outward) < 0) {
+      bulgeDir.negate();
+    }
+
     // 5 control points for smoother curvature
-    const q1 = oPos.clone().lerp(mid, 0.25).add(fiberDir.clone().multiplyScalar(bulge * 0.6));
-    const q2 = oPos.clone().lerp(mid, 0.5).add(fiberDir.clone().multiplyScalar(bulge));
-    const q3 = mid.clone().lerp(iPos, 0.5).add(fiberDir.clone().multiplyScalar(bulge * 0.8));
-    const q4 = mid.clone().lerp(iPos, 0.75).add(fiberDir.clone().multiplyScalar(bulge * 0.4));
+    const q1 = oPos.clone().lerp(mid, 0.25).add(bulgeDir.clone().multiplyScalar(bulge * 0.6));
+    const q2 = oPos.clone().lerp(mid, 0.5).add(bulgeDir.clone().multiplyScalar(bulge));
+    const q3 = mid.clone().lerp(iPos, 0.5).add(bulgeDir.clone().multiplyScalar(bulge * 0.8));
+    const q4 = mid.clone().lerp(iPos, 0.75).add(bulgeDir.clone().multiplyScalar(bulge * 0.4));
 
     // Belly radius from volume: V ≈ π r² L → r = sqrt(V / (π L))
     const bellyR = Math.max(0.2, Math.min(3.0, Math.sqrt(muscle.volume / (Math.PI * Math.max(1, muscle.restingLength)))));
