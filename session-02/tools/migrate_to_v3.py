@@ -380,48 +380,41 @@ def fix_audio_asset(asset: dict) -> dict:
 
 # ── Dependencies fix ──────────────────────────────────────────────────────────
 
-def fix_dependencies(deps: object) -> dict:
-    """Convert list-of-edges to {nodes, edges} with fromNodeId/toNodeId."""
+def fix_dependencies(deps: object) -> list:
+    """Convert dependency list to schema-compliant array of relationship edges."""
     if isinstance(deps, dict) and "edges" in deps:
-        # Already has structure, just fix edges
         edges = deps.get("edges", [])
-        nodes = deps.get("nodes", [])
     elif isinstance(deps, list):
         edges = deps
-        nodes = []
     else:
-        return {"nodes": [], "edges": []}
+        return []
 
+    valid_dep_types = {"requires", "blocks", "derives_from", "supersedes", "references", "syncs_with", "custom"}
     fixed_edges = []
-    node_ids = set()
-    for edge in edges:
+    for i, edge in enumerate(edges):
         if not isinstance(edge, dict):
             continue
 
         from_ref = edge.get("fromRef", {})
         to_ref = edge.get("toRef", {})
 
-        from_id = from_ref.get("logicalId") or from_ref.get("id", "") if isinstance(from_ref, dict) else str(from_ref)
-        to_id = to_ref.get("logicalId") or to_ref.get("id", "") if isinstance(to_ref, dict) else str(to_ref)
-
         fixed_edge = {
-            "fromNodeId": from_id,
-            "toNodeId": to_id,
+            "edgeId": edge.get("edgeId") or f"dep-{i:03d}",
+            "fromRef": to_entity_ref(from_ref) if from_ref else {"id": "unknown"},
+            "toRef": to_entity_ref(to_ref) if to_ref else {"id": "unknown"},
+            "dependencyType": edge.get("dependencyType", "requires"),
         }
 
-        # dependencyType → condition (closest allowed field)
-        dep_type = edge.get("dependencyType", "")
-        if dep_type:
-            fixed_edge["condition"] = dep_type
+        dep = fixed_edge["dependencyType"]
+        if dep not in valid_dep_types:
+            fixed_edge["dependencyType"] = "references"
 
         if edge.get("notes"):
             fixed_edge["notes"] = edge["notes"]
 
         fixed_edges.append(fixed_edge)
-        node_ids.add(from_id)
-        node_ids.add(to_id)
 
-    return {"edges": fixed_edges}
+    return fixed_edges
 
 
 # ── Shot refs in scenes ───────────────────────────────────────────────────────
@@ -933,14 +926,14 @@ def fix_workflows(workflows: list) -> list:
 
 # ── Relationships fix ─────────────────────────────────────────────────────────
 
-def fix_relationships(rels: object) -> dict:
-    """Convert relationships list to schema-compliant {edges} with edgeId/dependencyType."""
+def fix_relationships(rels: object) -> list:
+    """Convert relationships to schema-compliant array of edges with edgeId/dependencyType."""
     if isinstance(rels, dict) and "edges" in rels:
         edges = rels.get("edges", [])
     elif isinstance(rels, list):
         edges = rels
     else:
-        return {"edges": []}
+        return []
 
     fixed = []
     for i, edge in enumerate(edges):
@@ -949,7 +942,6 @@ def fix_relationships(rels: object) -> dict:
         result = {}
         result["edgeId"] = edge.get("edgeId") or edge.get("id") or f"rel-{i:03d}"
 
-        # fromRef/toRef stay as EntityRef
         if "fromRef" in edge:
             result["fromRef"] = to_entity_ref(edge["fromRef"])
         if "toRef" in edge:
@@ -966,7 +958,7 @@ def fix_relationships(rels: object) -> dict:
 
         fixed.append(result)
 
-    return {"edges": fixed}
+    return fixed
 
 
 # ── Audio technicalSpec fix ───────────────────────────────────────────────────
@@ -985,6 +977,537 @@ def fix_audio_tech_spec_recursive(obj: object) -> object:
         return result
     elif isinstance(obj, list):
         return [fix_audio_tech_spec_recursive(item) for item in obj]
+    return obj
+
+
+# ── Package fix ───────────────────────────────────────────────────────────────
+
+GOVERNANCE_ALLOWED = {"requireApprovalForPublish"}
+BUDGET_ALLOWED = {"currency"}
+COMPLIANCE_ALLOWED = {"notes"}
+
+
+def fix_package(pkg: dict) -> dict:
+    """Remove non-schema package sub-objects (governance, budget, compliance extras)."""
+    for section_name, allowed in [("governance", GOVERNANCE_ALLOWED),
+                                   ("budget", BUDGET_ALLOWED),
+                                   ("compliance", COMPLIANCE_ALLOWED)]:
+        section = pkg.get(section_name)
+        if not isinstance(section, dict):
+            continue
+        to_remove = [k for k in section if k not in allowed]
+        for k in to_remove:
+            del section[k]
+    return pkg
+
+
+# ── Project fix ───────────────────────────────────────────────────────────────
+
+def fix_project(project: dict) -> dict:
+    """Fix project-level schema issues."""
+    # audiences items must be strings
+    audiences = project.get("audiences") or []
+    fixed_audiences = []
+    for a in audiences:
+        if isinstance(a, str):
+            fixed_audiences.append(a)
+        elif isinstance(a, dict):
+            fixed_audiences.append(a.get("descriptor", str(a)))
+        else:
+            fixed_audiences.append(str(a))
+    if audiences:
+        project["audiences"] = fixed_audiences
+
+    # defaultQualityProfileRef must be EntityRef
+    dqpr = project.get("defaultQualityProfileRef")
+    if isinstance(dqpr, str):
+        project["defaultQualityProfileRef"] = {"id": dqpr}
+
+    # globalCharacterRefs/globalEnvironmentRefs — clean entityType from refs
+    for ref_field in ("globalCharacterRefs", "globalEnvironmentRefs", "globalPropRefs"):
+        refs = project.get(ref_field)
+        if isinstance(refs, list):
+            project[ref_field] = [to_entity_ref(r) for r in refs]
+
+    # globalPropRefs isn't in schema — move to extensions
+    if "globalPropRefs" in project:
+        ext = project.get("extensions") or {}
+        ext["globalPropRefs"] = project.pop("globalPropRefs")
+        project["extensions"] = ext
+
+    return project
+
+
+# ── Quality profile fix ───────────────────────────────────────────────────────
+
+def fix_quality_profiles(profiles: list) -> list:
+    """Fix qualityProfile structure: video/audio → profile.video/audio."""
+    for qp in profiles:
+        if not isinstance(qp, dict):
+            continue
+        # Schema expects a nested "profile" object containing video/audio
+        if "profile" not in qp and ("video" in qp or "audio" in qp):
+            profile = {}
+            if "video" in qp:
+                video = qp.pop("video")
+                # Fix video sub-fields
+                if isinstance(video, dict):
+                    # resolution.label not allowed
+                    res = video.get("resolution")
+                    if isinstance(res, dict):
+                        res.pop("label", None)
+                    # aspectRatio must be object
+                    ar = video.get("aspectRatio")
+                    if isinstance(ar, str):
+                        video["aspectRatio"] = {"expression": ar}
+                    # frameRate.mode: progressive → constant
+                    fr = video.get("frameRate")
+                    if isinstance(fr, dict) and fr.get("mode") == "progressive":
+                        fr["mode"] = "constant"
+                profile["video"] = video
+            if "audio" in qp:
+                audio = qp.pop("audio")
+                if isinstance(audio, dict):
+                    audio.pop("dialogueNormalization", None)
+                profile["audio"] = audio
+            profile["name"] = qp.get("name") or qp.get("id", "default")
+            qp["profile"] = profile
+        ensure_entity_fields(qp, "qualityProfile", name_fallback=qp.get("id", "qp"))
+    return profiles
+
+
+# ── Scene fix ─────────────────────────────────────────────────────────────────
+
+TRANSITION_TYPE_MAP = {
+    "fade_from_black": "fade",
+    "fade_to_black": "fade",
+    "smash_cut": "cut",
+    "match_cut": "cut",
+    "j_cut": "cut",
+    "l_cut": "cut",
+    "jump_cut": "cut",
+    "cross_dissolve": "dissolve",
+    "iris": "custom",
+}
+
+
+def fix_scenes(scenes: list) -> list:
+    """Add name and fix transition types on scenes."""
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        if "name" not in scene:
+            scene["name"] = scene.get("id") or scene.get("logicalId") or "Unnamed Scene"
+
+        for t_field in ("transitionIn", "transitionOut"):
+            t = scene.get(t_field)
+            if isinstance(t, dict) and "type" in t:
+                t_type = t["type"]
+                if t_type not in {"cut", "dissolve", "fade", "wipe", "push", "zoom", "custom"}:
+                    t["type"] = TRANSITION_TYPE_MAP.get(t_type, "custom")
+    return scenes
+
+
+# ── Canonical documents fix ───────────────────────────────────────────────────
+
+def fix_canonical_documents(docs: dict) -> dict:
+    """Add missing name fields to canonical documents."""
+    for key in ("story", "script", "directorInstructions"):
+        doc = docs.get(key)
+        if isinstance(doc, dict) and "name" not in doc:
+            doc["name"] = doc.get("id") or doc.get("logicalId") or key.replace("_", " ").title()
+    return docs
+
+
+# ── Shots required fields fix ─────────────────────────────────────────────────
+
+def fix_shots_required(shots: list) -> list:
+    """Add required fields to shots: sceneRef, targetDurationSec, cinematicSpec."""
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        if "sceneRef" not in shot:
+            shot["sceneRef"] = {"id": "scene-unknown"}
+        if "targetDurationSec" not in shot:
+            shot["targetDurationSec"] = 5.0
+        if "cinematicSpec" not in shot:
+            shot["cinematicSpec"] = {}
+    return shots
+
+
+# ── Visual asset spec fix ─────────────────────────────────────────────────────
+
+def fix_visual_asset_specs(assets: list) -> list:
+    """Fix spec sub-fields on visual assets."""
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        spec = asset.get("spec")
+        if not isinstance(spec, dict):
+            continue
+
+        # resolution.label not allowed
+        res = spec.get("resolution")
+        if isinstance(res, dict):
+            res.pop("label", None)
+
+        # aspectRatio must be object {expression}
+        ar = spec.get("aspectRatio")
+        if isinstance(ar, str):
+            spec["aspectRatio"] = {"expression": ar}
+
+        # frameRate must be object {fps}
+        fr = spec.get("frameRate")
+        if isinstance(fr, (int, float)):
+            spec["frameRate"] = {"fps": fr}
+
+        # Remove non-schema fields from spec
+        for extra in ("colorSpace", "durationSec", "dynamicRange", "stylePreset"):
+            spec.pop(extra, None)
+    return assets
+
+
+# ── Visual asset generation step deep fixes ───────────────────────────────────
+
+ADAPTER_INPUT_ALLOWED = {"adapterType", "weight", "ref", "parameters"}
+REFERENCE_ASSET_ALLOWED = {"ref", "role", "weight", "notes"}
+COST_ESTIMATE_ALLOWED = {"amount", "currency", "notes"}
+REPRODUCIBILITY_ALLOWED = {"deterministic", "extensions"}
+
+
+def fix_adapter_input(ai: dict) -> dict:
+    """Fix adapterInput to match schema."""
+    result = {}
+    if "adapterType" in ai:
+        result["adapterType"] = ai["adapterType"]
+
+    # source → ref
+    source = ai.get("source") or ai.get("ref")
+    if source is not None:
+        result["ref"] = to_entity_ref(source)
+
+    # characterRef → ref
+    char_ref = ai.get("characterRef")
+    if char_ref is not None and "ref" not in result:
+        result["ref"] = to_entity_ref(char_ref)
+
+    # targetRef → ref (for ControlNet)
+    target_ref = ai.get("targetRef")
+    if target_ref is not None and "ref" not in result:
+        result["ref"] = to_entity_ref(target_ref)
+
+    if "weight" in ai:
+        result["weight"] = ai["weight"]
+
+    # controlType → parameters
+    if "controlType" in ai:
+        result["parameters"] = {"controlType": ai["controlType"]}
+
+    return result
+
+
+def fix_reference_asset(ra: dict) -> dict:
+    """Fix referenceAsset to match schema."""
+    result = {}
+    # sourceRef → ref
+    ref = ra.get("ref") or ra.get("sourceRef")
+    if ref is not None:
+        result["ref"] = to_entity_ref(ref)
+
+    # type → role
+    role = ra.get("role") or ra.get("type")
+    if role:
+        result["role"] = role
+
+    for field in ("weight", "notes"):
+        if field in ra:
+            result[field] = ra[field]
+
+    return result
+
+
+def fix_cost_estimate(ce: dict) -> dict:
+    """Fix costEstimate to match schema."""
+    result = {}
+    amount = ce.get("amount") or ce.get("valueEstimate") or ce.get("tokenEstimate", 0)
+    result["amount"] = amount
+    result["currency"] = ce.get("currency", "USD")
+    return result
+
+
+def fix_reproducibility(repro: dict) -> dict:
+    """Fix reproducibility to match schema."""
+    result = {}
+    if "deterministic" in repro:
+        result["deterministic"] = repro["deterministic"]
+    return result
+
+
+def fix_generation_steps_deep(obj: object) -> object:
+    """Deep-fix generation step internals (adapterInputs, costEstimate, etc.)."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "generation" and isinstance(v, dict):
+                gen = {}
+                for gk, gv in v.items():
+                    if gk == "steps" and isinstance(gv, list):
+                        fixed_steps = []
+                        for step in gv:
+                            if not isinstance(step, dict):
+                                fixed_steps.append(step)
+                                continue
+                            # Ensure operationType
+                            if "operationType" not in step:
+                                step["operationType"] = "generation"
+                            # Fix adapterInputs
+                            if "adapterInputs" in step:
+                                step["adapterInputs"] = [
+                                    fix_adapter_input(ai) if isinstance(ai, dict) else ai
+                                    for ai in step["adapterInputs"]
+                                ]
+                            # Fix referenceAssets
+                            if "referenceAssets" in step:
+                                step["referenceAssets"] = [
+                                    fix_reference_asset(ra) if isinstance(ra, dict) else ra
+                                    for ra in step["referenceAssets"]
+                                ]
+                            # Fix costEstimate
+                            if "costEstimate" in step and isinstance(step["costEstimate"], dict):
+                                step["costEstimate"] = fix_cost_estimate(step["costEstimate"])
+                            # Remove non-schema fields from step
+                            # (costActual, retryConfig, asyncConfig, status, metrics, logs)
+                            for extra in ("costActual", "retryConfig", "asyncConfig",
+                                          "status", "metrics", "logs"):
+                                step.pop(extra, None)
+                            fixed_steps.append(step)
+                        gen[gk] = fixed_steps
+                    elif gk == "reproducibility" and isinstance(gv, dict):
+                        gen[gk] = fix_reproducibility(gv)
+                    else:
+                        gen[gk] = gv
+                result[k] = gen
+            else:
+                result[k] = fix_generation_steps_deep(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_generation_steps_deep(item) for item in obj]
+    return obj
+
+
+# ── Generic assets fix ────────────────────────────────────────────────────────
+
+GENERIC_ASSET_EXTRAS = {
+    "colorSpace", "filePath", "format", "label",
+    "lutDimension", "lutSize", "technicalNotes",
+    "maskParameters", "maskType", "overlayParameters",
+    "resolution", "frameRate",
+}
+
+
+def fix_generic_assets(assets: list) -> list:
+    """Fix genericAsset items."""
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        ensure_entity_fields(asset, "genericAsset", name_fallback=asset.get("label") or asset.get("id", "asset"))
+        # Remove non-schema fields → extensions
+        ext = asset.get("extensions") or {}
+        for extra in GENERIC_ASSET_EXTRAS:
+            if extra in asset:
+                ext[extra] = asset.pop(extra)
+        if ext:
+            asset["extensions"] = ext
+    return assets
+
+
+# ── Null ref cleanup ──────────────────────────────────────────────────────────
+
+def remove_null_refs_recursive(obj: object) -> object:
+    """Remove ref fields that are None (schema expects object, not null)."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if v is None and k in SINGLE_REF_FIELDS:
+                continue  # Skip null refs
+            result[k] = remove_null_refs_recursive(v)
+        return result
+    elif isinstance(obj, list):
+        return [remove_null_refs_recursive(item) for item in obj]
+    return obj
+
+
+# ── Workflow edges fix ────────────────────────────────────────────────────────
+
+# ── Workflow nodes fix ─────────────────────────────────────────────────────────
+
+NODE_TYPE_MAP = {
+    "GenerationNode": "generation",
+    "TransformNode": "transform",
+    "ValidationNode": "validation",
+    "RenderNode": "render",
+    "NotificationNode": "notification",
+}
+VALID_NODE_TYPES = {"generation", "transform", "validation", "render", "notification", "approval", "custom"}
+VALID_NODE_STATUS = {"pending", "running", "succeeded", "failed", "cancelled"}
+
+
+def _make_stub_generation_step(node: dict) -> dict:
+    """Create a minimal generationStep from node metadata."""
+    return {
+        "stepId": node.get("nodeId", "step-auto"),
+        "operationType": "generation",
+    }
+
+
+def fix_workflow_node(node: dict) -> dict:
+    """Fix a single workflow node to match schema oneOf discriminated union."""
+    raw_type = node.get("type") or node.get("nodeType", "custom")
+    node_type = NODE_TYPE_MAP.get(raw_type, raw_type if raw_type in VALID_NODE_TYPES else "custom")
+
+    # Collect extra fields for extensions
+    base_fields = {"nodeId", "name", "nodeType", "type", "inputs", "outputs",
+                    "retryPolicy", "cacheKey", "extensions", "status"}
+    ext = node.get("extensions") or {}
+    for nk, nv in node.items():
+        if nk not in base_fields:
+            ext[nk] = nv
+
+    fixed = {
+        "nodeId": node.get("nodeId", "node-auto"),
+        "name": node.get("name", ""),
+        "nodeType": node_type,
+    }
+
+    # Add type-specific required fields
+    if node_type == "generation":
+        fixed["generationStep"] = node.get("generationStep") or _make_stub_generation_step(node)
+    elif node_type == "transform":
+        fixed["operation"] = node.get("operation") or {
+            "opId": f"op-{node.get('nodeId', 'auto')}",
+            "opType": "custom",
+            "executor": "pipeline",
+        }
+    elif node_type == "validation":
+        fixed["validationRules"] = node.get("validationRules") or [
+            {"name": node.get("name", "validation")}
+        ]
+    elif node_type == "render":
+        fixed["renderPlanRef"] = node.get("renderPlanRef") or {"id": "renderplan-auto"}
+    elif node_type == "notification":
+        fixed["channel"] = node.get("channel") or "log"
+    elif node_type == "approval":
+        fixed["role"] = node.get("role") or "reviewer"
+        fixed["approvalStatus"] = node.get("approvalStatus") or "pending"
+    elif node_type == "custom":
+        fixed["executor"] = node.get("executor") or {}
+
+    if ext:
+        fixed["extensions"] = ext
+
+    return fixed
+
+
+def fix_workflow_nodes(obj: object) -> object:
+    """Fix orchestration workflow nodes to match schema."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "workflows" and isinstance(v, list):
+                for wf in v:
+                    if not isinstance(wf, dict):
+                        continue
+                    nodes = wf.get("nodes") or []
+                    wf["nodes"] = [
+                        fix_workflow_node(n) if isinstance(n, dict) else n
+                        for n in nodes
+                    ]
+                result[k] = v
+            else:
+                result[k] = fix_workflow_nodes(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_workflow_nodes(item) for item in obj]
+    return obj
+
+
+# ── Deliverables fix ──────────────────────────────────────────────────────────
+
+PUBLISH_SCHEDULE_KIND_MAP = {
+    "fixed": "exact",
+    "tbd": "unknown",
+    "approximate": "approximate",
+    "exact": "exact",
+    "range": "range",
+    "unknown": "unknown",
+}
+PUBLISH_SCHEDULE_ALLOWED = {"kind", "date", "extensions"}
+
+
+def fix_deliverables(deliverables: list) -> list:
+    """Fix deliverable items."""
+    for d in deliverables:
+        if not isinstance(d, dict):
+            continue
+        ensure_entity_fields(d, "finalOutput", name_fallback=d.get("id", "output"))
+
+        # Fix accessibilityConfig refs
+        ac = d.get("accessibilityConfig")
+        if isinstance(ac, dict):
+            for ref_field in ("audioDescriptionRef", "signLanguageRef"):
+                val = ac.get(ref_field)
+                if val is None:
+                    ac.pop(ref_field, None)
+                elif isinstance(val, str):
+                    ac[ref_field] = {"id": val}
+
+        # Fix platformDeliveries publishSchedule
+        pds = d.get("platformDeliveries") or []
+        for pd in pds:
+            if not isinstance(pd, dict):
+                continue
+            ps = pd.get("publishSchedule")
+            if isinstance(ps, dict):
+                kind = ps.get("kind", "unknown")
+                ps["kind"] = PUBLISH_SCHEDULE_KIND_MAP.get(kind, kind if kind in {"exact", "approximate", "range", "unknown"} else "unknown")
+                # Move non-schema fields out
+                to_remove = [k for k in ps if k not in PUBLISH_SCHEDULE_ALLOWED]
+                for k in to_remove:
+                    del ps[k]
+
+    return deliverables
+
+
+def fix_workflow_edges(obj: object) -> object:
+    """Fix orchestration workflow edges: remove dependencyType, use condition."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "workflows" and isinstance(v, list):
+                for wf in v:
+                    if isinstance(wf, dict):
+                        edges = wf.get("edges") or []
+                        fixed_edges = []
+                        for edge in edges:
+                            if not isinstance(edge, dict):
+                                fixed_edges.append(edge)
+                                continue
+                            fixed = {}
+                            fixed["fromNodeId"] = edge.get("fromNodeId") or edge.get("from", "")
+                            fixed["toNodeId"] = edge.get("toNodeId") or edge.get("to", "")
+                            dep = edge.get("dependencyType")
+                            if dep:
+                                fixed["condition"] = dep
+                            if "notes" in edge:
+                                fixed["notes"] = edge["notes"]
+                            fixed_edges.append(fixed)
+                        wf["edges"] = fixed_edges
+                result[k] = v
+            else:
+                result[k] = fix_workflow_edges(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_workflow_edges(item) for item in obj]
     return obj
 
 
@@ -1018,34 +1541,52 @@ def migrate(doc: dict) -> dict:
     # 8. Fix all refs throughout
     doc = fix_refs_recursive(doc)
 
-    # 9. Fix localization targets (null refs)
+    # 9. Remove null refs
+    doc = remove_null_refs_recursive(doc)
+
+    # 10. Fix localization targets (null refs)
     doc = fix_localization_targets_recursive(doc)
 
-    # 10. Fix qcResults
+    # 11. Fix qcResults
     doc = fix_qc_results_recursive(doc)
 
-    # 11. Fix platformDeliveries
+    # 12. Fix platformDeliveries
     doc = fix_platform_deliveries_recursive(doc)
 
-    # 12. Fix audio technicalSpec
+    # 13. Fix audio technicalSpec
     doc = fix_audio_tech_spec_recursive(doc)
 
-    # 13. Fix audio assets
+    # 14. Fix generation step internals (adapterInputs, costEstimate, etc.)
+    doc = fix_generation_steps_deep(doc)
+
+    # 15. Fix workflow edges (dependencyType → condition)
+    doc = fix_workflow_edges(doc)
+
+    # 15b. Fix workflow nodes
+    doc = fix_workflow_nodes(doc)
+
+    # 16. Fix audio assets
     audio_assets = (doc.get("assetLibrary") or {}).get("audioAssets") or []
     for i, aa in enumerate(audio_assets):
         audio_assets[i] = fix_audio_asset(aa)
 
-    # 14. Fix visual assets
+    # 17. Fix visual assets
     visual_assets = (doc.get("assetLibrary") or {}).get("visualAssets") or []
     if visual_assets:
-        doc["assetLibrary"]["visualAssets"] = fix_visual_assets(visual_assets)
+        fix_visual_assets(visual_assets)
+        fix_visual_asset_specs(visual_assets)
 
-    # 15. Fix marketing assets
+    # 18. Fix marketing assets
     marketing_assets = (doc.get("assetLibrary") or {}).get("marketingAssets") or []
     if marketing_assets:
-        doc["assetLibrary"]["marketingAssets"] = fix_marketing_assets(marketing_assets)
+        fix_marketing_assets(marketing_assets)
 
-    # 16. Fix assembly entities
+    # 19. Fix generic assets
+    generic_assets = (doc.get("assetLibrary") or {}).get("genericAssets") or []
+    if generic_assets:
+        fix_generic_assets(generic_assets)
+
+    # 20. Fix assembly entities
     assembly = doc.get("assembly") or {}
 
     timelines = assembly.get("timelines") or []
@@ -1060,40 +1601,65 @@ def migrate(doc: dict) -> dict:
     for i, rp in enumerate(render_plans):
         render_plans[i] = fix_render_plan(rp)
 
-    # 17. Fix dependencies (orchestration edges → fromNodeId/toNodeId)
+    # 21. Fix dependencies (list → {edges} with fromNodeId/toNodeId)
     if "dependencies" in doc:
         doc["dependencies"] = fix_dependencies(doc["dependencies"])
 
-    # 18. Fix relationships (list → {edges} with edgeId/dependencyType)
+    # 22. Fix relationships (list → {edges} with edgeId/dependencyType)
     if "relationships" in doc:
         doc["relationships"] = fix_relationships(doc["relationships"])
 
-    # 19. Fix scenes
+    # 23. Fix package
+    if "package" in doc:
+        fix_package(doc["package"])
+
+    # 24. Fix project
+    if "project" in doc:
+        fix_project(doc["project"])
+
+    # 25. Fix quality profiles
+    qps = doc.get("qualityProfiles") or []
+    if qps:
+        fix_quality_profiles(qps)
+
+    # 26. Fix scenes
     scenes = (doc.get("production") or {}).get("scenes") or []
+    if scenes:
+        fix_scenes(scenes)
     for scene in scenes:
         fix_scene_shot_refs(scene)
 
-    # 20. Fix shots
+    # 27. Fix shots
     shots = (doc.get("production") or {}).get("shots") or []
     if shots:
         doc["production"]["shots"] = fix_shots(shots)
+        fix_shots_required(shots)
 
-    # 21. Fix script segments
+    # 28. Fix canonical documents
+    if "canonicalDocuments" in doc:
+        fix_canonical_documents(doc["canonicalDocuments"])
+
+    # 29. Fix script segments
     script = (doc.get("canonicalDocuments") or {}).get("script") or {}
     segments = script.get("segments") or []
     if segments:
         fix_script_segments(segments)
 
-    # 22. Fix story arcs
+    # 30. Fix story arcs
     story = (doc.get("canonicalDocuments") or {}).get("story") or {}
     arcs = story.get("arcs") or []
     if arcs:
         fix_story_arcs(arcs)
 
-    # 23. Fix orchestration workflows
+    # 31. Fix orchestration workflows
     workflows = (doc.get("orchestration") or {}).get("workflows") or []
     if workflows:
         fix_workflows(workflows)
+
+    # 32. Fix deliverables
+    deliverables = doc.get("deliverables") or []
+    if deliverables:
+        fix_deliverables(deliverables)
 
     return doc
 

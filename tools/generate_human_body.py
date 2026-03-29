@@ -2,19 +2,17 @@
 """Generate multiple valid HumanBody JSON instances conforming to the
 session-3/schemas/src/ TypeScript (Zod) schema v3.0.0.
 
-Targets: matching the detail level of session-3/examples/david.json:
-  - 52 bones (full vertebral column, bilateral limbs, hands, feet)
-  - 24 joints with axes and ROM limits
-  - 94 tendons, 48 muscles with pennation/Fmax/fiberDirection/antagonists
-  - 9 organs, 20 vessels, 13 nerves, 12 ligaments, 9 cartilage
-  - 15 segments, currentPose, savedPoses, loadingConditions (28 forces)
-  - derivationGraph (10 rules), constitutiveLaws (11 laws), hair
-
-All generated instances satisfy:
-  - Referential integrity across all subsystems
-  - Anthropometric ratio constraints
-  - Unit quaternions and unit vectors where required
-  - Discriminated union fields set correctly
+Full 206-bone adult human skeleton with:
+  - 22 cranial/facial bones, hyoid, 6 ear ossicles
+  - 26 vertebrae (C1–C7, T1–T12, L1–L5, sacrum, coccyx)
+  - 25 thorax (sternum + 24 individual ribs)
+  - 4 pectoral girdle, 6 upper limb long bones
+  - 54 hand bones (8 carpals + 5 metacarpals + 14 phalanges × 2)
+  - 2 pelvic, 8 lower limb long bones
+  - 52 foot bones (7 tarsals + 5 metatarsals + 14 phalanges × 2)
+  - 24 joints, 94 tendons, 48 muscles, 9 organs, 20 vessels
+  - 13 nerves, 12 ligaments, 9 cartilage, 15 segments
+  - currentPose, savedPoses, loadingConditions, derivationGraph, constitutiveLaws
 
 Usage:
     python3 tools/generate_human_body.py                  # 3 bodies → stdout
@@ -57,7 +55,6 @@ def identity_quat() -> dict:
     return {"w": 1.0, "x": 0.0, "y": 0.0, "z": 0.0}
 
 def small_tilt_quat(pitch_deg: float = 0, yaw_deg: float = 0, roll_deg: float = 0) -> dict:
-    """Small rotation quaternion for poses."""
     p, y, r = math.radians(pitch_deg / 2), math.radians(yaw_deg / 2), math.radians(roll_deg / 2)
     w = math.cos(p) * math.cos(y) * math.cos(r) + math.sin(p) * math.sin(y) * math.sin(r)
     qx = math.sin(p) * math.cos(y) * math.cos(r) - math.cos(p) * math.sin(y) * math.sin(r)
@@ -82,33 +79,118 @@ SEX_OPTIONS = ["male", "female", "intersex"]
 G = 981  # cm/s²
 
 
-# ---------------------------------------------------------------------------
-# Named bone index constants — makes cross-references readable
-# ---------------------------------------------------------------------------
-# Order matches david.json: 0–51
+# =============================================================================
+# BONE INDEX CONSTANTS — 206 adult bones
+#
+# Layout:
+#   0–1     Pelvic girdle (2 hip bones)
+#   2–3     Sacrum, Coccyx
+#   4–11    Cranial bones (8)
+#   12–25   Facial bones (14)
+#   26      Hyoid
+#   27–32   Ear ossicles (6)
+#   33      Sternum
+#   34–57   Ribs (24: R1–R12 then L1–L12)
+#   58–59   Scapulae
+#   60–61   Clavicles
+#   62–63   Humeri
+#   64–65   Radii
+#   66–67   Ulnae
+#   68–69   Femora
+#   70–71   Patellae
+#   72–73   Tibiae
+#   74–75   Fibulae
+#   76–80   Lumbar L5–L1
+#   81–92   Thoracic T12–T1
+#   93–99   Cervical C7–C1
+#   100–126 Hand R (27: 8 carpals + 5 metacarpals + 14 phalanges)
+#   127–153 Hand L (27)
+#   154–179 Foot R (26: 7 tarsals + 5 metatarsals + 14 phalanges)
+#   180–205 Foot L (26)
+# =============================================================================
 
-B_PELVIS, B_SACRUM, B_SKULL, B_STERNUM = 0, 1, 2, 3
-B_RIBS_R, B_RIBS_L = 4, 5
-B_SCAP_R, B_SCAP_L = 6, 7
-B_CLAV_R, B_CLAV_L = 8, 9
-B_HUMER_R, B_HUMER_L = 10, 11
-B_RAD_R, B_RAD_L = 12, 13
-B_ULNA_R, B_ULNA_L = 14, 15
-B_FEM_R, B_FEM_L = 16, 17
-B_PAT_R, B_PAT_L = 18, 19
-B_TIB_R, B_TIB_L = 20, 21
-B_FIB_R, B_FIB_L = 22, 23
-# vertebrae L5..L1 = 24..28, T12..T1 = 29..40, C7..C1 = 41..47
-B_L5 = 24
-B_L1 = 28
-B_T12 = 29
-B_T1 = 40
-B_C7 = 41
-B_C1 = 47
-B_HAND_R, B_HAND_L = 48, 49
-B_FOOT_R, B_FOOT_L = 50, 51
+# Pelvic girdle
+B_HIP_R, B_HIP_L = 0, 1
+B_SACRUM, B_COCCYX = 2, 3
 
-# Joint index constants
+# Cranial bones (8)
+B_FRONTAL = 4
+B_PARIETAL_R, B_PARIETAL_L = 5, 6
+B_TEMPORAL_R, B_TEMPORAL_L = 7, 8
+B_OCCIPITAL = 9
+B_SPHENOID = 10
+B_ETHMOID = 11
+
+# Facial bones (14)
+B_MAXILLA_R, B_MAXILLA_L = 12, 13
+B_PALATINE_R, B_PALATINE_L = 14, 15
+B_ZYGOMATIC_R, B_ZYGOMATIC_L = 16, 17
+B_NASAL_R, B_NASAL_L = 18, 19
+B_LACRIMAL_R, B_LACRIMAL_L = 20, 21
+B_INF_CONCHA_R, B_INF_CONCHA_L = 22, 23
+B_VOMER = 24
+B_MANDIBLE = 25
+
+B_HYOID = 26
+
+# Ear ossicles
+B_MALLEUS_R, B_INCUS_R, B_STAPES_R = 27, 28, 29
+B_MALLEUS_L, B_INCUS_L, B_STAPES_L = 30, 31, 32
+
+B_STERNUM = 33
+
+# Ribs: R1–R12 = 34–45, L1–L12 = 46–57
+B_RIB_R = [34 + i for i in range(12)]
+B_RIB_L = [46 + i for i in range(12)]
+
+B_SCAP_R, B_SCAP_L = 58, 59
+B_CLAV_R, B_CLAV_L = 60, 61
+B_HUMER_R, B_HUMER_L = 62, 63
+B_RAD_R, B_RAD_L = 64, 65
+B_ULNA_R, B_ULNA_L = 66, 67
+B_FEM_R, B_FEM_L = 68, 69
+B_PAT_R, B_PAT_L = 70, 71
+B_TIB_R, B_TIB_L = 72, 73
+B_FIB_R, B_FIB_L = 74, 75
+
+# Vertebrae
+B_L5 = 76; B_L4 = 77; B_L3 = 78; B_L2 = 79; B_L1 = 80
+B_T12 = 81; B_T1 = 92
+B_C7 = 93; B_C1 = 99
+
+# Hand R carpals (8): 100–107
+B_HAND_R_SCAPHOID = 100
+B_HAND_R_LUNATE = 101
+B_HAND_R_TRIQUETRUM = 102
+B_HAND_R_PISIFORM = 103
+B_HAND_R_TRAPEZIUM = 104
+B_HAND_R_TRAPEZOID = 105
+B_HAND_R_CAPITATE = 106
+B_HAND_R_HAMATE = 107
+# Hand R metacarpals (5): 108–112
+B_HAND_R_MC = [108 + i for i in range(5)]
+# Hand R phalanges (14): 113–126
+# Thumb: PP=113, DP=114; Index: PP=115, MP=116, DP=117; etc.
+B_HAND_R_PHAL_START = 113
+
+B_HAND_L_START = 127  # Same layout +27
+
+# Foot R tarsals (7): 154–160
+B_FOOT_R_CALCANEUS = 154
+B_FOOT_R_TALUS = 155
+B_FOOT_R_NAVICULAR = 156
+B_FOOT_R_CUBOID = 157
+B_FOOT_R_CUNEIFORM_MED = 158
+B_FOOT_R_CUNEIFORM_INT = 159
+B_FOOT_R_CUNEIFORM_LAT = 160
+# Foot R metatarsals (5): 161–165
+B_FOOT_R_MT = [161 + i for i in range(5)]
+# Foot R phalanges (14): 166–179
+B_FOOT_R_PHAL_START = 166
+
+B_FOOT_L_START = 180  # Same layout +26
+
+# Joint index constants (unchanged count = 24)
 J_HIP_R, J_HIP_L = 0, 1
 J_KNEE_R, J_KNEE_L = 2, 3
 J_SHOULDER_R, J_SHOULDER_L = 4, 5
@@ -134,7 +216,6 @@ class Reg:
     segment_ids: list[str] = field(default_factory=list)
     ligament_ids: list[str] = field(default_factory=list)
     cartilage_ids: list[str] = field(default_factory=list)
-    # Named maps for muscle cross-references
     muscle_name_to_idx: dict[str, int] = field(default_factory=dict)
     tendon_name_to_idx: dict[str, int] = field(default_factory=dict)
     nerve_name_to_idx: dict[str, int] = field(default_factory=dict)
@@ -167,70 +248,248 @@ def gen_proportions(v: int = 0) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Skeleton — 52 bones
-# ---------------------------------------------------------------------------
+# =============================================================================
+# SKELETON — 206 bones
+# =============================================================================
 
-BONE_DEFS: list[tuple[str, str, str, int | None, float, float, float, float, tuple[float, float, float]]] = [
-    # (name, classification, region, parent_idx, length, width, depth, mass, (x,y,z))
-    ("Pelvis", "irregular", "appendicular_pelvic", None, 18, 28, 16, 580, (0, 95, 0)),
-    ("Sacrum", "irregular", "axial_vertebral", B_PELVIS, 12, 10, 3, 180, (0, 90, -3)),
-    ("Skull", "flat", "axial_cranium", B_C1, 22, 15, 19, 680, (0, 165, 0)),
-    ("Sternum", "flat", "axial_thorax", 35, 17, 5, 1.5, 40, (0, 130, 5)),  # parent=T6
-    ("Ribs (R)", "flat", "axial_thorax", 35, 25, 1.2, 0.8, 140, (-10, 130, 0)),
-    ("Ribs (L)", "flat", "axial_thorax", 35, 25, 1.2, 0.8, 140, (10, 130, 0)),
-    ("Scapula (R)", "flat", "appendicular_pectoral", 35, 15, 10, 1, 60, (-18, 145, -5)),
-    ("Scapula (L)", "flat", "appendicular_pectoral", 35, 15, 10, 1, 60, (18, 145, -5)),
-    ("Clavicle (R)", "long", "appendicular_pectoral", B_STERNUM, 15, 1.3, 1.1, 25, (-8, 150, 3)),
-    ("Clavicle (L)", "long", "appendicular_pectoral", B_STERNUM, 15, 1.3, 1.1, 25, (8, 150, 3)),
-    ("Humerus (R)", "long", "appendicular_upper", B_SCAP_R, 36, 2.2, 2, 200, (-23, 148, 0)),
-    ("Humerus (L)", "long", "appendicular_upper", B_SCAP_L, 36, 2.2, 2, 200, (23, 148, 0)),
-    ("Radius (R)", "long", "appendicular_upper", B_HUMER_R, 26, 1.6, 1.4, 60, (-25, 112, 2)),
-    ("Radius (L)", "long", "appendicular_upper", B_HUMER_L, 26, 1.6, 1.4, 60, (25, 112, 2)),
-    ("Ulna (R)", "long", "appendicular_upper", B_HUMER_R, 28, 1.5, 1.3, 65, (-24, 112, -1)),
-    ("Ulna (L)", "long", "appendicular_upper", B_HUMER_L, 28, 1.5, 1.3, 65, (24, 112, -1)),
-    ("Femur (R)", "long", "appendicular_lower", B_PELVIS, 45, 3.2, 2.8, 450, (-9, 92, 0)),
-    ("Femur (L)", "long", "appendicular_lower", B_PELVIS, 45, 3.2, 2.8, 450, (9, 92, 0)),
-    ("Patella (R)", "sesamoid", "appendicular_lower", B_FEM_R, 4, 4.5, 2, 25, (-9, 50, 3)),
-    ("Patella (L)", "sesamoid", "appendicular_lower", B_FEM_L, 4, 4.5, 2, 25, (9, 50, 3)),
-    ("Tibia (R)", "long", "appendicular_lower", B_FEM_R, 40, 2.8, 2.4, 340, (-9, 47, 0)),
-    ("Tibia (L)", "long", "appendicular_lower", B_FEM_L, 40, 2.8, 2.4, 340, (9, 47, 0)),
-    ("Fibula (R)", "long", "appendicular_lower", B_TIB_R, 38, 1.2, 1, 55, (-12, 47, 0)),
-    ("Fibula (L)", "long", "appendicular_lower", B_TIB_L, 38, 1.2, 1, 55, (12, 47, 0)),
-]
-# Lumbar vertebrae L5–L1 (indices 24–28)
-for i, level in enumerate(range(5, 0, -1)):
-    parent = B_SACRUM if i == 0 else (B_L5 + i - 1)
-    y = 95 + i * 3.6
-    BONE_DEFS.append((f"L{level} vertebra", "irregular", "axial_vertebral", parent, 3.2, 5, 3.5, 40, (0, y, -2)))
+# BoneDef: (name, classification, region, parent_idx, length, width, depth, mass, (x,y,z))
+BoneDef = tuple[str, str, str, int | None, float, float, float, float, tuple[float, float, float]]
 
-# Thoracic vertebrae T12–T1 (indices 29–40)
-for i, level in enumerate(range(12, 0, -1)):
-    parent = B_L1 if i == 0 else (B_T12 + i - 1)
-    y = 113 + i * 2.3
-    BONE_DEFS.append((f"T{level} vertebra", "irregular", "axial_vertebral", parent, 2.3, 4.5, 3, 23, (0, y, -2)))
+def _build_bone_defs() -> list[BoneDef]:
+    """Build the full 206-bone definition list."""
+    bones: list[BoneDef] = []
 
-# Cervical vertebrae C7–C1 (indices 41–47)
-for i, level in enumerate(range(7, 0, -1)):
-    name = f"C{level} vertebra" if level > 2 else ("C2 axis" if level == 2 else "C1 atlas")
-    parent = B_T1 if i == 0 else (B_C7 + i - 1)
-    y = 155 + i * 1.7
-    BONE_DEFS.append((name, "irregular", "axial_vertebral", parent, 1.7, 3, 2.5, 11, (0, y, 0)))
+    def add(name: str, cls: str, region: str, parent: int | None,
+            l: float, w: float, d: float, m: float, pos: tuple[float, float, float]) -> int:
+        idx = len(bones)
+        bones.append((name, cls, region, parent, l, w, d, m, pos))
+        return idx
 
-# Hands and Feet (indices 48–51)
-BONE_DEFS.append(("Hand (R)", "short", "appendicular_upper", B_RAD_R, 19, 8.5, 2.5, 400, (-26, 86, 3)))
-BONE_DEFS.append(("Hand (L)", "short", "appendicular_upper", B_RAD_L, 19, 8.5, 2.5, 400, (26, 86, 3)))
-BONE_DEFS.append(("Foot (R)", "short", "appendicular_lower", B_TIB_R, 26, 9, 7, 840, (-9, 0, 5)))
-BONE_DEFS.append(("Foot (L)", "short", "appendicular_lower", B_TIB_L, 26, 9, 7, 840, (9, 0, 5)))
+    # === PELVIC GIRDLE (2) + SACRUM/COCCYX (2) ===
+    add("Hip bone (R)", "irregular", "appendicular_pelvic", None, 18, 14, 8, 290, (-5, 95, 0))       # 0
+    add("Hip bone (L)", "irregular", "appendicular_pelvic", None, 18, 14, 8, 290, (5, 95, 0))        # 1
+    add("Sacrum", "irregular", "axial_vertebral", 0, 12, 10, 3, 180, (0, 90, -3))                     # 2
+    add("Coccyx", "irregular", "axial_vertebral", 2, 3, 2.5, 1.5, 8, (0, 87, -4))                    # 3
 
-assert len(BONE_DEFS) == 52
+    # === CRANIAL BONES (8) ===
+    add("Frontal bone", "flat", "axial_cranium", None, 12, 12, 0.7, 90, (0, 174, 4))                  # 4  parent set later→C1
+    add("Parietal bone (R)", "flat", "axial_cranium", 4, 12, 11, 0.5, 55, (-5, 176, 0))               # 5
+    add("Parietal bone (L)", "flat", "axial_cranium", 4, 12, 11, 0.5, 55, (5, 176, 0))                # 6
+    add("Temporal bone (R)", "flat", "axial_cranium", 5, 5, 4, 0.4, 30, (-6, 170, 0))                 # 7
+    add("Temporal bone (L)", "flat", "axial_cranium", 6, 5, 4, 0.4, 30, (6, 170, 0))                  # 8
+    add("Occipital bone", "flat", "axial_cranium", 4, 10, 10, 0.8, 80, (0, 172, -5))                  # 9
+    add("Sphenoid bone", "irregular", "axial_cranium", 4, 5, 7, 3, 30, (0, 168, 1))                   # 10
+    add("Ethmoid bone", "irregular", "axial_cranium", 4, 3, 2.5, 3, 8, (0, 170, 4))                   # 11
+
+    # === FACIAL BONES (14) ===
+    add("Maxilla (R)", "irregular", "axial_face", 10, 4, 3, 2, 15, (-1.5, 165, 5))                    # 12
+    add("Maxilla (L)", "irregular", "axial_face", 10, 4, 3, 2, 15, (1.5, 165, 5))                     # 13
+    add("Palatine bone (R)", "irregular", "axial_face", 12, 2.5, 2, 0.3, 3, (-1, 164, 3))             # 14
+    add("Palatine bone (L)", "irregular", "axial_face", 13, 2.5, 2, 0.3, 3, (1, 164, 3))              # 15
+    add("Zygomatic bone (R)", "irregular", "axial_face", 12, 3, 3, 0.5, 8, (-5, 167, 5))              # 16
+    add("Zygomatic bone (L)", "irregular", "axial_face", 13, 3, 3, 0.5, 8, (5, 167, 5))               # 17
+    add("Nasal bone (R)", "flat", "axial_face", 4, 2.5, 0.8, 0.2, 2, (-0.4, 168, 6))                 # 18
+    add("Nasal bone (L)", "flat", "axial_face", 4, 2.5, 0.8, 0.2, 2, (0.4, 168, 6))                  # 19
+    add("Lacrimal bone (R)", "flat", "axial_face", 11, 1.5, 1, 0.1, 1, (-1.5, 169, 5))                # 20
+    add("Lacrimal bone (L)", "flat", "axial_face", 11, 1.5, 1, 0.1, 1, (1.5, 169, 5))                 # 21
+    add("Inferior nasal concha (R)", "irregular", "axial_face", 12, 4, 1.5, 0.3, 2, (-1, 166, 5))     # 22
+    add("Inferior nasal concha (L)", "irregular", "axial_face", 13, 4, 1.5, 0.3, 2, (1, 166, 5))      # 23
+    add("Vomer", "flat", "axial_face", 10, 4, 3, 0.2, 3, (0, 166, 4))                                 # 24
+    add("Mandible", "irregular", "axial_face", 7, 10, 12, 3, 80, (0, 162, 4))                          # 25
+
+    # === HYOID (1) ===
+    add("Hyoid", "irregular", "axial_vertebral", 25, 4, 3, 1, 3, (0, 157, 4))                          # 26
+
+    # === EAR OSSICLES (6) ===
+    add("Malleus (R)", "irregular", "axial_cranium", 7, 0.8, 0.3, 0.3, 0.023, (-6, 170, 0.5))         # 27
+    add("Incus (R)", "irregular", "axial_cranium", 27, 0.7, 0.5, 0.3, 0.030, (-6, 170, 0.3))          # 28
+    add("Stapes (R)", "irregular", "axial_cranium", 28, 0.3, 0.3, 0.2, 0.003, (-6, 170, 0.1))         # 29
+    add("Malleus (L)", "irregular", "axial_cranium", 8, 0.8, 0.3, 0.3, 0.023, (6, 170, 0.5))          # 30
+    add("Incus (L)", "irregular", "axial_cranium", 30, 0.7, 0.5, 0.3, 0.030, (6, 170, 0.3))           # 31
+    add("Stapes (L)", "irregular", "axial_cranium", 31, 0.3, 0.3, 0.2, 0.003, (6, 170, 0.1))          # 32
+
+    # === STERNUM (1) ===
+    _t6 = 81 + 6  # T6 vertebra index (will be built below)
+    add("Sternum", "flat", "axial_thorax", _t6, 17, 5, 1.5, 40, (0, 130, 5))                          # 33
+
+    # === RIBS (24): R1–R12 then L1–L12 ===
+    rib_lengths = [7, 10, 12, 14, 15, 16, 15, 14, 13, 12, 10, 8]
+    rib_masses = [10, 12, 14, 16, 18, 20, 18, 16, 14, 12, 10, 8]
+    for i in range(12):
+        t_vert = 81 + (11 - i)  # T1→92, T2→91, ... T12→81 — rib attaches to its numbered thoracic
+        y = 138 - i * 2.5
+        add(f"Rib {i+1} (R)", "flat", "axial_thorax", t_vert,
+            rib_lengths[i], 1.2, 0.6, rib_masses[i], (-10, y, 0))                                      # 34–45
+    for i in range(12):
+        t_vert = 81 + (11 - i)
+        y = 138 - i * 2.5
+        add(f"Rib {i+1} (L)", "flat", "axial_thorax", t_vert,
+            rib_lengths[i], 1.2, 0.6, rib_masses[i], (10, y, 0))                                       # 46–57
+
+    # === PECTORAL GIRDLE (4) ===
+    add("Scapula (R)", "flat", "appendicular_pectoral", _t6, 15, 10, 1, 60, (-18, 145, -5))            # 58
+    add("Scapula (L)", "flat", "appendicular_pectoral", _t6, 15, 10, 1, 60, (18, 145, -5))             # 59
+    add("Clavicle (R)", "long", "appendicular_pectoral", 33, 15, 1.3, 1.1, 25, (-8, 150, 3))          # 60
+    add("Clavicle (L)", "long", "appendicular_pectoral", 33, 15, 1.3, 1.1, 25, (8, 150, 3))           # 61
+
+    # === UPPER LIMB LONG BONES (6) ===
+    add("Humerus (R)", "long", "appendicular_upper", 58, 36, 2.2, 2, 200, (-23, 148, 0))              # 62
+    add("Humerus (L)", "long", "appendicular_upper", 59, 36, 2.2, 2, 200, (23, 148, 0))               # 63
+    add("Radius (R)", "long", "appendicular_upper", 62, 26, 1.6, 1.4, 60, (-25, 112, 2))              # 64
+    add("Radius (L)", "long", "appendicular_upper", 63, 26, 1.6, 1.4, 60, (25, 112, 2))               # 65
+    add("Ulna (R)", "long", "appendicular_upper", 62, 28, 1.5, 1.3, 65, (-24, 112, -1))               # 66
+    add("Ulna (L)", "long", "appendicular_upper", 63, 28, 1.5, 1.3, 65, (24, 112, -1))                # 67
+
+    # === LOWER LIMB LONG BONES (8) ===
+    add("Femur (R)", "long", "appendicular_lower", 0, 45, 3.2, 2.8, 450, (-9, 92, 0))                 # 68
+    add("Femur (L)", "long", "appendicular_lower", 1, 45, 3.2, 2.8, 450, (9, 92, 0))                  # 69
+    add("Patella (R)", "sesamoid", "appendicular_lower", 68, 4, 4.5, 2, 25, (-9, 50, 3))              # 70
+    add("Patella (L)", "sesamoid", "appendicular_lower", 69, 4, 4.5, 2, 25, (9, 50, 3))               # 71
+    add("Tibia (R)", "long", "appendicular_lower", 68, 40, 2.8, 2.4, 340, (-9, 47, 0))                # 72
+    add("Tibia (L)", "long", "appendicular_lower", 69, 40, 2.8, 2.4, 340, (9, 47, 0))                 # 73
+    add("Fibula (R)", "long", "appendicular_lower", 72, 38, 1.2, 1, 55, (-12, 47, 0))                 # 74
+    add("Fibula (L)", "long", "appendicular_lower", 73, 38, 1.2, 1, 55, (12, 47, 0))                  # 75
+
+    # === LUMBAR VERTEBRAE L5–L1 (5) ===
+    for i, level in enumerate(range(5, 0, -1)):
+        parent = 2 if i == 0 else (76 + i - 1)  # Sacrum or previous lumbar
+        y = 95 + i * 3.6
+        add(f"L{level} vertebra", "irregular", "axial_vertebral", parent,
+            3.2, 5, 3.5, 40, (0, y, -2))                                                               # 76–80
+
+    # === THORACIC VERTEBRAE T12–T1 (12) ===
+    for i, level in enumerate(range(12, 0, -1)):
+        parent = 80 if i == 0 else (81 + i - 1)  # L1 or previous thoracic
+        y = 113 + i * 2.3
+        add(f"T{level} vertebra", "irregular", "axial_vertebral", parent,
+            2.3, 4.5, 3, 23, (0, y, -2))                                                               # 81–92
+
+    # === CERVICAL VERTEBRAE C7–C1 (7) ===
+    for i, level in enumerate(range(7, 0, -1)):
+        name = f"C{level} vertebra" if level > 2 else ("C2 axis" if level == 2 else "C1 atlas")
+        parent = 92 if i == 0 else (93 + i - 1)  # T1 or previous cervical
+        y = 155 + i * 1.7
+        add(name, "irregular", "axial_vertebral", parent,
+            1.7, 3, 2.5, 11, (0, y, 0))                                                                # 93–99
+
+    # === HAND R (27 bones: 8 carpals + 5 metacarpals + 14 phalanges) ===
+    _add_hand(bones, add, "R", 64, -26, 86)  # parent=Radius R, x=-26, y=86                            # 100–126
+
+    # === HAND L (27 bones) ===
+    _add_hand(bones, add, "L", 65, 26, 86)                                                              # 127–153
+
+    # === FOOT R (26 bones: 7 tarsals + 5 metatarsals + 14 phalanges) ===
+    _add_foot(bones, add, "R", 72, -9, 0)  # parent=Tibia R                                             # 154–179
+
+    # === FOOT L (26 bones) ===
+    _add_foot(bones, add, "L", 73, 9, 0)                                                                # 180–205
+
+    # Fix frontal bone parent → C1 atlas (idx 99)
+    bones[4] = (bones[4][0], bones[4][1], bones[4][2], 99, *bones[4][4:])
+
+    return bones
+
+
+def _add_hand(bones: list, add, side: str, radius_idx: int, x: float, y: float) -> None:
+    """Add 27 hand bones (8 carpals + 5 metacarpals + 14 phalanges)."""
+    sign = -1 if side == "R" else 1
+    start = len(bones)
+
+    # Proximal carpal row (4) — attach to radius
+    add(f"Scaphoid ({side})", "short", "appendicular_upper", radius_idx, 2.5, 1.5, 1.2, 5, (x, y, 2))
+    add(f"Lunate ({side})", "short", "appendicular_upper", radius_idx, 2, 1.5, 1.2, 4, (x + sign, y, 1.5))
+    add(f"Triquetrum ({side})", "short", "appendicular_upper", start + 1, 1.8, 1.5, 1.2, 3.5, (x + sign * 2, y, 1))
+    add(f"Pisiform ({side})", "short", "appendicular_upper", start + 2, 1.2, 1, 0.8, 1.5, (x + sign * 2.5, y, 0.5))
+
+    # Distal carpal row (4) — attach to proximal row
+    add(f"Trapezium ({side})", "short", "appendicular_upper", start, 2, 1.5, 1.5, 4, (x - sign, y - 2, 2.5))
+    add(f"Trapezoid ({side})", "short", "appendicular_upper", start, 1.5, 1.2, 1.2, 3, (x, y - 2, 2))
+    add(f"Capitate ({side})", "short", "appendicular_upper", start + 1, 2.5, 1.5, 1.5, 5, (x + sign, y - 2, 1.5))
+    add(f"Hamate ({side})", "short", "appendicular_upper", start + 2, 2, 1.5, 1.5, 4.5, (x + sign * 2, y - 2, 1))
+
+    # Metacarpals I–V (5)
+    mc_labels = ["I", "II", "III", "IV", "V"]
+    mc_parents = [start + 4, start + 5, start + 6, start + 7, start + 7]  # trapezium, trapezoid, capitate, hamate, hamate
+    mc_lengths = [4.5, 7, 6.5, 6, 5.5]
+    for j in range(5):
+        xoff = x + sign * (-1 + j * 1)
+        add(f"Metacarpal {mc_labels[j]} ({side})", "long", "appendicular_upper", mc_parents[j],
+            mc_lengths[j], 0.8, 0.6, 6, (xoff, y - 5 - j * 0.3, 2.5 - j * 0.3))
+
+    mc_start = start + 8  # index of Metacarpal I
+
+    # Phalanges (14): thumb has 2 (PP, DP), fingers have 3 (PP, MP, DP)
+    finger_names = ["Thumb", "Index", "Middle", "Ring", "Little"]
+    for j in range(5):
+        mc_idx = mc_start + j
+        xoff = x + sign * (-1 + j * 1)
+        ybase = y - 10 - j * 0.3
+        # Proximal phalanx
+        pp_idx = add(f"{finger_names[j]} proximal phalanx ({side})", "long", "appendicular_upper",
+                      mc_idx, 4 if j == 0 else 4.5, 0.6, 0.5, 3, (xoff, ybase, 2.5 - j * 0.3))
+        if j == 0:
+            # Thumb: distal phalanx only (2 total)
+            add(f"Thumb distal phalanx ({side})", "long", "appendicular_upper",
+                pp_idx, 2.5, 0.5, 0.4, 1.5, (xoff, ybase - 4, 2.5))
+        else:
+            # Fingers: middle + distal (3 total)
+            mp_idx = add(f"{finger_names[j]} middle phalanx ({side})", "long", "appendicular_upper",
+                          pp_idx, 3, 0.5, 0.4, 2, (xoff, ybase - 4.5, 2.5 - j * 0.3))
+            add(f"{finger_names[j]} distal phalanx ({side})", "long", "appendicular_upper",
+                mp_idx, 2.2, 0.4, 0.3, 1, (xoff, ybase - 7.5, 2.5 - j * 0.3))
+
+
+def _add_foot(bones: list, add, side: str, tibia_idx: int, x: float, y: float) -> None:
+    """Add 26 foot bones (7 tarsals + 5 metatarsals + 14 phalanges)."""
+    sign = -1 if side == "R" else 1
+    start = len(bones)
+
+    # Tarsals (7)
+    add(f"Calcaneus ({side})", "short", "appendicular_lower", tibia_idx, 8, 4, 4.5, 60, (x, y + 1, -2))
+    add(f"Talus ({side})", "short", "appendicular_lower", tibia_idx, 6, 4, 3, 35, (x, y + 3, 2))
+    add(f"Navicular ({side})", "short", "appendicular_lower", start + 1, 3.5, 2.5, 1.5, 12, (x - sign, y + 2, 5))
+    add(f"Cuboid ({side})", "short", "appendicular_lower", start, 3, 2.5, 2, 10, (x + sign * 2, y + 1, 5))
+    add(f"Medial cuneiform ({side})", "short", "appendicular_lower", start + 2, 3, 2, 1.5, 6, (x - sign, y + 1, 7))
+    add(f"Intermediate cuneiform ({side})", "short", "appendicular_lower", start + 2, 2.5, 1.5, 1.5, 4, (x, y + 1, 7))
+    add(f"Lateral cuneiform ({side})", "short", "appendicular_lower", start + 2, 2.5, 2, 1.5, 5, (x + sign, y + 1, 7))
+
+    # Metatarsals I–V (5)
+    mt_parents = [start + 4, start + 5, start + 6, start + 3, start + 3]
+    mt_lengths = [6.5, 7.5, 7, 6.5, 6]
+    mt_labels = ["I", "II", "III", "IV", "V"]
+    for j in range(5):
+        xoff = x + sign * (-1.5 + j * 0.8)
+        add(f"Metatarsal {mt_labels[j]} ({side})", "long", "appendicular_lower", mt_parents[j],
+            mt_lengths[j], 1, 0.8, 8, (xoff, y, 10 + j * 0.3))
+
+    mt_start = start + 7  # index of Metatarsal I
+
+    # Phalanges (14): big toe has 2 (PP, DP), toes 2–5 have 3 (PP, MP, DP)
+    toe_names = ["Hallux", "Second toe", "Third toe", "Fourth toe", "Fifth toe"]
+    for j in range(5):
+        mt_idx = mt_start + j
+        xoff = x + sign * (-1.5 + j * 0.8)
+        zbase = 15 + j * 0.3
+        pp_idx = add(f"{toe_names[j]} proximal phalanx ({side})", "long", "appendicular_lower",
+                      mt_idx, 3 if j == 0 else 2.5, 0.7, 0.5, 2, (xoff, y, zbase))
+        if j == 0:
+            add(f"Hallux distal phalanx ({side})", "long", "appendicular_lower",
+                pp_idx, 2.5, 0.6, 0.5, 1.5, (xoff, y, zbase + 3))
+        else:
+            mp_idx = add(f"{toe_names[j]} middle phalanx ({side})", "long", "appendicular_lower",
+                          pp_idx, 1.5, 0.5, 0.4, 0.8, (xoff, y, zbase + 2.5))
+            add(f"{toe_names[j]} distal phalanx ({side})", "long", "appendicular_lower",
+                mp_idx, 1.2, 0.4, 0.3, 0.5, (xoff, y, zbase + 4))
+
+
+BONE_DEFS = _build_bone_defs()
+assert len(BONE_DEFS) == 206, f"Expected 206 bones, got {len(BONE_DEFS)}"
 
 
 def gen_skeleton(r: Reg) -> list[dict]:
-    # First pass: assign IDs
+    # Allocate all IDs first (allows forward references)
     for _ in BONE_DEFS:
         r.bone_ids.append(uid())
-    # Second pass: build bone objects (all IDs now exist for forward refs)
     bones = []
     for i, (name, cls, region, parent_idx, length, width, depth, mass, pos) in enumerate(BONE_DEFS):
         bones.append({
@@ -242,24 +501,21 @@ def gen_skeleton(r: Reg) -> list[dict]:
     return bones
 
 
-# ---------------------------------------------------------------------------
-# Joints — 24
-# ---------------------------------------------------------------------------
+# =============================================================================
+# JOINTS — 24 (bone indices updated for 206-bone layout)
+# =============================================================================
 
-# (name, type, bone_idxs, dof, axes, limits)
 JOINT_DEFS: list[tuple[str, str, list[int], int, dict | None, dict | None]] = [
-    ("Hip (R)", "ball_and_socket", [B_PELVIS, B_FEM_R], 3,
+    ("Hip (R)", "ball_and_socket", [B_HIP_R, B_FEM_R], 3,
      {"primary": vec3(0, 0, 1), "secondary": vec3(1, 0, 0), "tertiary": vec3(0, 1, 0)},
      {"flexionExtension": {"min": -15, "max": 125}, "abductionAdduction": {"min": -30, "max": 45}, "internalExternalRotation": {"min": -45, "max": 45}}),
-    ("Hip (L)", "ball_and_socket", [B_PELVIS, B_FEM_L], 3,
+    ("Hip (L)", "ball_and_socket", [B_HIP_L, B_FEM_L], 3,
      {"primary": vec3(0, 0, 1), "secondary": vec3(1, 0, 0), "tertiary": vec3(0, 1, 0)},
      {"flexionExtension": {"min": -15, "max": 125}, "abductionAdduction": {"min": -30, "max": 45}, "internalExternalRotation": {"min": -45, "max": 45}}),
     ("Knee (R)", "hinge", [B_FEM_R, B_TIB_R, B_PAT_R], 1,
-     {"primary": vec3(0, 0, 1)},
-     {"flexionExtension": {"min": 0, "max": 140}}),
+     {"primary": vec3(0, 0, 1)}, {"flexionExtension": {"min": 0, "max": 140}}),
     ("Knee (L)", "hinge", [B_FEM_L, B_TIB_L, B_PAT_L], 1,
-     {"primary": vec3(0, 0, 1)},
-     {"flexionExtension": {"min": 0, "max": 140}}),
+     {"primary": vec3(0, 0, 1)}, {"flexionExtension": {"min": 0, "max": 140}}),
     ("Shoulder (R)", "ball_and_socket", [B_SCAP_R, B_HUMER_R], 3,
      {"primary": vec3(0, 0, 1), "secondary": vec3(1, 0, 0), "tertiary": vec3(0, 1, 0)},
      {"flexionExtension": {"min": -60, "max": 180}, "abductionAdduction": {"min": 0, "max": 180}, "internalExternalRotation": {"min": -90, "max": 90}}),
@@ -294,13 +550,13 @@ JOINT_DEFS: list[tuple[str, str, list[int], int, dict | None, dict | None]] = [
      {"flexionExtension": {"min": -5, "max": 10}}),
     ("C1-C2 atlantoaxial", "pivot", [B_C1, B_C1 - 1], 1, None,
      {"internalExternalRotation": {"min": -45, "max": 45}}),
-    ("Wrist (R)", "condyloid", [B_RAD_R, B_ULNA_R, B_HAND_R], 2, None,
+    ("Wrist (R)", "condyloid", [B_RAD_R, B_ULNA_R, B_HAND_R_SCAPHOID], 2, None,
      {"flexionExtension": {"min": -80, "max": 80}, "abductionAdduction": {"min": -20, "max": 35}}),
-    ("Wrist (L)", "condyloid", [B_RAD_L, B_ULNA_L, B_HAND_L], 2, None,
+    ("Wrist (L)", "condyloid", [B_RAD_L, B_ULNA_L, B_HAND_L_START], 2, None,
      {"flexionExtension": {"min": -80, "max": 80}, "abductionAdduction": {"min": -20, "max": 35}}),
-    ("Ankle (R)", "hinge", [B_TIB_R, B_FIB_R, B_FOOT_R], 1, None,
+    ("Ankle (R)", "hinge", [B_TIB_R, B_FIB_R, B_FOOT_R_TALUS], 1, None,
      {"flexionExtension": {"min": -20, "max": 50}}),
-    ("Ankle (L)", "hinge", [B_TIB_L, B_FIB_L, B_FOOT_L], 1, None,
+    ("Ankle (L)", "hinge", [B_TIB_L, B_FIB_L, B_FOOT_L_START + 1], 1, None,
      {"flexionExtension": {"min": -20, "max": 50}}),
 ]
 assert len(JOINT_DEFS) == 24
@@ -312,8 +568,7 @@ def gen_joints(r: Reg) -> list[dict]:
         jid = uid()
         r.joint_ids.append(jid)
         j: dict[str, Any] = {
-            "id": jid, "name": name, "type": jtype,
-            "transform": tf(),
+            "id": jid, "name": name, "type": jtype, "transform": tf(),
             "connectedBoneIds": [r.bone_ids[i] for i in bone_idxs],
             "degreesOfFreedom": dof,
         }
@@ -325,13 +580,9 @@ def gen_joints(r: Reg) -> list[dict]:
     return joints
 
 
-# ---------------------------------------------------------------------------
-# Tendons — 94 (origin + insertion per muscle, some named)
-# ---------------------------------------------------------------------------
-
-# Each entry: (name, attached_bone_idx, length, csa_or_None)
-# We build these dynamically from muscle defs below, but first define
-# named tendons that are shared or have special names
+# =============================================================================
+# TENDONS + MUSCLES — 94 tendons, 48 muscles
+# =============================================================================
 
 def _make_tendon(r: Reg, name: str, bone_idx: int, length: float, csa: float | None = None) -> dict:
     tid = uid()
@@ -347,57 +598,40 @@ def _make_tendon(r: Reg, name: str, bone_idx: int, length: float, csa: float | N
         t["crossSectionalArea"] = csa
     return t
 
-
-# ---------------------------------------------------------------------------
-# Muscles — 48 (bilateral) with full properties
-# ---------------------------------------------------------------------------
-
-# (name, region, arch, origin_bone, insert_bone, actions, secondary_actions,
-#  spinal, nerve, artery, length, volume, mass, fmax, penn_or_None,
-#  fiber_dir, antagonist_names, synergist_names,
-#  origin_tendon_name, insert_tendon_name, origin_tendon_csa, insert_tendon_csa)
-
 MuscleSpec = tuple[str, str, str, int, int, list[str], list[str] | None,
                    list[str], str, str, float, float, float, float, float | None,
                    tuple[float, float, float], list[str], list[str],
                    str | None, str | None, float | None, float | None]
 
 def _bilateral(defs: list[MuscleSpec]) -> list[MuscleSpec]:
-    """Expand unilateral defs to bilateral (R) + (L) where appropriate."""
     result: list[MuscleSpec] = []
     for d in defs:
         name = d[0]
         if "(R)" in name or "(L)" in name or name in ("Rectus Abdominis", "Diaphragm"):
             result.append(d)
         else:
-            # Make (R) and (L) versions
-            r_def = list(d)
-            l_def = list(d)
-            r_def[0] = f"{name} (R)"
-            l_def[0] = f"{name} (L)"
-            # Mirror x-components of fiber direction
+            r_def = list(d); l_def = list(d)
+            r_def[0] = f"{name} (R)"; l_def[0] = f"{name} (L)"
             fx, fy, fz = d[15]
             l_def[15] = (-fx if fx != 0 else 0, fy, fz)
-            # Mirror antagonist/synergist names
             r_antag = [n + " (R)" if not n.endswith(")") else n for n in d[16]]
             l_antag = [n.replace("(R)", "(L)") if "(R)" in n else (n + " (L)" if not n.endswith(")") else n) for n in d[16]]
             r_syn = [n + " (R)" if not n.endswith(")") else n for n in d[17]]
             l_syn = [n.replace("(R)", "(L)") if "(R)" in n else (n + " (L)" if not n.endswith(")") else n) for n in d[17]]
-            r_def[16] = r_antag
-            l_def[16] = l_antag
-            r_def[17] = r_syn
-            l_def[17] = l_syn
-            result.append(tuple(r_def))
-            result.append(tuple(l_def))
+            r_def[16] = r_antag; l_def[16] = l_antag; r_def[17] = r_syn; l_def[17] = l_syn
+            result.append(tuple(r_def)); result.append(tuple(l_def))
     return result
 
-# Unilateral definitions (will be expanded to bilateral)
+# T6 vertebra index = 81 + 6 = 87
+_T6 = B_T12 + 6
+_T4 = B_T12 + 8
+_T8 = B_T12 + 4
+
 _MUSCLE_BASE: list[MuscleSpec] = [
-    # name, region, arch, o_bone, i_bone, actions, sec_actions, spinal, nerve, artery, L, V, M, Fmax, penn, fdir, antag, syn, otn, itn, ocsa, icsa
     ("Rectus Femoris", "thigh_anterior", "bipennate", B_FEM_R, B_TIB_R, ["extension"], ["flexion"],
      ["L2", "L3", "L4"], "Femoral nerve", "Femoral artery", 40, 450, 450, 3500, 14,
      (0, -1, 0), ["Biceps Femoris"], [], "Quadriceps tendon", "Patellar tendon", 1.3, 1.5),
-    ("Biceps Femoris", "thigh_posterior", "fusiform", B_PELVIS, B_TIB_R, ["flexion"], None,
+    ("Biceps Femoris", "thigh_posterior", "fusiform", B_HIP_R, B_TIB_R, ["flexion"], None,
      ["L5", "S1", "S2"], "Sciatic nerve", "Deep femoral artery", 38, 380, 380, 3200, None,
      (0, -1, 0), ["Rectus Femoris"], [], None, None, None, None),
     ("Biceps Brachii", "arm_anterior", "fusiform", B_SCAP_R, B_RAD_R, ["flexion"], None,
@@ -412,10 +646,10 @@ _MUSCLE_BASE: list[MuscleSpec] = [
     ("Deltoid", "shoulder", "multipennate", B_CLAV_R, B_HUMER_R, ["abduction"], None,
      ["C5", "C6"], "Axillary nerve", "Posterior circumflex humeral artery", 20, 380, 380, 3400, 15,
      (-0.707107, -0.707107, 0), [], ["Pectoralis Major"], None, None, None, None),
-    ("Rectus Abdominis", "abdomen", "parallel", B_STERNUM, B_PELVIS, ["flexion"], None,
+    ("Rectus Abdominis", "abdomen", "parallel", B_STERNUM, B_HIP_R, ["flexion"], None,
      ["T7", "T8", "T9", "T10", "T11", "T12"], "Intercostal nerves", "Superior epigastric artery", 40, 280, 280, 2200, None,
      (0, -1, 0), ["Latissimus Dorsi (R)", "Latissimus Dorsi (L)"], [], None, None, None, None),
-    ("Latissimus Dorsi", "back_superficial", "convergent", 34, B_HUMER_R, ["extension", "adduction"], None,
+    ("Latissimus Dorsi", "back_superficial", "convergent", _T6 + 1, B_HUMER_R, ["extension", "adduction"], None,
      ["C6", "C7", "C8"], "Thoracodorsal nerve", "Thoracodorsal artery", 35, 620, 620, 3800, None,
      (-0.707107, 0.707107, 0), ["Pectoralis Major", "Deltoid"], [], None, None, None, None),
     ("Gastrocnemius", "leg_posterior", "bipennate", B_FEM_R, B_TIB_R, ["plantarflexion"], None,
@@ -427,22 +661,22 @@ _MUSCLE_BASE: list[MuscleSpec] = [
     ("Multifidus", "back_deep", "multipennate", B_SACRUM, B_L5 + 2, ["extension"], None,
      ["L1", "L2", "L3"], "Posterior rami", "Lumbar arteries", 8, 120, 120, 1200, 25,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Quadratus Lumborum", "back_deep", "parallel", B_PELVIS, B_L1, ["lateral_flexion"], None,
+    ("Quadratus Lumborum", "back_deep", "parallel", B_HIP_R, B_L1, ["lateral_flexion"], None,
      ["T12", "L1", "L2", "L3"], "Subcostal nerve", "Lumbar arteries", 12, 90, 90, 800, None,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Semispinalis Capitis", "back_deep", "multipennate", B_T12 + 8, B_SKULL, ["extension"], None,
+    ("Semispinalis Capitis", "back_deep", "multipennate", _T4, B_OCCIPITAL, ["extension"], None,
      ["C1", "C2", "C3", "C4"], "Posterior rami", "Occipital artery", 18, 80, 80, 600, 20,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Gluteus Maximus", "hip", "convergent", B_PELVIS, B_FEM_R, ["extension"], None,
+    ("Gluteus Maximus", "hip", "convergent", B_HIP_R, B_FEM_R, ["extension"], None,
      ["L5", "S1", "S2"], "Inferior gluteal nerve", "Superior gluteal artery", 18, 850, 850, 2800, None,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Gluteus Medius", "hip", "multipennate", B_PELVIS, B_FEM_R, ["abduction"], None,
+    ("Gluteus Medius", "hip", "multipennate", B_HIP_R, B_FEM_R, ["abduction"], None,
      ["L4", "L5", "S1"], "Superior gluteal nerve", "Superior gluteal artery", 12, 350, 350, 2200, 15,
      (0, -1, 0), [], [], None, None, None, None),
     ("Iliopsoas", "hip", "fusiform", B_L5, B_FEM_R, ["flexion"], None,
      ["L1", "L2", "L3"], "Femoral nerve", "Iliolumbar artery", 28, 280, 280, 2000, None,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Sternocleidomastoid", "head_and_neck", "parallel", B_STERNUM, B_SKULL, ["flexion"], None,
+    ("Sternocleidomastoid", "head_and_neck", "parallel", B_STERNUM, B_OCCIPITAL, ["flexion"], None,
      ["C2", "C3"], "Spinal accessory nerve (XI)", "Occipital artery", 20, 80, 80, 400, None,
      (0, -1, 0), [], [], None, None, None, None),
     ("Supraspinatus", "shoulder", "unipennate", B_SCAP_R, B_HUMER_R, ["abduction"], None,
@@ -454,64 +688,65 @@ _MUSCLE_BASE: list[MuscleSpec] = [
     ("Vastus Lateralis", "thigh_anterior", "bipennate", B_FEM_R, B_TIB_R, ["extension"], None,
      ["L2", "L3", "L4"], "Femoral nerve", "Femoral artery", 35, 420, 420, 3800, 14,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Soleus", "leg_posterior", "bipennate", B_TIB_R, B_FOOT_R, ["plantarflexion"], None,
+    ("Soleus", "leg_posterior", "bipennate", B_TIB_R, B_FOOT_R_CALCANEUS, ["plantarflexion"], None,
      ["S1", "S2"], "Tibial nerve", "Posterior tibial artery", 10, 420, 420, 3500, 25,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Tibialis Anterior", "leg_anterior", "unipennate", B_TIB_R, B_FOOT_R, ["dorsiflexion"], None,
+    ("Tibialis Anterior", "leg_anterior", "unipennate", B_TIB_R, B_FOOT_R_CUNEIFORM_MED, ["dorsiflexion"], None,
      ["L4", "L5"], "Common peroneal nerve", "Anterior tibial artery", 28, 140, 140, 1000, 10,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Trapezius Upper", "back_superficial", "convergent", B_SKULL, B_CLAV_R, ["elevation"], None,
+    ("Trapezius Upper", "back_superficial", "convergent", B_OCCIPITAL, B_CLAV_R, ["elevation"], None,
      ["C1", "C2", "C3", "C4"], "Spinal accessory nerve (XI)", "Transverse cervical artery", 15, 80, 80, 500, None,
      (0, -1, 0), [], [], None, None, None, None),
-    ("External Oblique", "abdomen", "parallel", B_T12 + 4, B_PELVIS, ["flexion", "lateral_flexion"], None,
+    ("External Oblique", "abdomen", "parallel", _T8, B_HIP_R, ["flexion", "lateral_flexion"], None,
      ["T7", "T8", "T9", "T10", "T11", "T12"], "Intercostal nerves", "Superior epigastric artery", 20, 100, 100, 600, None,
      (0, -1, 0), [], [], None, None, None, None),
-    ("Diaphragm", "abdomen", "circular", 35, B_L5, ["elevation"], None,
+    ("Diaphragm", "abdomen", "circular", _T6, B_L5, ["elevation"], None,
      ["C3", "C4", "C5"], "Phrenic nerve", "Phrenic artery", 5, 35, 35, 300, None,
      (0, -1, 0), [], [], None, None, None, None),
 ]
 
 MUSCLE_DEFS = _bilateral(_MUSCLE_BASE)
-assert len(MUSCLE_DEFS) == 48, f"Expected 48 muscles, got {len(MUSCLE_DEFS)}"
+assert len(MUSCLE_DEFS) == 48
+
+SHARED_ORIGIN_BASES = {"Pectoralis Major", "Latissimus Dorsi"}
+
+def _mirror_bone(idx: int) -> int:
+    mirrors = {
+        B_HIP_R: B_HIP_L, B_SCAP_R: B_SCAP_L, B_CLAV_R: B_CLAV_L,
+        B_HUMER_R: B_HUMER_L, B_RAD_R: B_RAD_L, B_ULNA_R: B_ULNA_L,
+        B_FEM_R: B_FEM_L, B_PAT_R: B_PAT_L,
+        B_TIB_R: B_TIB_L, B_FIB_R: B_FIB_L,
+        B_FOOT_R_CALCANEUS: B_FOOT_L_START,
+        B_FOOT_R_CUNEIFORM_MED: B_FOOT_L_START + 4,
+    }
+    return mirrors.get(idx, idx)
 
 
 def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
-    """Generate tendons and muscles together (tendons are created per muscle)."""
     tendons: list[dict] = []
     muscles: list[dict] = []
+    shared_origin_tendon_idx: dict[str, int] = {}
 
-    # Muscles whose origin tendon is shared between (R) and (L) variants
-    # (midline origin with bilateral insertions, like David's Pectoralis Major and Latissimus Dorsi)
-    SHARED_ORIGIN_BASES = {"Pectoralis Major", "Latissimus Dorsi"}
-    shared_origin_tendon_idx: dict[str, int] = {}  # base_name → tendon_ids index
-
-    # First pass: create all tendons and muscles (no cross-refs yet)
     for mdef in MUSCLE_DEFS:
         (name, region, arch, o_bone, i_bone, actions, sec_actions,
          spinal, nerve, artery, length, vol, mass, fmax, penn,
          fdir, _, _, otn, itn, ocsa, icsa) = mdef
 
-        # Adjust bone index for (L) variants
         if "(L)" in name:
             o_bone = _mirror_bone(o_bone)
             i_bone = _mirror_bone(i_bone)
 
-        # Check if this muscle shares an origin tendon with its bilateral partner
         base_name = name.replace(" (R)", "").replace(" (L)", "")
-        origin_tendon_idx: int
 
         if base_name in SHARED_ORIGIN_BASES and base_name in shared_origin_tendon_idx:
-            # Reuse the existing shared origin tendon
             origin_tendon_idx = shared_origin_tendon_idx[base_name]
         else:
-            # Create a new origin tendon
             ot_name = f"{otn} ({name.split('(')[-1].strip(')')[-1]})" if otn and "(" in name else (otn or f"{name} origin tendon")
             tendons.append(_make_tendon(r, ot_name, o_bone, random.uniform(2, 5), ocsa))
             origin_tendon_idx = len(r.tendon_ids) - 1
             if base_name in SHARED_ORIGIN_BASES:
                 shared_origin_tendon_idx[base_name] = origin_tendon_idx
 
-        # Insertion tendon (always unique per muscle)
         it_name = f"{itn} ({name.split('(')[-1].strip(')')[-1]})" if itn and "(" in name else (itn or f"{name} insertion tendon")
         tendons.append(_make_tendon(r, it_name, i_bone, random.uniform(3, 6), icsa))
 
@@ -539,7 +774,7 @@ def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
             m["pennationAngle"] = penn
         muscles.append(m)
 
-    # Second pass: resolve antagonist/synergist IDs
+    # Resolve antagonist/synergist IDs
     for i, mdef in enumerate(MUSCLE_DEFS):
         antag_names, syn_names = mdef[16], mdef[17]
         if antag_names:
@@ -551,8 +786,8 @@ def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
             if sids:
                 muscles[i]["synergistIds"] = sids
 
-    # Resolve nerveId references
-    for i, m in enumerate(muscles):
+    # Resolve nerveId
+    for m in muscles:
         nerve_name = m["innervation"]["nerveName"]
         if nerve_name in r.nerve_name_to_idx:
             m["innervation"]["nerveId"] = r.nerve_ids[r.nerve_name_to_idx[nerve_name]]
@@ -560,21 +795,9 @@ def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
     return tendons, muscles
 
 
-def _mirror_bone(idx: int) -> int:
-    """Map R-side bone index to L-side."""
-    mirrors = {
-        B_SCAP_R: B_SCAP_L, B_CLAV_R: B_CLAV_L,
-        B_HUMER_R: B_HUMER_L, B_RAD_R: B_RAD_L, B_ULNA_R: B_ULNA_L,
-        B_FEM_R: B_FEM_L, B_PAT_R: B_PAT_L,
-        B_TIB_R: B_TIB_L, B_FIB_R: B_FIB_L,
-        B_HAND_R: B_HAND_L, B_FOOT_R: B_FOOT_L,
-    }
-    return mirrors.get(idx, idx)
-
-
-# ---------------------------------------------------------------------------
-# Nerves — 13
-# ---------------------------------------------------------------------------
+# =============================================================================
+# NERVES — 13
+# =============================================================================
 
 NERVE_DEFS = [
     ("Femoral nerve", "mixed", "lumbar", ["L2", "L3", "L4"], None),
@@ -591,8 +814,6 @@ NERVE_DEFS = [
     ("Phrenic nerve", "motor", "cervical", ["C3", "C4", "C5"], None),
     ("Spinal accessory nerve (XI)", "motor", "none", ["C1", "C2", "C3", "C4"], None),
 ]
-assert len(NERVE_DEFS) == 13
-
 
 def gen_nerves(r: Reg) -> list[dict]:
     nerves = []
@@ -604,17 +825,15 @@ def gen_nerves(r: Reg) -> list[dict]:
         nerves.append({
             "id": nid, "name": name, "type": ntype, "plexus": plexus,
             "spinalRoots": roots, "parentNerveId": parent_id,
-            "path": [
-                vec3(random.uniform(-5, 5), random.uniform(60, 120), random.uniform(-3, 3)),
-                vec3(random.uniform(-5, 5), random.uniform(10, 60), random.uniform(-3, 3)),
-            ],
+            "path": [vec3(random.uniform(-5, 5), random.uniform(60, 120), random.uniform(-3, 3)),
+                     vec3(random.uniform(-5, 5), random.uniform(10, 60), random.uniform(-3, 3))],
         })
     return nerves
 
 
-# ---------------------------------------------------------------------------
-# Organs — 9
-# ---------------------------------------------------------------------------
+# =============================================================================
+# ORGANS — 9
+# =============================================================================
 
 def gen_organs(r: Reg) -> list[dict]:
     defs = [
@@ -630,77 +849,58 @@ def gen_organs(r: Reg) -> list[dict]:
     ]
     organs = []
     for name, system, vol, mass, vital, paired, lat, pos in defs:
-        oid = uid()
-        r.organ_ids.append(oid)
-        organs.append({
-            "id": oid, "name": name, "system": system,
-            "transform": tf(*pos),
-            "volume": vol, "mass": mass,
-            "isVital": vital, "pairedOrgan": paired, "laterality": lat,
-        })
+        oid = uid(); r.organ_ids.append(oid)
+        organs.append({"id": oid, "name": name, "system": system, "transform": tf(*pos),
+                        "volume": vol, "mass": mass, "isVital": vital, "pairedOrgan": paired, "laterality": lat})
     return organs
 
 
-# ---------------------------------------------------------------------------
-# Vascular — 20 vessels (arteries + veins)
-# ---------------------------------------------------------------------------
+# =============================================================================
+# VASCULAR — 20 vessels
+# =============================================================================
 
 def gen_vascular(r: Reg) -> list[dict]:
     vessels: list[dict] = []
 
-    def _art(name: str, parent_idx: int | None, radius: float, path: list[dict], **kw: Any) -> None:
-        vid = uid()
-        r.vessel_ids.append(vid)
-        v: dict[str, Any] = {
-            "id": vid, "name": name, "vesselType": "artery",
-            "path": path, "averageLumenRadius": radius,
-            "parentVesselId": r.vessel_ids[parent_idx] if parent_idx is not None else None,
-        }
-        v.update(kw)
-        vessels.append(v)
+    def _art(name, pi, rad, path, **kw):
+        vid = uid(); r.vessel_ids.append(vid)
+        v: dict = {"id": vid, "name": name, "vesselType": "artery", "path": path,
+                    "averageLumenRadius": rad, "parentVesselId": r.vessel_ids[pi] if pi is not None else None}
+        v.update(kw); vessels.append(v)
 
-    def _vein(name: str, parent_idx: int | None, radius: float, path: list[dict], **kw: Any) -> None:
-        vid = uid()
-        r.vessel_ids.append(vid)
-        v: dict[str, Any] = {
-            "id": vid, "name": name, "vesselType": "vein",
-            "path": path, "averageLumenRadius": radius,
-            "parentVesselId": r.vessel_ids[parent_idx] if parent_idx is not None else None,
-            "hasValves": kw.pop("hasValves", True),
-        }
-        v.update(kw)
-        vessels.append(v)
+    def _vein(name, pi, rad, path, **kw):
+        vid = uid(); r.vessel_ids.append(vid)
+        v: dict = {"id": vid, "name": name, "vesselType": "vein", "path": path,
+                    "averageLumenRadius": rad, "parentVesselId": r.vessel_ids[pi] if pi is not None else None,
+                    "hasValves": kw.pop("hasValves", True)}
+        v.update(kw); vessels.append(v)
 
-    # Arteries (indices 0–12)
-    _art("Aorta", None, 1.5, [vec3(0, 135, 3), vec3(0, 100, 0), vec3(0, 70, -2)], systolicPressure=120, diastolicPressure=80, oxygenSaturation=98)
-    _art("Common iliac (R)", 0, 0.8, [vec3(-3, 70, -2), vec3(-7, 60, -1)])
-    _art("Common iliac (L)", 0, 0.8, [vec3(3, 70, -2), vec3(7, 60, -1)])
-    _art("Femoral artery (R)", 1, 0.5, [vec3(-9, 60, 0), vec3(-9, 30, 0)])
-    _art("Femoral artery (L)", 2, 0.5, [vec3(9, 60, 0), vec3(9, 30, 0)])
-    _art("Brachial artery (R)", 0, 0.35, [vec3(-23, 148, 0), vec3(-25, 112, 0)])
-    _art("Brachial artery (L)", 0, 0.35, [vec3(23, 148, 0), vec3(25, 112, 0)])
-    # IVC index=7
-    _vein("Inferior vena cava", None, 1.8, [vec3(1, 70, -2), vec3(1, 100, 0), vec3(1, 135, 3)], hasValves=False)
-    _vein("Great saphenous (R)", 7, 0.4, [vec3(-10, 5, 2), vec3(-9, 60, 0)])
-    _art("Celiac trunk", 0, 0.6, [vec3(0, 115, 3), vec3(0, 112, 5)])
-    _art("Superior mesenteric artery", 0, 0.5, [vec3(0, 113, 3), vec3(0, 105, 5)])
-    _art("Renal artery (R)", 0, 0.35, [vec3(-2, 110, -2), vec3(-6, 110, -5)])
-    _art("Renal artery (L)", 0, 0.35, [vec3(2, 110, -2), vec3(6, 110, -5)])
-    _art("Posterior tibial artery (R)", 3, 0.2, [vec3(-9, 30, 0), vec3(-9, 5, 2)])
-    _vein("Popliteal vein (R)", 7, 0.5, [vec3(-9, 30, -1), vec3(-9, 50, -1)])
-    _vein("Femoral vein (R)", 7, 0.55, [vec3(-9, 50, 0), vec3(-9, 70, 0)])
-    _vein("Femoral vein (L)", 7, 0.55, [vec3(9, 50, 0), vec3(9, 70, 0)])
-    _vein("Internal jugular vein (R)", 7, 0.7, [vec3(-3, 155, 2), vec3(-2, 135, 3)])
-    _art("Carotid artery (R)", 0, 0.4, [vec3(-2, 135, 3), vec3(-3, 160, 2)])
-    _art("Carotid artery (L)", 0, 0.4, [vec3(2, 135, 3), vec3(3, 160, 2)])
-
-    assert len(vessels) == 20
+    _art("Aorta", None, 1.5, [vec3(0,135,3), vec3(0,100,0), vec3(0,70,-2)], systolicPressure=120, diastolicPressure=80, oxygenSaturation=98)
+    _art("Common iliac (R)", 0, 0.8, [vec3(-3,70,-2), vec3(-7,60,-1)])
+    _art("Common iliac (L)", 0, 0.8, [vec3(3,70,-2), vec3(7,60,-1)])
+    _art("Femoral artery (R)", 1, 0.5, [vec3(-9,60,0), vec3(-9,30,0)])
+    _art("Femoral artery (L)", 2, 0.5, [vec3(9,60,0), vec3(9,30,0)])
+    _art("Brachial artery (R)", 0, 0.35, [vec3(-23,148,0), vec3(-25,112,0)])
+    _art("Brachial artery (L)", 0, 0.35, [vec3(23,148,0), vec3(25,112,0)])
+    _vein("Inferior vena cava", None, 1.8, [vec3(1,70,-2), vec3(1,100,0), vec3(1,135,3)], hasValves=False)
+    _vein("Great saphenous (R)", 7, 0.4, [vec3(-10,5,2), vec3(-9,60,0)])
+    _art("Celiac trunk", 0, 0.6, [vec3(0,115,3), vec3(0,112,5)])
+    _art("Superior mesenteric artery", 0, 0.5, [vec3(0,113,3), vec3(0,105,5)])
+    _art("Renal artery (R)", 0, 0.35, [vec3(-2,110,-2), vec3(-6,110,-5)])
+    _art("Renal artery (L)", 0, 0.35, [vec3(2,110,-2), vec3(6,110,-5)])
+    _art("Posterior tibial artery (R)", 3, 0.2, [vec3(-9,30,0), vec3(-9,5,2)])
+    _vein("Popliteal vein (R)", 7, 0.5, [vec3(-9,30,-1), vec3(-9,50,-1)])
+    _vein("Femoral vein (R)", 7, 0.55, [vec3(-9,50,0), vec3(-9,70,0)])
+    _vein("Femoral vein (L)", 7, 0.55, [vec3(9,50,0), vec3(9,70,0)])
+    _vein("Internal jugular vein (R)", 7, 0.7, [vec3(-3,155,2), vec3(-2,135,3)])
+    _art("Carotid artery (R)", 0, 0.4, [vec3(-2,135,3), vec3(-3,160,2)])
+    _art("Carotid artery (L)", 0, 0.4, [vec3(2,135,3), vec3(3,160,2)])
     return vessels
 
 
-# ---------------------------------------------------------------------------
-# Ligaments — 12
-# ---------------------------------------------------------------------------
+# =============================================================================
+# LIGAMENTS — 12
+# =============================================================================
 
 def gen_ligaments(r: Reg) -> list[dict]:
     defs = [
@@ -710,8 +910,8 @@ def gen_ligaments(r: Reg) -> list[dict]:
         ("Lateral collateral ligament (R)", B_FEM_R, B_TIB_R, J_KNEE_R, 5.5),
         ("Anterior cruciate ligament (L)", B_FEM_L, B_TIB_L, J_KNEE_L, 3.2),
         ("Posterior cruciate ligament (L)", B_FEM_L, B_TIB_L, J_KNEE_L, 3.8),
-        ("Iliofemoral ligament (R)", B_PELVIS, B_FEM_R, J_HIP_R, 8.5),
-        ("Iliofemoral ligament (L)", B_PELVIS, B_FEM_L, J_HIP_L, 8.5),
+        ("Iliofemoral ligament (R)", B_HIP_R, B_FEM_R, J_HIP_R, 8.5),
+        ("Iliofemoral ligament (L)", B_HIP_L, B_FEM_L, J_HIP_L, 8.5),
         ("Glenohumeral ligament (R)", B_SCAP_R, B_HUMER_R, J_SHOULDER_R, 3.5),
         ("Glenohumeral ligament (L)", B_SCAP_L, B_HUMER_L, J_SHOULDER_L, 3.5),
         ("Anterior longitudinal ligament (lumbar)", B_SACRUM, B_L1, J_L5S1, 15),
@@ -719,24 +919,19 @@ def gen_ligaments(r: Reg) -> list[dict]:
     ]
     ligs = []
     for name, ob, ib, ji, length in defs:
-        lid = uid()
-        r.ligament_ids.append(lid)
-        ligs.append({
-            "id": lid, "name": name,
+        lid = uid(); r.ligament_ids.append(lid)
+        ligs.append({"id": lid, "name": name,
             "originBoneId": r.bone_ids[ob],
-            "originPosition": vec3(random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)),
+            "originPosition": vec3(random.uniform(-1,1), random.uniform(-1,1), random.uniform(-1,1)),
             "insertionBoneId": r.bone_ids[ib],
-            "insertionPosition": vec3(random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)),
-            "jointId": r.joint_ids[ji],
-            "restingLength": length,
-        })
-    assert len(ligs) == 12
+            "insertionPosition": vec3(random.uniform(-1,1), random.uniform(-1,1), random.uniform(-1,1)),
+            "jointId": r.joint_ids[ji], "restingLength": length})
     return ligs
 
 
-# ---------------------------------------------------------------------------
-# Cartilage — 9
-# ---------------------------------------------------------------------------
+# =============================================================================
+# CARTILAGE — 9
+# =============================================================================
 
 def gen_cartilage(r: Reg) -> list[dict]:
     defs = [
@@ -744,7 +939,7 @@ def gen_cartilage(r: Reg) -> list[dict]:
         ("Tibial plateau articular cartilage (R)", "hyaline", B_TIB_R, J_KNEE_R, 3, 10),
         ("Medial meniscus (R)", "fibrocartilage", None, J_KNEE_R, 5, 8),
         ("Lateral meniscus (R)", "fibrocartilage", None, J_KNEE_R, 4.5, 7),
-        ("Acetabular cartilage (R)", "hyaline", B_PELVIS, J_HIP_R, 2.5, 16),
+        ("Acetabular cartilage (R)", "hyaline", B_HIP_R, J_HIP_R, 2.5, 16),
         ("Femoral head cartilage (R)", "hyaline", B_FEM_R, J_HIP_R, 2, 14),
         ("Acetabular labrum (R)", "fibrocartilage", None, J_HIP_R, 4, 6),
         ("Glenoid labrum (R)", "fibrocartilage", None, J_SHOULDER_R, 3.5, 4),
@@ -752,25 +947,22 @@ def gen_cartilage(r: Reg) -> list[dict]:
     ]
     carts = []
     for name, ctype, bone_idx, joint_idx, thickness, area in defs:
-        cid = uid()
-        r.cartilage_ids.append(cid)
-        c: dict[str, Any] = {"id": cid, "name": name, "type": ctype, "thickness": thickness, "surfaceArea": area}
+        cid = uid(); r.cartilage_ids.append(cid)
+        c: dict = {"id": cid, "name": name, "type": ctype, "thickness": thickness, "surfaceArea": area}
         if bone_idx is not None:
             c["boneId"] = r.bone_ids[bone_idx]
         c["jointId"] = r.joint_ids[joint_idx]
         carts.append(c)
-    assert len(carts) == 9
     return carts
 
 
-# ---------------------------------------------------------------------------
-# Hair
-# ---------------------------------------------------------------------------
+# =============================================================================
+# HAIR
+# =============================================================================
 
 def gen_hair(height: float) -> dict:
-    styles = ["Curly, short", "Straight, medium", "Wavy, long", "Buzz cut", "Afro"]
     return {
-        "style": random.choice(styles),
+        "style": random.choice(["Curly, short", "Straight, medium", "Wavy, long", "Buzz cut", "Afro"]),
         "color": color(random.randint(20, 80), random.randint(15, 60), random.randint(10, 50)),
         "length": random.randint(2, 25),
         "density": round(random.uniform(0.5, 0.95), 2),
@@ -778,361 +970,211 @@ def gen_hair(height: float) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Segments — 15
-# ---------------------------------------------------------------------------
+# =============================================================================
+# SEGMENTS — 15 (bone lists updated for 206-bone layout)
+# =============================================================================
+
+# Trunk bones: all thoracic vertebrae + sternum + 24 ribs + scapulae + clavicles
+_TRUNK_BONES = (list(range(B_L5, B_T1 + 1))            # L5–T1 (17 vertebrae)
+                + [B_STERNUM]                             # sternum
+                + B_RIB_R + B_RIB_L                       # 24 individual ribs
+                + [B_SCAP_R, B_SCAP_L, B_CLAV_R, B_CLAV_L])
+
+# Head-neck bones: cervical vertebrae + all cranial + facial + hyoid + ossicles
+_HEAD_BONES = (list(range(B_C7, B_C1 + 1))              # C7–C1 (7 vertebrae)
+               + list(range(B_FRONTAL, B_ETHMOID + 1))    # 8 cranial
+               + list(range(B_MAXILLA_R, B_MANDIBLE + 1)) # 14 facial
+               + [B_HYOID]                                  # hyoid
+               + list(range(B_MALLEUS_R, B_STAPES_L + 1))) # 6 ossicles
+
+# Hand R: all 27 bones (indices 100–126)
+_HAND_R_BONES = list(range(100, 127))
+_HAND_L_BONES = list(range(127, 154))
+
+# Foot R: all 26 bones (indices 154–179)
+_FOOT_R_BONES = list(range(154, 180))
+_FOOT_L_BONES = list(range(180, 206))
 
 SEG_DEFS = [
-    # (name, bone_idxs, proximal_joint_idx_or_None, distal_joint_idxs, mass_frac, length, com_ratio)
-    ("Pelvis", [B_PELVIS, B_SACRUM], None, [J_HIP_R, J_HIP_L], 0.113, 18, 0.5),
+    ("Pelvis", [B_HIP_R, B_HIP_L, B_SACRUM, B_COCCYX], None, [J_HIP_R, J_HIP_L], 0.113, 18, 0.5),
     ("Thigh (R)", [B_FEM_R], J_HIP_R, [J_KNEE_R], 0.14, 45, 0.433),
     ("Thigh (L)", [B_FEM_L], J_HIP_L, [J_KNEE_L], 0.14, 45, 0.433),
     ("Shank (R)", [B_TIB_R, B_FIB_R, B_PAT_R], J_KNEE_R, [J_ANKLE_R], 0.046, 40, 0.433),
     ("Shank (L)", [B_TIB_L, B_FIB_L, B_PAT_L], J_KNEE_L, [J_ANKLE_L], 0.046, 40, 0.433),
-    ("Trunk", list(range(B_L5, B_T1 + 1)) + [B_STERNUM, B_RIBS_R, B_RIBS_L, B_SCAP_R, B_SCAP_L, B_CLAV_R, B_CLAV_L],
-     8, [J_SHOULDER_R, J_SHOULDER_L], 0.4306, 46, 0.5),  # proximal=L5-S1
-    ("Head-neck", list(range(B_C7, B_C1 + 1)) + [B_SKULL], 18, [], 0.0714, 22, 0.5),  # proximal=C7-T1
+    ("Trunk", _TRUNK_BONES, 8, [J_SHOULDER_R, J_SHOULDER_L], 0.4306, 46, 0.5),
+    ("Head-neck", _HEAD_BONES, 18, [], 0.0714, 22, 0.5),
     ("Upper arm (R)", [B_HUMER_R], J_SHOULDER_R, [J_ELBOW_R], 0.027, 36, 0.436),
     ("Upper arm (L)", [B_HUMER_L], J_SHOULDER_L, [J_ELBOW_L], 0.027, 36, 0.436),
     ("Forearm (R)", [B_RAD_R, B_ULNA_R], J_ELBOW_R, [J_WRIST_R], 0.0164, 26, 0.43),
     ("Forearm (L)", [B_RAD_L, B_ULNA_L], J_ELBOW_L, [J_WRIST_L], 0.0164, 26, 0.43),
-    ("Hand (R)", [B_HAND_R], J_WRIST_R, [], 0.0061, 19, 0.506),
-    ("Hand (L)", [B_HAND_L], J_WRIST_L, [], 0.0061, 19, 0.506),
-    ("Foot (R)", [B_FOOT_R], J_ANKLE_R, [], 0.014, 26, 0.5),
-    ("Foot (L)", [B_FOOT_L], J_ANKLE_L, [], 0.014, 26, 0.5),
+    ("Hand (R)", _HAND_R_BONES, J_WRIST_R, [], 0.0061, 19, 0.506),
+    ("Hand (L)", _HAND_L_BONES, J_WRIST_L, [], 0.0061, 19, 0.506),
+    ("Foot (R)", _FOOT_R_BONES, J_ANKLE_R, [], 0.014, 26, 0.5),
+    ("Foot (L)", _FOOT_L_BONES, J_ANKLE_L, [], 0.014, 26, 0.5),
 ]
-assert len(SEG_DEFS) == 15
 
 
 def gen_segments(r: Reg, weight: float) -> list[dict]:
     segs = []
     for name, bone_idxs, prox_j, distal_js, mass_frac, seg_len, com_ratio in SEG_DEFS:
-        sid = uid()
-        r.segment_ids.append(sid)
+        sid = uid(); r.segment_ids.append(sid)
         seg_mass = round(weight * mass_frac, 2)
-        com_y = seg_len * com_ratio
         segs.append({
             "id": sid, "name": name,
             "boneIds": [r.bone_ids[i] for i in bone_idxs],
             "proximalJointId": r.joint_ids[prox_j] if prox_j is not None else None,
             "distalJointIds": [r.joint_ids[j] for j in distal_js],
             "mass": seg_mass,
-            "centerOfMass": vec3(0, com_y, 0),
-            "inertiaTensor": sym_tensor(
-                round(seg_mass * (seg_len * 0.3) ** 2, 1),
-                round(seg_mass * (seg_len * 0.1) ** 2, 1),
-                round(seg_mass * (seg_len * 0.3) ** 2, 1),
-            ),
+            "centerOfMass": vec3(0, seg_len * com_ratio, 0),
+            "inertiaTensor": sym_tensor(round(seg_mass * (seg_len * 0.3)**2, 1),
+                                         round(seg_mass * (seg_len * 0.1)**2, 1),
+                                         round(seg_mass * (seg_len * 0.3)**2, 1)),
             "segmentLength": seg_len,
         })
     return segs
 
 
-# ---------------------------------------------------------------------------
-# Poses — currentPose (24 jointStates) + 1 savedPose (8 jointStates)
-# ---------------------------------------------------------------------------
+# =============================================================================
+# POSES, LOADING CONDITIONS, DERIVATION GRAPH, CONSTITUTIVE LAWS
+# (unchanged from 52-bone version — they reference joints/segments, not bones directly)
+# =============================================================================
 
 def gen_current_pose(r: Reg) -> dict:
     r.pose_id = uid()
     joint_states = []
     for i in range(24):
         dof = JOINT_DEFS[i][3]
-        angles: dict[str, Any] = {"flexionExtension": round(random.uniform(-5, 15), 1), "abductionAdduction": 0, "internalExternalRotation": 0}
-        if dof >= 2:
-            angles["abductionAdduction"] = round(random.uniform(-5, 5), 1)
-        if dof >= 3:
-            angles["internalExternalRotation"] = round(random.uniform(-5, 5), 1)
+        angles: dict = {"flexionExtension": round(random.uniform(-5, 15), 1), "abductionAdduction": 0, "internalExternalRotation": 0}
+        if dof >= 2: angles["abductionAdduction"] = round(random.uniform(-5, 5), 1)
+        if dof >= 3: angles["internalExternalRotation"] = round(random.uniform(-5, 5), 1)
         joint_states.append({"jointId": r.joint_ids[i], "angles": angles})
-
-    return {
-        "id": r.pose_id, "name": "contrapposto",
-        "rootSegmentId": r.segment_ids[0],
-        "rootPose": rigid_pose(0, 95, 0, small_tilt_quat(2, 5, 1)),
-        "jointStates": joint_states,
-    }
+    return {"id": r.pose_id, "name": "contrapposto", "rootSegmentId": r.segment_ids[0],
+            "rootPose": rigid_pose(0, 95, 0, small_tilt_quat(2, 5, 1)), "jointStates": joint_states}
 
 
 def gen_saved_poses(r: Reg) -> list[dict]:
     r.saved_pose_id = uid()
-    # Anatomical position — 8 major joints at zero
-    major_joints = [J_HIP_R, J_HIP_L, J_KNEE_R, J_KNEE_L, J_SHOULDER_R, J_SHOULDER_L, J_ELBOW_R, J_ELBOW_L]
-    joint_states = [
-        {"jointId": r.joint_ids[j], "angles": {"flexionExtension": 0, "abductionAdduction": 0, "internalExternalRotation": 0}}
-        for j in major_joints
-    ]
-    return [{
-        "id": r.saved_pose_id, "name": "anatomical_position",
-        "rootSegmentId": r.segment_ids[0],
-        "rootPose": rigid_pose(0, 95, 0),
-        "jointStates": joint_states,
-    }]
+    major = [J_HIP_R, J_HIP_L, J_KNEE_R, J_KNEE_L, J_SHOULDER_R, J_SHOULDER_L, J_ELBOW_R, J_ELBOW_L]
+    return [{"id": r.saved_pose_id, "name": "anatomical_position", "rootSegmentId": r.segment_ids[0],
+             "rootPose": rigid_pose(0, 95, 0),
+             "jointStates": [{"jointId": r.joint_ids[j], "angles": {"flexionExtension": 0, "abductionAdduction": 0, "internalExternalRotation": 0}} for j in major]}]
 
-
-# ---------------------------------------------------------------------------
-# Loading conditions — 28 forces, 1 moment, 2 contacts
-# ---------------------------------------------------------------------------
 
 def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     forces: list[dict] = []
 
-    def _grf(name: str, mag: float, side: str, seg_idx: int) -> dict:
-        return {
-            "id": uid(), "name": name, "forceType": "ground_reaction",
-            "magnitude": mag, "direction": unit_vec3(0, 1, 0),
-            "centerOfPressure": vec3(0, 0, 0),
-            "vertical": mag * 0.98, "anteroposterior": mag * 0.02, "mediolateral": mag * 0.01,
-            "contactSide": side, "contactSegmentId": r.segment_ids[seg_idx],
-        }
+    def _grf(name, mag, side, seg_idx):
+        return {"id": uid(), "name": name, "forceType": "ground_reaction", "magnitude": mag, "direction": unit_vec3(0,1,0),
+                "centerOfPressure": vec3(), "vertical": mag*0.98, "anteroposterior": mag*0.02, "mediolateral": mag*0.01,
+                "contactSide": side, "contactSegmentId": r.segment_ids[seg_idx]}
 
-    def _muscle_f(name: str, mag: float, muscle_name: str) -> dict:
-        return {
-            "id": uid(), "name": name, "forceType": "muscle",
-            "magnitude": mag, "direction": unit_vec3(0, -1, 0),
-            "muscleId": r.muscle_ids[r.muscle_name_to_idx[muscle_name]],
-            "applicationPoint": vec3(0, 0, 0),
-            "activeComponent": mag * 0.9, "passiveComponent": mag * 0.1,
-        }
+    def _mf(name, mag, mname):
+        return {"id": uid(), "name": name, "forceType": "muscle", "magnitude": mag, "direction": unit_vec3(0,-1,0),
+                "muscleId": r.muscle_ids[r.muscle_name_to_idx[mname]], "applicationPoint": vec3(),
+                "activeComponent": mag*0.9, "passiveComponent": mag*0.1}
 
-    def _grav(seg_idx: int) -> dict:
-        name = SEG_DEFS[seg_idx][0]
-        m = round(weight * SEG_DEFS[seg_idx][4], 2)
-        return {
-            "id": uid(), "name": f"Weight {name}", "forceType": "gravitational",
-            "magnitude": round(m * G / 100, 2),  # N (G in cm/s², so /100 for m/s²)
-            "direction": unit_vec3(0, -1, 0),
-            "targetSegmentId": r.segment_ids[seg_idx],
-            "gravitationalAcceleration": G,
-        }
+    def _grav(si):
+        m = round(weight * SEG_DEFS[si][4], 2)
+        return {"id": uid(), "name": f"Weight {SEG_DEFS[si][0]}", "forceType": "gravitational",
+                "magnitude": round(m * G / 100, 2), "direction": unit_vec3(0,-1,0),
+                "targetSegmentId": r.segment_ids[si], "gravitationalAcceleration": G}
 
-    def _jr(name: str, mag: float, joint_idx: int) -> dict:
-        return {
-            "id": uid(), "name": name, "forceType": "joint_reaction",
-            "magnitude": mag, "direction": unit_vec3(0, 1, 0),
-            "jointId": r.joint_ids[joint_idx],
-            "applicationPoint": vec3(0, 0, 0),
-        }
+    def _jr(name, mag, ji):
+        return {"id": uid(), "name": name, "forceType": "joint_reaction", "magnitude": mag, "direction": unit_vec3(0,1,0),
+                "jointId": r.joint_ids[ji], "applicationPoint": vec3()}
 
-    # GRFs (2)
-    total_w = weight * 9.81
-    r_frac = random.uniform(0.55, 0.75)
-    forces.append(_grf("GRF (R foot)", round(total_w * r_frac, 0), "right", 13))
-    forces.append(_grf("GRF (L foot)", round(total_w * (1 - r_frac), 0), "left", 14))
+    tw = weight * 9.81; rf = random.uniform(0.55, 0.75)
+    forces += [_grf("GRF (R foot)", round(tw*rf), "right", 13), _grf("GRF (L foot)", round(tw*(1-rf)), "left", 14)]
+    forces += [_mf("Rectus femoris force (R)", 285, "Rectus Femoris (R)"), _mf("Gastrocnemius force (R)", 180, "Gastrocnemius (R)"),
+               _mf("L quad force", 120, "Rectus Femoris (L)"), _mf("L gastroc", 80, "Gastrocnemius (L)"),
+               _mf("R erector spinae", 350, "Erector Spinae (R)"), _mf("L erector spinae", 340, "Erector Spinae (L)"),
+               _mf("R gluteus max", 180, "Gluteus Maximus (R)"), _mf("R soleus", 220, "Soleus (R)")]
+    for si in range(15): forces.append(_grav(si))
+    forces += [_jr("R knee joint reaction", 1800, J_KNEE_R), _jr("R hip joint reaction", 2400, J_HIP_R), _jr("L5-S1 joint reaction", 900, J_L5S1)]
 
-    # Muscle forces (8)
-    forces.append(_muscle_f("Rectus femoris force (R)", 285, "Rectus Femoris (R)"))
-    forces.append(_muscle_f("Gastrocnemius force (R)", 180, "Gastrocnemius (R)"))
-    forces.append(_muscle_f("L quad force", 120, "Rectus Femoris (L)"))
-    forces.append(_muscle_f("L gastroc", 80, "Gastrocnemius (L)"))
-    forces.append(_muscle_f("R erector spinae", 350, "Erector Spinae (R)"))
-    forces.append(_muscle_f("L erector spinae", 340, "Erector Spinae (L)"))
-    forces.append(_muscle_f("R gluteus max", 180, "Gluteus Maximus (R)"))
-    forces.append(_muscle_f("R soleus", 220, "Soleus (R)"))
+    nf = vec3(round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.2,0.2),2))
+    return [{"id": uid(), "name": "contrapposto_standing", "poseId": r.pose_id, "forces": forces,
+             "moments": [{"id": uid(), "name": "Knee resultant moment (R)", "momentType": "joint_resultant",
+                           "aboutJointId": r.joint_ids[J_KNEE_R], "axis": unit_vec3(0,0,1), "magnitude": round(random.uniform(800,1500))}],
+             "contacts": [{"id": uid(), "name": "Right foot ground contact", "contactType": "foot_ground",
+                            "segmentId": r.segment_ids[13], "surfaceNormal": unit_vec3(0,1,0), "contactPoint": vec3(-9,0,5), "isActive": True},
+                           {"id": uid(), "name": "Left foot ground contact", "contactType": "foot_ground",
+                            "segmentId": r.segment_ids[14], "surfaceNormal": unit_vec3(0,1,0), "contactPoint": vec3(9,0,5), "isActive": True}],
+             "equilibrium": {"netForce": nf, "netMoment": vec3(round(random.uniform(-1,1),1), round(random.uniform(-0.5,0.5),1), round(random.uniform(-0.5,0.5),1)),
+                              "isStatic": True, "residualForceMagnitude": round(math.sqrt(nf["x"]**2+nf["y"]**2+nf["z"]**2), 2),
+                              "residualMomentMagnitude": round(random.uniform(0.5,2), 1)}}]
 
-    # Gravitational forces (15 — one per segment)
-    for si in range(15):
-        forces.append(_grav(si))
-
-    # Joint reaction forces (3)
-    forces.append(_jr("R knee joint reaction", 1800, J_KNEE_R))
-    forces.append(_jr("R hip joint reaction", 2400, J_HIP_R))
-    forces.append(_jr("L5-S1 joint reaction", 900, J_L5S1))
-
-    assert len(forces) == 28
-
-    # Moment (1)
-    moments = [{
-        "id": uid(), "name": "Knee resultant moment (R)",
-        "momentType": "joint_resultant",
-        "aboutJointId": r.joint_ids[J_KNEE_R],
-        "axis": unit_vec3(0, 0, 1),
-        "magnitude": round(random.uniform(800, 1500), 0),
-    }]
-
-    # Contacts (2)
-    contacts = [
-        {
-            "id": uid(), "name": "Right foot ground contact", "contactType": "foot_ground",
-            "segmentId": r.segment_ids[13],
-            "surfaceNormal": unit_vec3(0, 1, 0), "contactPoint": vec3(-9, 0, 5),
-            "isActive": True,
-        },
-        {
-            "id": uid(), "name": "Left foot ground contact", "contactType": "foot_ground",
-            "segmentId": r.segment_ids[14],
-            "surfaceNormal": unit_vec3(0, 1, 0), "contactPoint": vec3(9, 0, 5),
-            "isActive": True,
-        },
-    ]
-
-    net_fx = round(random.uniform(-0.5, 0.5), 2)
-    net_fy = round(random.uniform(-0.5, 0.5), 2)
-    net_fz = round(random.uniform(-0.2, 0.2), 2)
-    net_res = round(math.sqrt(net_fx**2 + net_fy**2 + net_fz**2), 2)
-
-    return [{
-        "id": uid(), "name": "contrapposto_standing",
-        "poseId": r.pose_id,
-        "forces": forces, "moments": moments, "contacts": contacts,
-        "equilibrium": {
-            "netForce": vec3(net_fx, net_fy, net_fz),
-            "netMoment": vec3(round(random.uniform(-1, 1), 1), round(random.uniform(-0.5, 0.5), 1), round(random.uniform(-0.5, 0.5), 1)),
-            "isStatic": True,
-            "residualForceMagnitude": net_res,
-            "residualMomentMagnitude": round(random.uniform(0.5, 2), 1),
-        },
-    }]
-
-
-# ---------------------------------------------------------------------------
-# Derivation Graph — 10 rules
-# ---------------------------------------------------------------------------
-
-def gen_derivation_graph() -> dict:
-    rule_ids = [uid() for _ in range(10)]
-    rules = [
-        {"id": rule_ids[0], "name": "muscle_pcsa",
-         "law": {"name": "PCSA definition", "equation": "PCSA = V / L_opt", "domain": "definition"},
-         "inputFields": ["muscles[*].volume", "muscles[*].optimalFiberLength"], "outputField": "muscles[*].pcsa"},
-        {"id": rule_ids[1], "name": "forward_kinematics",
-         "law": {"name": "Forward kinematics", "equation": "T_global = T_root × Π T_joint(θ)", "domain": "kinematics"},
-         "inputFields": ["currentPose.rootPose", "currentPose.jointStates[*].angles", "segments[*].proximalJointId", "joints[*].axes"],
-         "outputField": "currentPose.segmentStates[*].globalPose"},
-        {"id": rule_ids[2], "name": "segment_global_com",
-         "law": {"name": "Coordinate transformation", "equation": "r_global = T_global × r_local", "domain": "kinematics"},
-         "inputFields": ["currentPose.segmentStates[*].globalPose", "segments[*].centerOfMass"],
-         "outputField": "currentPose.segmentStates[*].globalCenterOfMass", "dependsOn": [rule_ids[1]]},
-        {"id": rule_ids[3], "name": "whole_body_com",
-         "law": {"name": "Center of mass definition", "equation": "r_com = Σ(mᵢrᵢ) / Σ(mᵢ)", "domain": "definition"},
-         "inputFields": ["currentPose.segmentStates[*].globalCenterOfMass", "segments[*].mass"],
-         "outputField": "currentPose.wholeBodyCenterOfMass", "dependsOn": [rule_ids[2]]},
-        {"id": rule_ids[4], "name": "gravitational_force_magnitude",
-         "law": {"name": "Newton's law of gravitation (uniform field)", "equation": "F = m × g", "domain": "rigid_body_dynamics"},
-         "inputFields": ["segments[*].mass", "loadingConditions[*].forces[type=gravitational].gravitationalAcceleration"],
-         "outputField": "loadingConditions[*].forces[type=gravitational].magnitude"},
-        {"id": rule_ids[5], "name": "equilibrium_net_force",
-         "law": {"name": "Force equilibrium", "equation": "F_net = Σ Fᵢ", "domain": "rigid_body_dynamics"},
-         "inputFields": ["loadingConditions[*].forces[*].magnitude", "loadingConditions[*].forces[*].direction"],
-         "outputField": "loadingConditions[*].equilibrium.netForce"},
-        {"id": rule_ids[6], "name": "equilibrium_residual_magnitude",
-         "law": {"name": "Vector magnitude", "equation": "|F| = √(Fx² + Fy² + Fz²)", "domain": "definition"},
-         "inputFields": ["loadingConditions[*].equilibrium.netForce"],
-         "outputField": "loadingConditions[*].equilibrium.residualForceMagnitude", "dependsOn": [rule_ids[5]]},
-        {"id": rule_ids[7], "name": "equilibrium_static_check",
-         "law": {"name": "Static equilibrium criterion", "equation": "|F_net| < ε AND |M_net| < ε", "domain": "rigid_body_dynamics"},
-         "inputFields": ["loadingConditions[*].equilibrium.residualForceMagnitude", "loadingConditions[*].equilibrium.residualMomentMagnitude"],
-         "outputField": "loadingConditions[*].equilibrium.isStatic", "dependsOn": [rule_ids[6]]},
-        {"id": rule_ids[8], "name": "fbd_translational_residual",
-         "law": {"name": "Newton's second law", "equation": "ΣF = ma", "domain": "rigid_body_dynamics"},
-         "inputFields": ["freeBodyDiagrams[*].forces[*].magnitude", "freeBodyDiagrams[*].forces[*].direction",
-                         "segments[matched].mass", "currentPose.segmentStates[matched].linearAcceleration"],
-         "outputField": "freeBodyDiagrams[*].translationalResidual"},
-        {"id": rule_ids[9], "name": "fbd_rotational_residual",
-         "law": {"name": "Euler's equation of rotation", "equation": "ΣM = Iα", "domain": "rigid_body_dynamics"},
-         "inputFields": ["freeBodyDiagrams[*].moments[*]", "segments[matched].inertiaTensor",
-                         "currentPose.segmentStates[matched].angularAcceleration"],
-         "outputField": "freeBodyDiagrams[*].rotationalResidual"},
-    ]
-    return {"version": "1.0.0", "rules": rules}
-
-
-# ---------------------------------------------------------------------------
-# Constitutive Laws — 11
-# ---------------------------------------------------------------------------
 
 HILL_EQ = "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]"
 LIG_EQ = "F_lig = piecewise(ε ≤ 0: 0, ε ≤ ε_toe: k_toe×ε^n, ε ≤ ε_fail: k×(ε-ε₀), ε > ε_fail: FAILURE)"
 BONE_YIELD_EQ = "σ_bone = F / A ≤ σ_yield (rigid body assumption valid when σ_bone << σ_yield)"
-
-HILL_VALIDITY = [{"assumption": "Quasi-static muscle contraction", "validWhen": "Contraction velocity < V_max",
-                   "violatedWhen": "Ballistic motion, electrical stimulation above physiological rates",
-                   "consequence": "Force-velocity relationship underestimates eccentric forces"}]
-
-LIG_VALIDITY = [{"assumption": "Ligament is intact and within elastic range", "validWhen": "Strain < ultimate strain",
-                  "violatedWhen": "Ligament rupture, chronic laxity",
-                  "consequence": "Force-strain model is invalid; joint becomes unstable"}]
-
-BONE_VALIDITY = [{"assumption": "Bones are rigid bodies", "validWhen": "Bone stress << yield stress",
-                   "violatedWhen": "Impact loading with strain rate > 1/s, stress near 130 MPa",
-                   "consequence": "Rigid body dynamics underestimates deformation and energy absorption"}]
+HILL_V = [{"assumption": "Quasi-static muscle contraction", "validWhen": "Contraction velocity < V_max",
+           "violatedWhen": "Ballistic motion", "consequence": "Force-velocity underestimates eccentric forces"}]
+LIG_V = [{"assumption": "Ligament intact and within elastic range", "validWhen": "Strain < ultimate strain",
+          "violatedWhen": "Ligament rupture", "consequence": "Force-strain model invalid"}]
+BONE_V = [{"assumption": "Bones are rigid bodies", "validWhen": "Bone stress << yield stress",
+           "violatedWhen": "Impact loading, stress near 130 MPa", "consequence": "Rigid body dynamics underestimates deformation"}]
 
 
-def _hill_law(name: str, muscle_name: str) -> dict:
-    return {
-        "lawType": "hill_muscle_model", "id": uid(), "name": name,
-        "constrainedFields": {
-            "muscleForce": f"loadingConditions[*].forces[type=muscle,muscleId={muscle_name}].magnitude",
-            "activation": f"loadingConditions[*].forces[type=muscle,muscleId={muscle_name}].activationLevel",
-            "currentLength": f"loadingConditions[*].forces[type=muscle,muscleId={muscle_name}].currentLength",
-            "contractionVelocity": f"loadingConditions[*].forces[type=muscle,muscleId={muscle_name}].contractionVelocity",
-            "maxIsometricForce": f"muscles[name={muscle_name}].maxIsometricForce",
-            "optimalFiberLength": f"muscles[name={muscle_name}].optimalFiberLength",
-            "maxContractionVelocity": f"muscles[name={muscle_name}].maxContractionVelocity",
-        },
-        "forceLength": {"widthParameter": 0.56, "minActiveForceLengthRatio": 0.5, "maxActiveForceLengthRatio": 1.5},
-        "forceVelocity": {"concentricCurveShape": 0.25, "eccentricForceMax": 1.4, "eccentricCurveShape": 0.15},
-        "passiveElement": {"strainAtMaxForce": 0.6, "exponentialShape": 4.0},
-        "constraint": {"equation": HILL_EQ, "violationSeverity": "error", "toleranceFraction": 0.1},
-        "validityBoundaries": HILL_VALIDITY,
-    }
-
-
-def _lig_law(name: str, lig_name: str) -> dict:
-    return {
-        "lawType": "ligament_force_strain", "id": uid(), "name": name,
-        "constrainedFields": {
-            "ligamentForce": f"loadingConditions[*].forces[type=ligamentous,name={lig_name}].magnitude",
-            "strain": f"loadingConditions[*].forces[type=ligamentous,name={lig_name}].strain",
-            "stiffness": f"ligaments[name={lig_name}].linearStiffness",
-            "restingLength": f"ligaments[name={lig_name}].restingLength",
-            "referenceStrain": f"ligaments[name={lig_name}].referenceStrain",
-        },
-        "toeRegion": {"maxStrain": 0.04, "curveExponent": 2.0},
-        "linearRegion": {"stiffness": 200, "interceptStrain": 0.03},
-        "failure": {"ultimateStrain": 0.12, "ultimateLoad": 2160, "reference": "Woo et al. (1999)"},
-        "constraint": {"equation": LIG_EQ, "violationSeverity": "error", "strainTolerance": 0.005},
-        "validityBoundaries": LIG_VALIDITY,
-    }
+def gen_derivation_graph() -> dict:
+    ids = [uid() for _ in range(10)]
+    rules = [
+        {"id": ids[0], "name": "muscle_pcsa", "law": {"name": "PCSA definition", "equation": "PCSA = V / L_opt", "domain": "definition"},
+         "inputFields": ["muscles[*].volume", "muscles[*].optimalFiberLength"], "outputField": "muscles[*].pcsa"},
+        {"id": ids[1], "name": "forward_kinematics", "law": {"name": "Forward kinematics", "equation": "T_global = T_root × Π T_joint(θ)", "domain": "kinematics"},
+         "inputFields": ["currentPose.rootPose", "currentPose.jointStates[*].angles", "segments[*].proximalJointId", "joints[*].axes"], "outputField": "currentPose.segmentStates[*].globalPose"},
+        {"id": ids[2], "name": "segment_global_com", "law": {"name": "Coordinate transformation", "equation": "r_global = T_global × r_local", "domain": "kinematics"},
+         "inputFields": ["currentPose.segmentStates[*].globalPose", "segments[*].centerOfMass"], "outputField": "currentPose.segmentStates[*].globalCenterOfMass", "dependsOn": [ids[1]]},
+        {"id": ids[3], "name": "whole_body_com", "law": {"name": "Center of mass definition", "equation": "r_com = Σ(mᵢrᵢ) / Σ(mᵢ)", "domain": "definition"},
+         "inputFields": ["currentPose.segmentStates[*].globalCenterOfMass", "segments[*].mass"], "outputField": "currentPose.wholeBodyCenterOfMass", "dependsOn": [ids[2]]},
+        {"id": ids[4], "name": "gravitational_force_magnitude", "law": {"name": "Newton's law of gravitation (uniform field)", "equation": "F = m × g", "domain": "rigid_body_dynamics"},
+         "inputFields": ["segments[*].mass", "loadingConditions[*].forces[type=gravitational].gravitationalAcceleration"], "outputField": "loadingConditions[*].forces[type=gravitational].magnitude"},
+        {"id": ids[5], "name": "equilibrium_net_force", "law": {"name": "Force equilibrium", "equation": "F_net = Σ Fᵢ", "domain": "rigid_body_dynamics"},
+         "inputFields": ["loadingConditions[*].forces[*].magnitude", "loadingConditions[*].forces[*].direction"], "outputField": "loadingConditions[*].equilibrium.netForce"},
+        {"id": ids[6], "name": "equilibrium_residual_magnitude", "law": {"name": "Vector magnitude", "equation": "|F| = √(Fx² + Fy² + Fz²)", "domain": "definition"},
+         "inputFields": ["loadingConditions[*].equilibrium.netForce"], "outputField": "loadingConditions[*].equilibrium.residualForceMagnitude", "dependsOn": [ids[5]]},
+        {"id": ids[7], "name": "equilibrium_static_check", "law": {"name": "Static equilibrium criterion", "equation": "|F_net| < ε AND |M_net| < ε", "domain": "rigid_body_dynamics"},
+         "inputFields": ["loadingConditions[*].equilibrium.residualForceMagnitude", "loadingConditions[*].equilibrium.residualMomentMagnitude"], "outputField": "loadingConditions[*].equilibrium.isStatic", "dependsOn": [ids[6]]},
+        {"id": ids[8], "name": "fbd_translational_residual", "law": {"name": "Newton's second law", "equation": "ΣF = ma", "domain": "rigid_body_dynamics"},
+         "inputFields": ["freeBodyDiagrams[*].forces[*].magnitude", "freeBodyDiagrams[*].forces[*].direction", "segments[matched].mass", "currentPose.segmentStates[matched].linearAcceleration"], "outputField": "freeBodyDiagrams[*].translationalResidual"},
+        {"id": ids[9], "name": "fbd_rotational_residual", "law": {"name": "Euler's equation of rotation", "equation": "ΣM = Iα", "domain": "rigid_body_dynamics"},
+         "inputFields": ["freeBodyDiagrams[*].moments[*]", "segments[matched].inertiaTensor", "currentPose.segmentStates[matched].angularAcceleration"], "outputField": "freeBodyDiagrams[*].rotationalResidual"},
+    ]
+    return {"version": "1.0.0", "rules": rules}
 
 
 def gen_constitutive_laws() -> dict:
-    laws = [
-        _hill_law("hill_model_rectus_femoris_r_", "Rectus Femoris (R)"),
-        _hill_law("hill_model_biceps_femoris_r_", "Biceps Femoris (R)"),
-        _hill_law("hill_model_biceps_brachii_r_", "Biceps Brachii (R)"),
-        _hill_law("hill_model_triceps_brachii_r_", "Triceps Brachii (R)"),
-        _hill_law("hill_model_pectoralis_major_r_", "Pectoralis Major (R)"),
-        _hill_law("hill_model_deltoid_r_", "Deltoid (R)"),
-        _lig_law("force_strain_anterior_cruciate_ligament_r_", "Anterior cruciate ligament (R)"),
-        _lig_law("force_strain_posterior_cruciate_ligament_r_", "Posterior cruciate ligament (R)"),
-        _lig_law("force_strain_medial_collateral_ligament_r_", "Medial collateral ligament (R)"),
-        _lig_law("force_strain_lateral_collateral_ligament_r_", "Lateral collateral ligament (R)"),
-        {
-            "lawType": "bone_yield_criterion", "id": uid(), "name": "rigid_body_yield_check",
-            "constrainedFields": {"jointReactionForce": "loadingConditions[*].forces[type=joint_reaction].magnitude"},
-            "parameters": {
-                "corticalTensileYield": 130, "corticalCompressiveYield": 190,
-                "trabecularCompressiveYield": 5, "fatigueReductionFactor": 0.6,
-            },
-            "constraint": {"equation": BONE_YIELD_EQ, "violationSeverity": "error"},
-            "validityBoundaries": BONE_VALIDITY,
-        },
-    ]
-    assert len(laws) == 11
+    def _hill(name, mn):
+        return {"lawType": "hill_muscle_model", "id": uid(), "name": name,
+                "constrainedFields": {k: f"muscles[name={mn}].{k}" for k in ["muscleForce", "activation", "currentLength", "contractionVelocity", "maxIsometricForce", "optimalFiberLength", "maxContractionVelocity"]},
+                "forceLength": {"widthParameter": 0.56, "minActiveForceLengthRatio": 0.5, "maxActiveForceLengthRatio": 1.5},
+                "forceVelocity": {"concentricCurveShape": 0.25, "eccentricForceMax": 1.4, "eccentricCurveShape": 0.15},
+                "passiveElement": {"strainAtMaxForce": 0.6, "exponentialShape": 4.0},
+                "constraint": {"equation": HILL_EQ, "violationSeverity": "error", "toleranceFraction": 0.1}, "validityBoundaries": HILL_V}
+    def _lig(name, ln):
+        return {"lawType": "ligament_force_strain", "id": uid(), "name": name,
+                "constrainedFields": {k: f"ligaments[name={ln}].{k}" for k in ["ligamentForce", "strain", "stiffness", "restingLength", "referenceStrain"]},
+                "toeRegion": {"maxStrain": 0.04, "curveExponent": 2.0}, "linearRegion": {"stiffness": 200, "interceptStrain": 0.03},
+                "failure": {"ultimateStrain": 0.12, "ultimateLoad": 2160}, "constraint": {"equation": LIG_EQ, "violationSeverity": "error", "strainTolerance": 0.005}, "validityBoundaries": LIG_V}
+    laws = [_hill(f"hill_model_{n}", n) for n in ["Rectus Femoris (R)", "Biceps Femoris (R)", "Biceps Brachii (R)", "Triceps Brachii (R)", "Pectoralis Major (R)", "Deltoid (R)"]]
+    laws += [_lig(f"force_strain_{n}", n) for n in ["Anterior cruciate ligament (R)", "Posterior cruciate ligament (R)", "Medial collateral ligament (R)", "Lateral collateral ligament (R)"]]
+    laws.append({"lawType": "bone_yield_criterion", "id": uid(), "name": "rigid_body_yield_check",
+                 "constrainedFields": {"jointReactionForce": "loadingConditions[*].forces[type=joint_reaction].magnitude"},
+                 "parameters": {"corticalTensileYield": 130, "corticalCompressiveYield": 190, "trabecularCompressiveYield": 5, "fatigueReductionFactor": 0.6},
+                 "constraint": {"equation": BONE_YIELD_EQ, "violationSeverity": "error"}, "validityBoundaries": BONE_V})
     return {"version": "1.0.0", "laws": laws}
 
 
-# ---------------------------------------------------------------------------
-# Root entity generator
-# ---------------------------------------------------------------------------
+# =============================================================================
+# ROOT ENTITY
+# =============================================================================
 
 def generate_human_body(variation: int = 0) -> dict:
     r = Reg()
-
     proportions = gen_proportions(variation)
     weight = proportions["weight"]
     height = proportions["totalHeight"]
 
-    # Build in dependency order
     skeleton = gen_skeleton(r)
     joints = gen_joints(r)
     nerves = gen_nerves(r)
@@ -1146,59 +1188,40 @@ def generate_human_body(variation: int = 0) -> dict:
     saved_poses = gen_saved_poses(r)
     loading = gen_loading_conditions(r, weight)
 
-    body: dict[str, Any] = {
-        "schemaVersion": SCHEMA_VERSION,
-        "id": uid(),
-        "name": f"generated_body_{variation:03d}",
-        "proportions": proportions,
-        "skeleton": skeleton,
-        "joints": joints,
-        "tendons": tendons,
-        "muscles": muscles,
-        "organs": organs,
-        "vascularSystem": vascular,
-        "ligaments": ligaments,
-        "cartilage": cartilage,
-        "nerves": nerves,
-        "hair": gen_hair(height),
-        "clothing": [],
-        "segments": segments,
-        "currentPose": current_pose,
-        "savedPoses": saved_poses,
-        "loadingConditions": loading,
-        "derivationGraph": gen_derivation_graph(),
+    return {
+        "schemaVersion": SCHEMA_VERSION, "id": uid(), "name": f"generated_body_{variation:03d}",
+        "proportions": proportions, "skeleton": skeleton, "joints": joints,
+        "tendons": tendons, "muscles": muscles, "organs": organs,
+        "vascularSystem": vascular, "ligaments": ligaments, "cartilage": cartilage,
+        "nerves": nerves, "hair": gen_hair(height), "clothing": [],
+        "segments": segments, "currentPose": current_pose, "savedPoses": saved_poses,
+        "loadingConditions": loading, "derivationGraph": gen_derivation_graph(),
         "constitutiveLaws": gen_constitutive_laws(),
     }
-    return body
 
 
-# ---------------------------------------------------------------------------
+# =============================================================================
 # CLI
-# ---------------------------------------------------------------------------
+# =============================================================================
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate valid HumanBody v3.0.0 JSON instances")
-    parser.add_argument("-n", "--count", type=int, default=3, help="Number of bodies (default: 3)")
-    parser.add_argument("-o", "--output-dir", type=str, default=None, help="Output directory (default: stdout)")
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
-    parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser = argparse.ArgumentParser(description="Generate valid HumanBody v3.0.0 JSON (206 bones)")
+    parser.add_argument("-n", "--count", type=int, default=3)
+    parser.add_argument("-o", "--output-dir", type=str, default=None)
+    parser.add_argument("--pretty", action="store_true")
+    parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
-
     if args.seed is not None:
         random.seed(args.seed)
-
     indent = 2 if args.pretty else None
     bodies = [generate_human_body(i) for i in range(args.count)]
-
     if args.output_dir:
-        out = Path(args.output_dir)
-        out.mkdir(parents=True, exist_ok=True)
+        out = Path(args.output_dir); out.mkdir(parents=True, exist_ok=True)
         for i, body in enumerate(bodies):
             (out / f"body_{i:03d}.json").write_text(json.dumps(body, indent=indent, ensure_ascii=False) + "\n")
         print(f"Wrote {len(bodies)} file(s) to {out}/", file=sys.stderr)
     else:
         print(json.dumps(bodies[0] if len(bodies) == 1 else bodies, indent=indent, ensure_ascii=False))
-
 
 if __name__ == "__main__":
     main()
