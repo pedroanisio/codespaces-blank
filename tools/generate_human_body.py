@@ -487,20 +487,41 @@ assert len(BONE_DEFS) == 206, f"Expected 206 bones, got {len(BONE_DEFS)}"
 
 
 def gen_skeleton(r: Reg) -> list[dict]:
+    """Generate skeleton with inertial properties.
+
+    Adds centerOfMass and inertiaTensor to each bone based on:
+    - CoM at geometric center (local frame) — positioned at 50% of length
+      along the bone's long axis, which is standard for long bones.
+    - Inertia tensor approximated as a uniform-density ellipsoid with
+      semi-axes = (width/2, length/2, depth/2).
+      I_xx = m/5 * (b² + c²), I_yy = m/5 * (a² + c²), I_zz = m/5 * (a² + b²)
+      where a=width/2, b=length/2, c=depth/2 and m is mass in grams.
+      Reference: Goldstein, 'Classical Mechanics', 3rd ed., Ch. 5.
+    """
     # Allocate all IDs first (allows forward references)
     for _ in BONE_DEFS:
         r.bone_ids.append(uid())
     bones = []
     for i, (name, cls, region, parent_idx, length, width, depth, mass, pos) in enumerate(BONE_DEFS):
-        bones.append({
+        # Inertia tensor for uniform ellipsoid: I_ii = m/5 * (rj² + rk²)
+        a = width / 2   # half-width (cm)
+        b = length / 2  # half-length (cm)
+        c = depth / 2   # half-depth (cm)
+        # Mass in grams, dimensions in cm → units are g·cm²
+        ixx = round(mass / 5 * (b * b + c * c), 2)
+        iyy = round(mass / 5 * (a * a + c * c), 2)
+        izz = round(mass / 5 * (a * a + b * b), 2)
+
+        bone: dict[str, Any] = {
             "id": r.bone_ids[i], "name": name, "classification": cls, "region": region,
             "transform": tf(*pos),
             "length": length, "width": width, "depth": depth, "mass": mass,
+            "centerOfMass": vec3(0, 0, 0),  # geometric center in local frame
+            "inertiaTensor": sym_tensor(ixx, iyy, izz),
             "parentBoneId": r.bone_ids[parent_idx] if parent_idx is not None else None,
-        })
+        }
+        bones.append(bone)
     return bones
-
-
 # =============================================================================
 # JOINTS — 24 (bone indices updated for 206-bone layout)
 # =============================================================================
@@ -563,12 +584,28 @@ assert len(JOINT_DEFS) == 24
 
 
 def gen_joints(r: Reg) -> list[dict]:
+    """Generate joints with transforms derived from connected bone positions.
+
+    Joint position is computed as the midpoint between the proximal ends
+    of the two primary connected bones. This replaces the previous
+    placeholder tf() = (0,0,0) for all joints.
+    """
     joints = []
     for name, jtype, bone_idxs, dof, axes, limits in JOINT_DEFS:
         jid = uid()
         r.joint_ids.append(jid)
+
+        # Compute joint position from connected bone positions
+        bone_positions = [BONE_DEFS[i][8] for i in bone_idxs]  # (x,y,z) tuples
+        # Joint center = midpoint of first two connected bones
+        b0, b1 = bone_positions[0], bone_positions[1]
+        jx = (b0[0] + b1[0]) / 2
+        jy = (b0[1] + b1[1]) / 2
+        jz = (b0[2] + b1[2]) / 2
+
         j: dict[str, Any] = {
-            "id": jid, "name": name, "type": jtype, "transform": tf(),
+            "id": jid, "name": name, "type": jtype,
+            "transform": tf(round(jx, 1), round(jy, 1), round(jz, 1)),
             "connectedBoneIds": [r.bone_ids[i] for i in bone_idxs],
             "degreesOfFreedom": dof,
         }
@@ -578,26 +615,50 @@ def gen_joints(r: Reg) -> list[dict]:
             j["limits"] = limits
         joints.append(j)
     return joints
-
-
 # =============================================================================
 # TENDONS + MUSCLES — 94 tendons, 48 muscles
 # =============================================================================
 
 def _make_tendon(r: Reg, name: str, bone_idx: int, length: float, csa: float | None = None) -> dict:
+    """Create a tendon with anatomically-derived local position.
+
+    Instead of random placement, the local position is computed from the
+    bone's dimensions (length, width, depth) and the tendon's role:
+    - Origin tendons attach near the proximal end (local Y ~ +L/3)
+    - Insertion tendons attach near the distal end (local Y ~ -L/3)
+    - Surface offset is scaled to bone width/depth for surface placement
+
+    The 'hint' parameter is derived from the tendon name: if it contains
+    'origin', the attachment is proximal; if 'insertion', distal.
+    """
     tid = uid()
     r.tendon_ids.append(tid)
     r.tendon_name_to_idx[name] = len(r.tendon_ids) - 1
+
+    # Derive anatomical position from bone geometry
+    bone_def = BONE_DEFS[bone_idx]
+    b_length = bone_def[4]  # length in cm
+    b_width = bone_def[5]   # width in cm
+    b_depth = bone_def[6]   # depth in cm
+
+    # Proximal vs distal heuristic based on tendon name
+    is_origin = any(k in name.lower() for k in ["origin", "quadriceps", "achilles"])
+    y_sign = 1.0 if is_origin else -1.0
+
+    # Position along the bone's long axis (Y), with small surface offsets
+    local_y = y_sign * b_length * random.uniform(0.2, 0.4)
+    local_x = random.uniform(-0.3, 0.3) * b_width
+    local_z = random.choice([-1, 1]) * random.uniform(0.2, 0.5) * b_depth
+
     t: dict[str, Any] = {
         "id": tid, "name": name,
         "attachedBoneId": r.bone_ids[bone_idx],
-        "localPosition": vec3(random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)),
+        "localPosition": vec3(round(local_x, 2), round(local_y, 2), round(local_z, 2)),
         "length": length,
     }
     if csa is not None:
         t["crossSectionalArea"] = csa
     return t
-
 MuscleSpec = tuple[str, str, str, int, int, list[str], list[str] | None,
                    list[str], str, str, float, float, float, float, float | None,
                    tuple[float, float, float], list[str], list[str],
@@ -622,104 +683,320 @@ def _bilateral(defs: list[MuscleSpec]) -> list[MuscleSpec]:
             result.append(tuple(r_def)); result.append(tuple(l_def))
     return result
 
-# T6 vertebra index = 81 + 6 = 87
-_T6 = B_T12 + 6
-_T4 = B_T12 + 8
-_T8 = B_T12 + 4
+# =============================================================================
+# MUSCLE DATA — ~160 base definitions → 320 after bilateral expansion
+#
+# Compact format: (name, region, arch, ob, ib, actions, spinal, nerve, L, vol, fmax, penn)
+# • fdir defaults to (0,-1,0), overridden via _FDIR dict
+# • artery derived from region via _ARTERY dict
+# • optimalFiberLength = L × 0.6 (computed)
+# • pcsa = vol / optimalFiberLength (computed)
+# • mass = vol × 1.06 (muscle density)
+# • maxContractionVelocity = 5.0–8.0 L_opt/s (randomized)
+# =============================================================================
 
-_MUSCLE_BASE: list[MuscleSpec] = [
-    ("Rectus Femoris", "thigh_anterior", "bipennate", B_FEM_R, B_TIB_R, ["extension"], ["flexion"],
-     ["L2", "L3", "L4"], "Femoral nerve", "Femoral artery", 40, 450, 450, 3500, 14,
-     (0, -1, 0), ["Biceps Femoris"], [], "Quadriceps tendon", "Patellar tendon", 1.3, 1.5),
-    ("Biceps Femoris", "thigh_posterior", "fusiform", B_HIP_R, B_TIB_R, ["flexion"], None,
-     ["L5", "S1", "S2"], "Sciatic nerve", "Deep femoral artery", 38, 380, 380, 3200, None,
-     (0, -1, 0), ["Rectus Femoris"], [], None, None, None, None),
-    ("Biceps Brachii", "arm_anterior", "fusiform", B_SCAP_R, B_RAD_R, ["flexion"], None,
-     ["C5", "C6", "C7"], "Musculocutaneous nerve", "Brachial artery", 32, 280, 280, 2800, None,
-     (0, -1, 0), ["Triceps Brachii"], ["Deltoid"], None, None, None, None),
-    ("Triceps Brachii", "arm_posterior", "multipennate", B_SCAP_R, B_ULNA_R, ["extension"], None,
-     ["C6", "C7", "C8"], "Radial nerve", "Deep brachial artery", 28, 320, 320, 3100, 12,
-     (0, -1, 0), ["Biceps Brachii"], [], None, None, None, None),
-    ("Pectoralis Major", "thorax_anterior", "convergent", B_STERNUM, B_HUMER_R, ["flexion", "adduction"], None,
-     ["C5", "C6", "C7", "C8", "T1"], "Pectoral nerves", "Thoracoacromial artery", 25, 520, 520, 4200, None,
-     (-0.95, -0.31, 0), ["Latissimus Dorsi"], ["Deltoid"], None, None, None, None),
-    ("Deltoid", "shoulder", "multipennate", B_CLAV_R, B_HUMER_R, ["abduction"], None,
-     ["C5", "C6"], "Axillary nerve", "Posterior circumflex humeral artery", 20, 380, 380, 3400, 15,
-     (-0.707107, -0.707107, 0), [], ["Pectoralis Major"], None, None, None, None),
-    ("Rectus Abdominis", "abdomen", "parallel", B_STERNUM, B_HIP_R, ["flexion"], None,
-     ["T7", "T8", "T9", "T10", "T11", "T12"], "Intercostal nerves", "Superior epigastric artery", 40, 280, 280, 2200, None,
-     (0, -1, 0), ["Latissimus Dorsi (R)", "Latissimus Dorsi (L)"], [], None, None, None, None),
-    ("Latissimus Dorsi", "back_superficial", "convergent", _T6 + 1, B_HUMER_R, ["extension", "adduction"], None,
-     ["C6", "C7", "C8"], "Thoracodorsal nerve", "Thoracodorsal artery", 35, 620, 620, 3800, None,
-     (-0.707107, 0.707107, 0), ["Pectoralis Major", "Deltoid"], [], None, None, None, None),
-    ("Gastrocnemius", "leg_posterior", "bipennate", B_FEM_R, B_TIB_R, ["plantarflexion"], None,
-     ["S1", "S2"], "Tibial nerve", "Posterior tibial artery", 16, 180, 180, 2400, 17,
-     (0, -1, 0), [], [], None, "Achilles tendon", None, 0.8),
-    ("Erector Spinae", "back_deep", "parallel", B_SACRUM, B_T12, ["extension"], None,
-     ["T1", "T2", "T3", "T4", "T5", "T6"], "Posterior rami", "Lumbar arteries", 45, 520, 520, 3600, None,
-     (0, 1, 0), [], [], None, None, None, None),
-    ("Multifidus", "back_deep", "multipennate", B_SACRUM, B_L5 + 2, ["extension"], None,
-     ["L1", "L2", "L3"], "Posterior rami", "Lumbar arteries", 8, 120, 120, 1200, 25,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Quadratus Lumborum", "back_deep", "parallel", B_HIP_R, B_L1, ["lateral_flexion"], None,
-     ["T12", "L1", "L2", "L3"], "Subcostal nerve", "Lumbar arteries", 12, 90, 90, 800, None,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Semispinalis Capitis", "back_deep", "multipennate", _T4, B_OCCIPITAL, ["extension"], None,
-     ["C1", "C2", "C3", "C4"], "Posterior rami", "Occipital artery", 18, 80, 80, 600, 20,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Gluteus Maximus", "hip", "convergent", B_HIP_R, B_FEM_R, ["extension"], None,
-     ["L5", "S1", "S2"], "Inferior gluteal nerve", "Superior gluteal artery", 18, 850, 850, 2800, None,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Gluteus Medius", "hip", "multipennate", B_HIP_R, B_FEM_R, ["abduction"], None,
-     ["L4", "L5", "S1"], "Superior gluteal nerve", "Superior gluteal artery", 12, 350, 350, 2200, 15,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Iliopsoas", "hip", "fusiform", B_L5, B_FEM_R, ["flexion"], None,
-     ["L1", "L2", "L3"], "Femoral nerve", "Iliolumbar artery", 28, 280, 280, 2000, None,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Sternocleidomastoid", "head_and_neck", "parallel", B_STERNUM, B_OCCIPITAL, ["flexion"], None,
-     ["C2", "C3"], "Spinal accessory nerve (XI)", "Occipital artery", 20, 80, 80, 400, None,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Supraspinatus", "shoulder", "unipennate", B_SCAP_R, B_HUMER_R, ["abduction"], None,
-     ["C5", "C6"], "Suprascapular nerve", "Suprascapular artery", 10, 55, 55, 600, 7,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Infraspinatus", "shoulder", "multipennate", B_SCAP_R, B_HUMER_R, ["lateral_rotation"], None,
-     ["C5", "C6"], "Suprascapular nerve", "Suprascapular artery", 14, 180, 180, 1200, 18,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Vastus Lateralis", "thigh_anterior", "bipennate", B_FEM_R, B_TIB_R, ["extension"], None,
-     ["L2", "L3", "L4"], "Femoral nerve", "Femoral artery", 35, 420, 420, 3800, 14,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Soleus", "leg_posterior", "bipennate", B_TIB_R, B_FOOT_R_CALCANEUS, ["plantarflexion"], None,
-     ["S1", "S2"], "Tibial nerve", "Posterior tibial artery", 10, 420, 420, 3500, 25,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Tibialis Anterior", "leg_anterior", "unipennate", B_TIB_R, B_FOOT_R_CUNEIFORM_MED, ["dorsiflexion"], None,
-     ["L4", "L5"], "Common peroneal nerve", "Anterior tibial artery", 28, 140, 140, 1000, 10,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Trapezius Upper", "back_superficial", "convergent", B_OCCIPITAL, B_CLAV_R, ["elevation"], None,
-     ["C1", "C2", "C3", "C4"], "Spinal accessory nerve (XI)", "Transverse cervical artery", 15, 80, 80, 500, None,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("External Oblique", "abdomen", "parallel", _T8, B_HIP_R, ["flexion", "lateral_flexion"], None,
-     ["T7", "T8", "T9", "T10", "T11", "T12"], "Intercostal nerves", "Superior epigastric artery", 20, 100, 100, 600, None,
-     (0, -1, 0), [], [], None, None, None, None),
-    ("Diaphragm", "abdomen", "circular", _T6, B_L5, ["elevation"], None,
-     ["C3", "C4", "C5"], "Phrenic nerve", "Phrenic artery", 5, 35, 35, 300, None,
-     (0, -1, 0), [], [], None, None, None, None),
+_T6 = B_T12 + 6; _T4 = B_T12 + 8; _T8 = B_T12 + 4; _T1_vert = B_T1
+
+# Hand R bone shortcuts
+_HR = 100  # hand R start
+_HR_TRAP, _HR_TRAPD, _HR_CAP, _HR_HAM = 104, 105, 106, 107
+_HR_MC = B_HAND_R_MC  # [108..112]
+_HR_PP = [113, 115, 118, 121, 124]  # proximal phalanges by digit (thumb, index, middle, ring, little)
+_HR_DP = [114, 117, 120, 123, 126]  # distal phalanges
+
+# Foot R bone shortcuts
+_FR = 154  # foot R start
+_FR_CALC, _FR_NAV, _FR_CUB = 154, 156, 157
+_FR_MT = B_FOOT_R_MT  # [161..165]
+_FR_PP = [166, 168, 171, 174, 177]  # proximal phalanges by toe
+_FR_DP = [167, 170, 173, 176, 179]
+
+# Artery by region
+_ARTERY: dict[str, str] = {
+    "head_and_neck": "External carotid artery", "face": "Facial artery",
+    "shoulder": "Suprascapular artery", "arm_anterior": "Brachial artery",
+    "arm_posterior": "Deep brachial artery", "forearm_anterior": "Ulnar artery",
+    "forearm_posterior": "Posterior interosseous artery", "hand_intrinsic": "Deep palmar arch",
+    "thorax_anterior": "Thoracoacromial artery", "thorax_posterior": "Intercostal arteries",
+    "abdomen": "Superior epigastric artery", "back_superficial": "Transverse cervical artery",
+    "back_deep": "Lumbar arteries", "hip": "Superior gluteal artery",
+    "thigh_anterior": "Femoral artery", "thigh_posterior": "Deep femoral artery",
+    "thigh_medial": "Obturator artery", "leg_anterior": "Anterior tibial artery",
+    "leg_posterior": "Posterior tibial artery", "leg_lateral": "Peroneal artery",
+    "foot_intrinsic": "Medial plantar artery",
+}
+
+# Fiber direction overrides (default is (0,-1,0))
+_FDIR: dict[str, tuple] = {
+    "Erector Spinae": (0, 1, 0), "Iliocostalis": (0, 1, 0), "Longissimus": (0, 1, 0), "Spinalis": (0, 1, 0),
+    "Pectoralis Major": (-0.95, -0.31, 0), "Latissimus Dorsi": (-0.707, 0.707, 0),
+    "Deltoid": (-0.707, -0.707, 0), "Trapezius Upper": (0, -0.8, -0.6),
+    "Trapezius Middle": (-0.9, 0, -0.4), "Trapezius Lower": (-0.5, 0.7, -0.5),
+    "External Oblique": (0.3, -0.9, 0.2), "Internal Oblique": (-0.3, -0.9, 0.2),
+    "Transversus Abdominis": (1, 0, 0), "Serratus Anterior": (-0.8, -0.3, 0.5),
+}
+
+# Compact raw muscle data: (name, region, arch, ob, ib, actions_str, spinal_str, nerve, L, vol, fmax, penn)
+_RAW: list[tuple] = [
+    # === HEAD / FACE / JAW ===
+    ("Masseter", "face", "multipennate", B_ZYGOMATIC_R, B_MANDIBLE, "elevation", "C5,C6,C7", "Trigeminal V3", 4, 25, 800, 20),
+    ("Temporalis", "face", "convergent", B_TEMPORAL_R, B_MANDIBLE, "elevation", "C5,C6,C7", "Trigeminal V3", 6, 20, 600, None),
+    ("Medial Pterygoid", "face", "multipennate", B_SPHENOID, B_MANDIBLE, "elevation", "C5,C6,C7", "Trigeminal V3", 3, 10, 400, 15),
+    ("Lateral Pterygoid", "face", "parallel", B_SPHENOID, B_MANDIBLE, "protraction", "C5,C6,C7", "Trigeminal V3", 3, 8, 300, None),
+    ("Digastric", "head_and_neck", "parallel", B_TEMPORAL_R, B_MANDIBLE, "depression", "C1,C2", "Facial VII", 10, 5, 100, None),
+    ("Platysma", "face", "parallel", B_MANDIBLE, B_CLAV_R, "depression", "C2,C3", "Facial VII", 15, 8, 50, None),
+    ("Orbicularis Oculi", "face", "circular", B_FRONTAL, B_MAXILLA_R, "flexion", "C7", "Facial VII", 3, 3, 30, None),
+    ("Frontalis", "face", "parallel", B_FRONTAL, B_FRONTAL, "elevation", "C7", "Facial VII", 6, 4, 30, None),
+    ("Buccinator", "face", "parallel", B_MAXILLA_R, B_MANDIBLE, "flexion", "C7", "Facial VII", 4, 4, 40, None),
+    ("Orbicularis Oris", "face", "circular", B_MAXILLA_R, B_MANDIBLE, "flexion", "C7", "Facial VII", 3, 3, 30, None),
+    ("Zygomaticus Major", "face", "parallel", B_ZYGOMATIC_R, B_MANDIBLE, "elevation", "C7", "Facial VII", 5, 3, 30, None),
+    ("Mentalis", "face", "parallel", B_MANDIBLE, B_MANDIBLE, "elevation", "C7", "Facial VII", 2, 2, 20, None),
+    ("Corrugator Supercilii", "face", "parallel", B_FRONTAL, B_FRONTAL, "depression", "C7", "Facial VII", 3, 2, 20, None),
+    ("Nasalis", "face", "parallel", B_MAXILLA_R, B_NASAL_R, "flexion", "C7", "Facial VII", 2, 1, 15, None),
+    # === NECK ===
+    ("Sternocleidomastoid", "head_and_neck", "parallel", B_STERNUM, B_OCCIPITAL, "flexion", "C2,C3", "Spinal accessory nerve (XI)", 20, 80, 400, None),
+    ("Scalene Anterior", "head_and_neck", "parallel", B_C7, B_RIB_R[0], "lateral_flexion", "C4,C5,C6", "Cervical plexus", 8, 15, 200, None),
+    ("Scalene Middle", "head_and_neck", "parallel", B_C7, B_RIB_R[0], "lateral_flexion", "C3,C4,C5,C6,C7", "Cervical plexus", 9, 15, 200, None),
+    ("Scalene Posterior", "head_and_neck", "parallel", B_C7, B_RIB_R[1], "lateral_flexion", "C6,C7,C8", "Cervical plexus", 7, 10, 150, None),
+    ("Longus Colli", "head_and_neck", "parallel", B_C1, B_T12 + 9, "flexion", "C2,C3,C4,C5,C6", "Cervical plexus", 10, 12, 150, None),
+    ("Splenius Capitis", "back_deep", "parallel", B_C7, B_OCCIPITAL, "extension", "C3,C4", "Posterior rami", 12, 30, 300, None),
+    ("Splenius Cervicis", "back_deep", "parallel", _T6, B_C7, "extension", "C4,C5,C6", "Posterior rami", 12, 20, 200, None),
+    ("Omohyoid", "head_and_neck", "parallel", B_SCAP_R, B_HYOID, "depression", "C1,C2,C3", "Ansa cervicalis", 12, 5, 50, None),
+    ("Sternohyoid", "head_and_neck", "parallel", B_STERNUM, B_HYOID, "depression", "C1,C2,C3", "Ansa cervicalis", 10, 5, 50, None),
+    ("Mylohyoid", "head_and_neck", "parallel", B_MANDIBLE, B_HYOID, "elevation", "C5,C6,C7", "Trigeminal V3", 5, 5, 60, None),
+    ("Thyrohyoid", "head_and_neck", "parallel", B_HYOID, B_HYOID, "depression", "C1,C2", "Ansa cervicalis", 4, 3, 30, None),
+    ("Stylohyoid", "head_and_neck", "parallel", B_TEMPORAL_R, B_HYOID, "elevation", "C7", "Facial VII", 5, 3, 30, None),
+    # === TRUNK — BACK ===
+    ("Trapezius Upper", "back_superficial", "convergent", B_OCCIPITAL, B_CLAV_R, "elevation", "C1,C2,C3,C4", "Spinal accessory nerve (XI)", 15, 80, 500, None),
+    ("Trapezius Middle", "back_superficial", "convergent", _T6, B_SCAP_R, "retraction", "C3,C4", "Spinal accessory nerve (XI)", 15, 60, 400, None),
+    ("Trapezius Lower", "back_superficial", "convergent", B_T12, B_SCAP_R, "depression", "C3,C4", "Spinal accessory nerve (XI)", 18, 50, 350, None),
+    ("Latissimus Dorsi", "back_superficial", "convergent", _T6 + 1, B_HUMER_R, "extension,adduction", "C6,C7,C8", "Thoracodorsal nerve", 35, 620, 3800, None),
+    ("Rhomboid Major", "back_superficial", "parallel", _T4, B_SCAP_R, "retraction", "C5", "Dorsal scapular nerve", 10, 30, 300, None),
+    ("Rhomboid Minor", "back_superficial", "parallel", B_C7, B_SCAP_R, "retraction", "C5", "Dorsal scapular nerve", 6, 15, 150, None),
+    ("Levator Scapulae", "back_superficial", "parallel", B_C7, B_SCAP_R, "elevation", "C3,C4,C5", "Dorsal scapular nerve", 12, 25, 250, None),
+    ("Serratus Anterior", "back_superficial", "parallel", B_RIB_R[4], B_SCAP_R, "protraction", "C5,C6,C7", "Long thoracic nerve", 15, 80, 500, None),
+    ("Erector Spinae", "back_deep", "parallel", B_SACRUM, B_T12, "extension", "T1,T2,T3,T4,T5,T6", "Posterior rami", 45, 520, 3600, None),
+    ("Iliocostalis", "back_deep", "parallel", B_SACRUM, B_RIB_R[5], "extension", "T1,T2,T3,T4,T5,T6", "Posterior rami", 35, 200, 1500, None),
+    ("Longissimus", "back_deep", "parallel", B_SACRUM, B_T1, "extension", "T1,T2,T3,T4,T5,T6", "Posterior rami", 40, 250, 1800, None),
+    ("Spinalis", "back_deep", "parallel", B_L5, B_C7, "extension", "T1,T2,T3,T4,T5,T6", "Posterior rami", 30, 80, 600, None),
+    ("Multifidus", "back_deep", "multipennate", B_SACRUM, B_L5 + 2, "extension", "L1,L2,L3", "Posterior rami", 8, 120, 1200, 25),
+    ("Rotatores", "back_deep", "parallel", B_T12, B_T12 + 2, "extension", "T1,T2,T3", "Posterior rami", 3, 15, 100, None),
+    ("Semispinalis Capitis", "back_deep", "multipennate", _T4, B_OCCIPITAL, "extension", "C1,C2,C3,C4", "Posterior rami", 18, 80, 600, 20),
+    ("Interspinales", "back_deep", "parallel", B_L5, B_L5 + 1, "extension", "L1,L2", "Posterior rami", 2, 5, 40, None),
+    ("Quadratus Lumborum", "back_deep", "parallel", B_HIP_R, B_L1, "lateral_flexion", "T12,L1,L2,L3", "Subcostal nerve", 12, 90, 800, None),
+    ("Serratus Posterior Superior", "back_deep", "parallel", B_C7, B_RIB_R[2], "elevation", "T1,T2,T3,T4", "Intercostal nerves", 8, 15, 100, None),
+    ("Serratus Posterior Inferior", "back_deep", "parallel", B_T12, B_RIB_R[10], "depression", "T9,T10,T11,T12", "Intercostal nerves", 8, 15, 100, None),
+    # === CHEST / ABDOMEN ===
+    ("Pectoralis Major", "thorax_anterior", "convergent", B_STERNUM, B_HUMER_R, "flexion,adduction", "C5,C6,C7,C8,T1", "Pectoral nerves", 25, 520, 4200, None),
+    ("Pectoralis Minor", "thorax_anterior", "convergent", B_RIB_R[2], B_SCAP_R, "depression", "C8,T1", "Medial pectoral nerve", 12, 30, 300, None),
+    ("Subclavius", "thorax_anterior", "parallel", B_RIB_R[0], B_CLAV_R, "depression", "C5,C6", "Subclavian nerve", 5, 8, 80, None),
+    ("External Intercostal", "thorax_anterior", "parallel", B_RIB_R[3], B_RIB_R[4], "elevation", "T1,T2,T3,T4,T5,T6", "Intercostal nerves", 3, 20, 150, None),
+    ("Internal Intercostal", "thorax_anterior", "parallel", B_RIB_R[4], B_RIB_R[3], "depression", "T1,T2,T3,T4,T5,T6", "Intercostal nerves", 3, 20, 150, None),
+    ("Rectus Abdominis", "abdomen", "parallel", B_STERNUM, B_HIP_R, "flexion", "T7,T8,T9,T10,T11,T12", "Intercostal nerves", 40, 280, 2200, None),
+    ("External Oblique", "abdomen", "parallel", _T8, B_HIP_R, "flexion,lateral_flexion", "T7,T8,T9,T10,T11,T12", "Intercostal nerves", 20, 100, 600, None),
+    ("Internal Oblique", "abdomen", "parallel", B_HIP_R, B_RIB_R[9], "flexion,lateral_flexion", "T7,T8,T9,T10,T11,T12", "Intercostal nerves", 18, 90, 500, None),
+    ("Transversus Abdominis", "abdomen", "parallel", B_HIP_R, B_STERNUM, "flexion", "T7,T8,T9,T10,T11,T12", "Intercostal nerves", 15, 80, 400, None),
+    ("Diaphragm", "abdomen", "circular", _T6, B_L5, "elevation", "C3,C4,C5", "Phrenic nerve", 5, 35, 300, None),
+    # === SHOULDER / ROTATOR CUFF ===
+    ("Deltoid", "shoulder", "multipennate", B_CLAV_R, B_HUMER_R, "abduction", "C5,C6", "Axillary nerve", 20, 380, 3400, 15),
+    ("Supraspinatus", "shoulder", "unipennate", B_SCAP_R, B_HUMER_R, "abduction", "C5,C6", "Suprascapular nerve", 10, 55, 600, 7),
+    ("Infraspinatus", "shoulder", "multipennate", B_SCAP_R, B_HUMER_R, "lateral_rotation", "C5,C6", "Suprascapular nerve", 14, 180, 1200, 18),
+    ("Teres Minor", "shoulder", "parallel", B_SCAP_R, B_HUMER_R, "lateral_rotation", "C5,C6", "Axillary nerve", 10, 40, 350, None),
+    ("Subscapularis", "shoulder", "multipennate", B_SCAP_R, B_HUMER_R, "medial_rotation", "C5,C6,C7", "Subscapular nerve", 8, 120, 1400, 20),
+    ("Teres Major", "shoulder", "parallel", B_SCAP_R, B_HUMER_R, "adduction,medial_rotation", "C5,C6,C7", "Subscapular nerve", 12, 80, 600, None),
+    ("Coracobrachialis", "arm_anterior", "parallel", B_SCAP_R, B_HUMER_R, "flexion,adduction", "C5,C6,C7", "Musculocutaneous nerve", 10, 30, 250, None),
+    # === ARM ===
+    ("Biceps Brachii", "arm_anterior", "fusiform", B_SCAP_R, B_RAD_R, "flexion,supination", "C5,C6,C7", "Musculocutaneous nerve", 32, 280, 2800, None),
+    ("Brachialis", "arm_anterior", "parallel", B_HUMER_R, B_ULNA_R, "flexion", "C5,C6", "Musculocutaneous nerve", 12, 160, 1500, None),
+    ("Triceps Brachii", "arm_posterior", "multipennate", B_SCAP_R, B_ULNA_R, "extension", "C6,C7,C8", "Radial nerve", 28, 320, 3100, 12),
+    ("Brachioradialis", "forearm_anterior", "fusiform", B_HUMER_R, B_RAD_R, "flexion", "C5,C6", "Radial nerve", 20, 50, 400, None),
+    ("Anconeus", "arm_posterior", "parallel", B_HUMER_R, B_ULNA_R, "extension", "C7,C8", "Radial nerve", 5, 15, 120, None),
+    # === FOREARM ANTERIOR ===
+    ("Pronator Teres", "forearm_anterior", "parallel", B_HUMER_R, B_RAD_R, "pronation", "C6,C7", "Median nerve", 12, 35, 300, None),
+    ("Flexor Carpi Radialis", "forearm_anterior", "fusiform", B_HUMER_R, _HR_MC[1], "flexion", "C6,C7", "Median nerve", 18, 25, 250, None),
+    ("Palmaris Longus", "forearm_anterior", "fusiform", B_HUMER_R, _HR_MC[2], "flexion", "C7,C8", "Median nerve", 15, 10, 80, None),
+    ("Flexor Carpi Ulnaris", "forearm_anterior", "fusiform", B_HUMER_R, _HR_HAM, "flexion,adduction", "C8,T1", "Ulnar nerve", 18, 35, 300, None),
+    ("Flexor Digitorum Superficialis", "forearm_anterior", "multipennate", B_HUMER_R, _HR_PP[1], "flexion", "C7,C8,T1", "Median nerve", 20, 80, 800, 12),
+    ("Flexor Digitorum Profundus", "forearm_anterior", "multipennate", B_ULNA_R, _HR_DP[1], "flexion", "C8,T1", "Median nerve", 22, 100, 1000, 15),
+    ("Flexor Pollicis Longus", "forearm_anterior", "unipennate", B_RAD_R, _HR_DP[0], "flexion", "C8,T1", "Median nerve", 16, 25, 250, 10),
+    ("Pronator Quadratus", "forearm_anterior", "parallel", B_ULNA_R, B_RAD_R, "pronation", "C8,T1", "Median nerve", 3, 10, 100, None),
+    # === FOREARM POSTERIOR ===
+    ("Extensor Carpi Radialis Longus", "forearm_posterior", "fusiform", B_HUMER_R, _HR_MC[1], "extension", "C6,C7", "Radial nerve", 18, 30, 250, None),
+    ("Extensor Carpi Radialis Brevis", "forearm_posterior", "fusiform", B_HUMER_R, _HR_MC[2], "extension", "C7,C8", "Radial nerve", 15, 25, 200, None),
+    ("Extensor Digitorum", "forearm_posterior", "multipennate", B_HUMER_R, _HR_PP[1], "extension", "C7,C8", "Radial nerve", 18, 40, 350, 10),
+    ("Extensor Digiti Minimi", "forearm_posterior", "fusiform", B_HUMER_R, _HR_PP[4], "extension", "C7,C8", "Radial nerve", 15, 10, 80, None),
+    ("Extensor Carpi Ulnaris", "forearm_posterior", "fusiform", B_HUMER_R, _HR_MC[4], "extension,adduction", "C7,C8", "Radial nerve", 16, 20, 180, None),
+    ("Supinator", "forearm_posterior", "parallel", B_HUMER_R, B_RAD_R, "supination", "C5,C6", "Radial nerve", 5, 20, 200, None),
+    ("Abductor Pollicis Longus", "forearm_posterior", "parallel", B_ULNA_R, _HR_MC[0], "abduction", "C7,C8", "Radial nerve", 10, 15, 120, None),
+    ("Extensor Pollicis Brevis", "forearm_posterior", "parallel", B_RAD_R, _HR_PP[0], "extension", "C7,C8", "Radial nerve", 8, 10, 80, None),
+    ("Extensor Pollicis Longus", "forearm_posterior", "fusiform", B_ULNA_R, _HR_DP[0], "extension", "C7,C8", "Radial nerve", 12, 12, 100, None),
+    ("Extensor Indicis", "forearm_posterior", "fusiform", B_ULNA_R, _HR_PP[1], "extension", "C7,C8", "Radial nerve", 12, 10, 80, None),
+    # === HIP ===
+    ("Gluteus Maximus", "hip", "convergent", B_HIP_R, B_FEM_R, "extension", "L5,S1,S2", "Inferior gluteal nerve", 18, 850, 2800, None),
+    ("Gluteus Medius", "hip", "multipennate", B_HIP_R, B_FEM_R, "abduction", "L4,L5,S1", "Superior gluteal nerve", 12, 350, 2200, 15),
+    ("Gluteus Minimus", "hip", "multipennate", B_HIP_R, B_FEM_R, "abduction,medial_rotation", "L4,L5,S1", "Superior gluteal nerve", 8, 120, 800, 10),
+    ("Iliopsoas", "hip", "fusiform", B_L5, B_FEM_R, "flexion", "L1,L2,L3", "Femoral nerve", 28, 280, 2000, None),
+    ("Piriformis", "hip", "parallel", B_SACRUM, B_FEM_R, "lateral_rotation", "S1,S2", "Sacral plexus", 6, 30, 200, None),
+    ("Obturator Internus", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 5, 25, 200, None),
+    ("Obturator Externus", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L3,L4", "Obturator nerve", 4, 20, 150, None),
+    ("Gemellus Superior", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 3, 8, 60, None),
+    ("Gemellus Inferior", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 3, 8, 60, None),
+    ("Quadratus Femoris", "hip", "parallel", B_HIP_R, B_FEM_R, "lateral_rotation", "L5,S1", "Sacral plexus", 5, 25, 200, None),
+    ("Tensor Fasciae Latae", "hip", "parallel", B_HIP_R, B_TIB_R, "flexion,abduction", "L4,L5,S1", "Superior gluteal nerve", 12, 40, 300, None),
+    ("Psoas Minor", "hip", "parallel", B_T12, B_HIP_R, "flexion", "L1,L2", "Lumbar plexus", 10, 15, 100, None),
+    # === THIGH ===
+    ("Rectus Femoris", "thigh_anterior", "bipennate", B_FEM_R, B_TIB_R, "extension", "L2,L3,L4", "Femoral nerve", 40, 450, 3500, 14),
+    ("Vastus Lateralis", "thigh_anterior", "bipennate", B_FEM_R, B_TIB_R, "extension", "L2,L3,L4", "Femoral nerve", 35, 420, 3800, 14),
+    ("Vastus Medialis", "thigh_anterior", "unipennate", B_FEM_R, B_TIB_R, "extension", "L2,L3,L4", "Femoral nerve", 30, 350, 3200, 10),
+    ("Vastus Intermedius", "thigh_anterior", "bipennate", B_FEM_R, B_TIB_R, "extension", "L2,L3,L4", "Femoral nerve", 25, 300, 2800, 8),
+    ("Biceps Femoris", "thigh_posterior", "fusiform", B_HIP_R, B_TIB_R, "flexion", "L5,S1,S2", "Sciatic nerve", 38, 380, 3200, None),
+    ("Semitendinosus", "thigh_posterior", "fusiform", B_HIP_R, B_TIB_R, "flexion", "L5,S1,S2", "Sciatic nerve", 32, 180, 1600, None),
+    ("Semimembranosus", "thigh_posterior", "unipennate", B_HIP_R, B_TIB_R, "flexion", "L5,S1,S2", "Sciatic nerve", 30, 250, 2200, 15),
+    ("Sartorius", "thigh_anterior", "parallel", B_HIP_R, B_TIB_R, "flexion,abduction", "L2,L3", "Femoral nerve", 50, 60, 300, None),
+    ("Gracilis", "thigh_medial", "parallel", B_HIP_R, B_TIB_R, "adduction,flexion", "L2,L3", "Obturator nerve", 32, 30, 200, None),
+    ("Adductor Magnus", "thigh_medial", "multipennate", B_HIP_R, B_FEM_R, "adduction", "L2,L3,L4,L5,S1", "Obturator nerve", 20, 400, 2800, 15),
+    ("Adductor Longus", "thigh_medial", "parallel", B_HIP_R, B_FEM_R, "adduction", "L2,L3,L4", "Obturator nerve", 15, 120, 800, None),
+    ("Adductor Brevis", "thigh_medial", "parallel", B_HIP_R, B_FEM_R, "adduction", "L2,L3", "Obturator nerve", 10, 60, 400, None),
+    ("Pectineus", "thigh_medial", "parallel", B_HIP_R, B_FEM_R, "adduction,flexion", "L2,L3", "Femoral nerve", 8, 35, 250, None),
+    # === LEG ===
+    ("Gastrocnemius", "leg_posterior", "bipennate", B_FEM_R, B_FOOT_R_CALCANEUS, "plantarflexion", "S1,S2", "Tibial nerve", 16, 180, 2400, 17),
+    ("Soleus", "leg_posterior", "bipennate", B_TIB_R, B_FOOT_R_CALCANEUS, "plantarflexion", "S1,S2", "Tibial nerve", 10, 420, 3500, 25),
+    ("Plantaris", "leg_posterior", "fusiform", B_FEM_R, B_FOOT_R_CALCANEUS, "plantarflexion", "S1,S2", "Tibial nerve", 7, 10, 50, None),
+    ("Tibialis Anterior", "leg_anterior", "unipennate", B_TIB_R, B_FOOT_R_CUNEIFORM_MED, "dorsiflexion", "L4,L5", "Common peroneal nerve", 28, 140, 1000, 10),
+    ("Tibialis Posterior", "leg_posterior", "multipennate", B_TIB_R, B_FOOT_R_NAVICULAR, "plantarflexion,inversion", "L4,L5", "Tibial nerve", 20, 120, 1000, 15),
+    ("Peroneus Longus", "leg_lateral", "unipennate", B_FIB_R, _FR_MT[0], "eversion", "L5,S1", "Common peroneal nerve", 25, 80, 600, 10),
+    ("Peroneus Brevis", "leg_lateral", "unipennate", B_FIB_R, _FR_MT[4], "eversion", "L5,S1", "Common peroneal nerve", 15, 40, 300, 8),
+    ("Flexor Digitorum Longus", "leg_posterior", "unipennate", B_TIB_R, _FR_DP[1], "flexion,plantarflexion", "S1,S2", "Tibial nerve", 20, 30, 250, 10),
+    ("Flexor Hallucis Longus", "leg_posterior", "unipennate", B_FIB_R, _FR_DP[0], "flexion,plantarflexion", "S1,S2", "Tibial nerve", 22, 50, 400, 12),
+    ("Extensor Digitorum Longus", "leg_anterior", "unipennate", B_TIB_R, _FR_PP[1], "extension,dorsiflexion", "L4,L5,S1", "Common peroneal nerve", 25, 40, 300, 8),
+    ("Extensor Hallucis Longus", "leg_anterior", "unipennate", B_FIB_R, _FR_DP[0], "extension,dorsiflexion", "L5,S1", "Common peroneal nerve", 20, 20, 150, 8),
+    ("Popliteus", "leg_posterior", "parallel", B_FEM_R, B_TIB_R, "flexion,medial_rotation", "L4,L5,S1", "Tibial nerve", 5, 15, 120, None),
+    # === PELVIC ===
+    ("Levator Ani", "hip", "parallel", B_HIP_R, B_COCCYX, "elevation", "S3,S4", "Pudendal nerve", 6, 15, 100, None),
+    ("Coccygeus", "hip", "parallel", B_HIP_R, B_COCCYX, "elevation", "S4,S5", "Pudendal nerve", 4, 8, 60, None),
 ]
 
-MUSCLE_DEFS = _bilateral(_MUSCLE_BASE)
-assert len(MUSCLE_DEFS) == 48
+# === HAND INTRINSIC (18 per side — generated programmatically for R) ===
+def _hand_intrinsic_raw() -> list[tuple]:
+    """Generate 18 R-side hand intrinsic muscle definitions."""
+    mc, pp, dp = _HR_MC, _HR_PP, _HR_DP
+    m: list[tuple] = []
+    # Thenar (4)
+    m.append(("Abductor Pollicis Brevis", "hand_intrinsic", "parallel", _HR_TRAP, pp[0], "abduction", "C8,T1", "Median nerve", 4, 5, 80, None))
+    m.append(("Flexor Pollicis Brevis", "hand_intrinsic", "parallel", _HR_TRAP, pp[0], "flexion", "C8,T1", "Median nerve", 4, 5, 80, None))
+    m.append(("Opponens Pollicis", "hand_intrinsic", "parallel", _HR_TRAP, mc[0], "opposition", "C8,T1", "Median nerve", 3, 6, 100, None))
+    m.append(("Adductor Pollicis", "hand_intrinsic", "parallel", _HR_CAP, pp[0], "adduction", "C8,T1", "Ulnar nerve", 4, 8, 120, None))
+    # Hypothenar (3)
+    m.append(("Abductor Digiti Minimi Hand", "hand_intrinsic", "parallel", 103, pp[4], "abduction", "C8,T1", "Ulnar nerve", 4, 4, 60, None))  # pisiform
+    m.append(("Flexor Digiti Minimi Brevis Hand", "hand_intrinsic", "parallel", _HR_HAM, pp[4], "flexion", "C8,T1", "Ulnar nerve", 3, 3, 50, None))
+    m.append(("Opponens Digiti Minimi", "hand_intrinsic", "parallel", _HR_HAM, mc[4], "opposition", "C8,T1", "Ulnar nerve", 3, 4, 60, None))
+    # Lumbricals (4)
+    for i in range(4):
+        m.append((f"Lumbrical {i+1} Hand", "hand_intrinsic", "fusiform", mc[i+1], pp[i+1], "flexion", "C8,T1", "Median nerve" if i < 2 else "Ulnar nerve", 3, 2, 30, None))
+    # Dorsal interossei (4)
+    for i in range(4):
+        m.append((f"Dorsal Interosseous {i+1} Hand", "hand_intrinsic", "bipennate", mc[i], pp[min(i+1,4)], "abduction", "C8,T1", "Ulnar nerve", 3, 4, 60, 10))
+    # Palmar interossei (3)
+    for i in range(3):
+        digit = i + 1 if i < 1 else i + 2  # digits 2, 4, 5 (index=1, ring=3, little=4)
+        m.append((f"Palmar Interosseous {i+1} Hand", "hand_intrinsic", "unipennate", mc[digit], pp[digit], "adduction", "C8,T1", "Ulnar nerve", 3, 3, 50, 8))
+    return m
 
+# === FOOT INTRINSIC (20 per side — generated programmatically for R) ===
+def _foot_intrinsic_raw() -> list[tuple]:
+    """Generate 20 R-side foot intrinsic muscle definitions."""
+    mt, pp, dp = _FR_MT, _FR_PP, _FR_DP
+    m: list[tuple] = []
+    # Dorsal (2)
+    m.append(("Extensor Digitorum Brevis", "foot_intrinsic", "parallel", _FR_CALC, pp[1], "extension", "L5,S1", "Common peroneal nerve", 6, 10, 80, None))
+    m.append(("Extensor Hallucis Brevis", "foot_intrinsic", "parallel", _FR_CALC, pp[0], "extension", "L5,S1", "Common peroneal nerve", 5, 5, 40, None))
+    # Layer 1 (3)
+    m.append(("Abductor Hallucis", "foot_intrinsic", "parallel", _FR_CALC, pp[0], "abduction", "S1,S2", "Medial plantar nerve", 10, 25, 200, None))
+    m.append(("Flexor Digitorum Brevis", "foot_intrinsic", "multipennate", _FR_CALC, pp[1], "flexion", "S1,S2", "Medial plantar nerve", 8, 20, 150, 12))
+    m.append(("Abductor Digiti Minimi Foot", "foot_intrinsic", "parallel", _FR_CALC, pp[4], "abduction", "S1,S2", "Lateral plantar nerve", 8, 15, 100, None))
+    # Layer 2 (5)
+    m.append(("Quadratus Plantae", "foot_intrinsic", "parallel", _FR_CALC, _FR_CALC, "flexion", "S1,S2", "Lateral plantar nerve", 5, 10, 80, None))
+    for i in range(4):
+        m.append((f"Lumbrical {i+1} Foot", "foot_intrinsic", "fusiform", mt[i+1], pp[i+1], "flexion", "S1,S2", "Medial plantar nerve" if i == 0 else "Lateral plantar nerve", 3, 2, 20, None))
+    # Layer 3 (3)
+    m.append(("Flexor Hallucis Brevis", "foot_intrinsic", "parallel", _FR_CUB, pp[0], "flexion", "S1,S2", "Medial plantar nerve", 5, 10, 80, None))
+    m.append(("Adductor Hallucis", "foot_intrinsic", "parallel", mt[1], pp[0], "adduction", "S1,S2", "Lateral plantar nerve", 5, 10, 80, None))
+    m.append(("Flexor Digiti Minimi Brevis Foot", "foot_intrinsic", "parallel", mt[4], pp[4], "flexion", "S1,S2", "Lateral plantar nerve", 4, 5, 40, None))
+    # Layer 4 (7): dorsal interossei (4) + plantar interossei (3)
+    for i in range(4):
+        m.append((f"Dorsal Interosseous {i+1} Foot", "foot_intrinsic", "bipennate", mt[i], pp[min(i+1,4)], "abduction", "S1,S2", "Lateral plantar nerve", 3, 4, 50, 10))
+    for i in range(3):
+        digit = i + 2  # toes 3, 4, 5 → indices 2, 3, 4
+        m.append((f"Plantar Interosseous {i+1} Foot", "foot_intrinsic", "unipennate", mt[digit], pp[digit], "adduction", "S1,S2", "Lateral plantar nerve", 3, 3, 40, 8))
+    return m
+
+# Combine all raw definitions
+_ALL_RAW = _RAW + _hand_intrinsic_raw() + _foot_intrinsic_raw()
+
+# Antagonist map (base name → list of base antagonist names)
+_ANTAG: dict[str, list[str]] = {
+    "Rectus Femoris": ["Biceps Femoris", "Semitendinosus", "Semimembranosus"],
+    "Vastus Lateralis": ["Biceps Femoris"], "Vastus Medialis": ["Biceps Femoris"],
+    "Biceps Femoris": ["Rectus Femoris", "Vastus Lateralis"],
+    "Semitendinosus": ["Rectus Femoris"], "Semimembranosus": ["Rectus Femoris"],
+    "Biceps Brachii": ["Triceps Brachii"], "Triceps Brachii": ["Biceps Brachii"],
+    "Pectoralis Major": ["Latissimus Dorsi"], "Latissimus Dorsi": ["Pectoralis Major", "Deltoid"],
+    "Tibialis Anterior": ["Gastrocnemius", "Soleus"],
+    "External Oblique": ["Erector Spinae"],
+    "Rectus Abdominis": ["Latissimus Dorsi (R)", "Latissimus Dorsi (L)"],
+}
+_SYNERG: dict[str, list[str]] = {
+    "Biceps Brachii": ["Deltoid", "Brachialis"], "Deltoid": ["Pectoralis Major"],
+    "Gastrocnemius": ["Soleus"], "Soleus": ["Gastrocnemius"],
+}
+
+# Special tendon overrides
+_OTN: dict[str, tuple[str, float | None]] = {"Rectus Femoris": ("Quadriceps tendon", 1.3)}
+_ITN: dict[str, tuple[str, float | None]] = {"Rectus Femoris": ("Patellar tendon", 1.5), "Gastrocnemius": ("Achilles tendon", 0.8)}
+
+# Midline muscles (not expanded bilaterally)
+_MIDLINE = {"Rectus Abdominis", "Diaphragm"}
+
+# Shared origin tendons (midline origin, bilateral insertion)
 SHARED_ORIGIN_BASES = {"Pectoralis Major", "Latissimus Dorsi"}
 
+def _expand_raw() -> list[MuscleSpec]:
+    """Expand compact _ALL_RAW into MuscleSpec tuples, then apply bilateral expansion."""
+    base: list[MuscleSpec] = []
+    for r in _ALL_RAW:
+        name, reg, arch, ob, ib, acts_str, sp_str, nv, L, vol, fmax, penn = r
+        actions = acts_str.split(",")
+        spinal = sp_str.split(",")
+        fdir = _FDIR.get(name, (0, -1, 0))
+        artery = _ARTERY.get(reg, "Regional artery")
+        antag = _ANTAG.get(name, [])
+        synerg = _SYNERG.get(name, [])
+        mass = round(vol * 1.06)
+        otn_pair = _OTN.get(name)
+        itn_pair = _ITN.get(name)
+        base.append((name, reg, arch, ob, ib, actions, None, spinal, nv, artery,
+                      L, vol, mass, fmax, penn, fdir, antag, synerg,
+                      otn_pair[0] if otn_pair else None, itn_pair[0] if itn_pair else None,
+                      otn_pair[1] if otn_pair else None, itn_pair[1] if itn_pair else None))
+    return _bilateral(base)
+
+MUSCLE_DEFS = _expand_raw()
+
+
 def _mirror_bone(idx: int) -> int:
-    mirrors = {
+    """Map any R-side bone index to its L-side counterpart."""
+    _PAIRS = {
         B_HIP_R: B_HIP_L, B_SCAP_R: B_SCAP_L, B_CLAV_R: B_CLAV_L,
         B_HUMER_R: B_HUMER_L, B_RAD_R: B_RAD_L, B_ULNA_R: B_ULNA_L,
-        B_FEM_R: B_FEM_L, B_PAT_R: B_PAT_L,
-        B_TIB_R: B_TIB_L, B_FIB_R: B_FIB_L,
-        B_FOOT_R_CALCANEUS: B_FOOT_L_START,
-        B_FOOT_R_CUNEIFORM_MED: B_FOOT_L_START + 4,
+        B_FEM_R: B_FEM_L, B_PAT_R: B_PAT_L, B_TIB_R: B_TIB_L, B_FIB_R: B_FIB_L,
+        B_TEMPORAL_R: B_TEMPORAL_L, B_PARIETAL_R: B_PARIETAL_L,
+        B_MAXILLA_R: B_MAXILLA_L, B_ZYGOMATIC_R: B_ZYGOMATIC_L, B_NASAL_R: B_NASAL_L,
     }
-    return mirrors.get(idx, idx)
+    if idx in _PAIRS: return _PAIRS[idx]
+    if 34 <= idx <= 45: return idx + 12   # Rib R → L
+    if 100 <= idx <= 126: return idx + 27  # Hand R → L
+    if 154 <= idx <= 179: return idx + 26  # Foot R → L
+    return idx
 
 
 def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
@@ -754,6 +1031,11 @@ def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
         r.muscle_ids.append(mid)
         r.muscle_name_to_idx[name] = len(r.muscle_ids) - 1
 
+        # Computed biomechanical properties
+        opt_fiber_len = round(length * 0.6, 2)
+        pcsa = round(vol / opt_fiber_len, 2) if opt_fiber_len > 0 else 0
+        vmax = round(random.uniform(5.0, 8.0), 1)
+
         m: dict[str, Any] = {
             "id": mid, "name": name, "region": region, "type": "skeletal",
             "origin": {"tendonId": r.tendon_ids[origin_tendon_idx], "description": f"Origin of {name}"},
@@ -762,8 +1044,10 @@ def gen_tendons_and_muscles(r: Reg) -> tuple[list[dict], list[dict]]:
             "fiberDirection": unit_vec3(*fdir),
             "fiberComposition": "mixed",
             "restingLength": length, "volume": vol, "mass": mass,
+            "optimalFiberLength": opt_fiber_len,
+            "pcsa": pcsa,
             "maxIsometricForce": fmax,
-            "maxContractionVelocity": round(random.uniform(4, 8), 1),
+            "maxContractionVelocity": vmax,
             "innervation": {"nerveName": nerve, "spinalRoots": spinal},
             "bloodSupply": {"primaryArteryName": artery},
             "primaryActions": actions,
@@ -813,6 +1097,27 @@ NERVE_DEFS = [
     ("Common peroneal nerve", "mixed", "sacral", ["L4", "L5", "S1", "S2"], "Sciatic nerve"),
     ("Phrenic nerve", "motor", "cervical", ["C3", "C4", "C5"], None),
     ("Spinal accessory nerve (XI)", "motor", "none", ["C1", "C2", "C3", "C4"], None),
+    ("Median nerve", "mixed", "brachial", ["C5", "C6", "C7", "C8", "T1"], None),
+    ("Ulnar nerve", "mixed", "brachial", ["C8", "T1"], None),
+    ("Obturator nerve", "mixed", "lumbar", ["L2", "L3", "L4"], None),
+    ("Pudendal nerve", "mixed", "sacral", ["S2", "S3", "S4"], None),
+    ("Subclavian nerve", "motor", "brachial", ["C5", "C6"], None),
+    ("Long thoracic nerve", "motor", "brachial", ["C5", "C6", "C7"], None),
+    ("Dorsal scapular nerve", "motor", "brachial", ["C5"], None),
+    ("Suprascapular nerve", "motor", "brachial", ["C5", "C6"], None),
+    ("Subscapular nerve", "motor", "brachial", ["C5", "C6", "C7"], None),
+    ("Medial pectoral nerve", "motor", "brachial", ["C8", "T1"], None),
+    ("Subcostal nerve", "mixed", "none", ["T12"], None),
+    ("Intercostal nerves", "mixed", "none", ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11"], None),
+    ("Medial plantar nerve", "mixed", "sacral", ["S1", "S2"], "Tibial nerve"),
+    ("Lateral plantar nerve", "mixed", "sacral", ["S1", "S2"], "Tibial nerve"),
+    ("Trigeminal V3", "mixed", "none", ["C5", "C6", "C7"], None),
+    ("Facial VII", "mixed", "none", ["C7"], None),
+    ("Sacral plexus", "mixed", "sacral", ["L4", "L5", "S1", "S2", "S3"], None),
+    ("Lumbar plexus", "mixed", "lumbar", ["L1", "L2", "L3", "L4"], None),
+    ("Posterior rami", "mixed", "none", ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12", "L1", "L2", "L3", "L4", "L5"], None),
+    ("Ansa cervicalis", "motor", "cervical", ["C1", "C2", "C3"], None),
+    ("Cervical plexus", "mixed", "cervical", ["C1", "C2", "C3", "C4"], None),
 ]
 
 def gen_nerves(r: Reg) -> list[dict]:
@@ -846,6 +1151,19 @@ def gen_organs(r: Reg) -> list[dict]:
         ("Brain", "nervous", 1400, 1400, True, False, "midline", (0, 168, 0)),
         ("Stomach", "digestive", 950, 150, False, False, "left", (5, 118, 3)),
         ("Spleen", "lymphatic", 200, 180, False, False, "left", (10, 115, -2)),
+        ("Pancreas", "digestive", 70, 100, False, False, "midline", (0, 112, -1)),
+        ("Gallbladder", "digestive", 50, 30, False, False, "right", (-6, 112, 4)),
+        ("Thyroid gland", "endocrine", 20, 25, False, False, "midline", (0, 155, 5)),
+        ("Adrenal gland (R)", "endocrine", 6, 5, False, True, "right", (-4, 112, -4)),
+        ("Adrenal gland (L)", "endocrine", 6, 5, False, True, "left", (4, 112, -4)),
+        ("Bladder", "urinary", 500, 50, False, False, "midline", (0, 88, 4)),
+        ("Eye (R)", "nervous", 7, 7.5, False, True, "right", (-3, 170, 7)),
+        ("Eye (L)", "nervous", 7, 7.5, False, True, "left", (3, 170, 7)),
+        ("Small intestine", "digestive", 900, 1000, False, False, "midline", (0, 100, 3)),
+        ("Large intestine", "digestive", 700, 500, False, False, "midline", (0, 98, 2)),
+        ("Esophagus", "digestive", 40, 50, False, False, "midline", (0, 140, -1)),
+        ("Trachea", "respiratory", 30, 30, False, False, "midline", (0, 150, 4)),
+        ("Larynx", "respiratory", 20, 25, False, False, "midline", (0, 153, 5)),
     ]
     organs = []
     for name, system, vol, mass, vital, paired, lat, pos in defs:
@@ -860,6 +1178,13 @@ def gen_organs(r: Reg) -> list[dict]:
 # =============================================================================
 
 def gen_vascular(r: Reg) -> list[dict]:
+    """Generate vascular system: ~40 vessels including coronary, pulmonary, portal, and cerebral.
+
+    Vessel radii from:
+      - Aorta: ~1.5 cm (Redheuil et al., Radiology 2011)
+      - Coronary: 1.5-2.5 mm (Dodge et al., Circulation 1992)
+      - Cerebral: 1-3 mm (Kochanowicz et al., Med Sci Monit 2009)
+    """
     vessels: list[dict] = []
 
     def _art(name, pi, rad, path, **kw):
@@ -875,29 +1200,64 @@ def gen_vascular(r: Reg) -> list[dict]:
                     "hasValves": kw.pop("hasValves", True)}
         v.update(kw); vessels.append(v)
 
-    _art("Aorta", None, 1.5, [vec3(0,135,3), vec3(0,100,0), vec3(0,70,-2)], systolicPressure=120, diastolicPressure=80, oxygenSaturation=98)
-    _art("Common iliac (R)", 0, 0.8, [vec3(-3,70,-2), vec3(-7,60,-1)])
-    _art("Common iliac (L)", 0, 0.8, [vec3(3,70,-2), vec3(7,60,-1)])
-    _art("Femoral artery (R)", 1, 0.5, [vec3(-9,60,0), vec3(-9,30,0)])
-    _art("Femoral artery (L)", 2, 0.5, [vec3(9,60,0), vec3(9,30,0)])
-    _art("Brachial artery (R)", 0, 0.35, [vec3(-23,148,0), vec3(-25,112,0)])
-    _art("Brachial artery (L)", 0, 0.35, [vec3(23,148,0), vec3(25,112,0)])
-    _vein("Inferior vena cava", None, 1.8, [vec3(1,70,-2), vec3(1,100,0), vec3(1,135,3)], hasValves=False)
-    _vein("Great saphenous (R)", 7, 0.4, [vec3(-10,5,2), vec3(-9,60,0)])
-    _art("Celiac trunk", 0, 0.6, [vec3(0,115,3), vec3(0,112,5)])
-    _art("Superior mesenteric artery", 0, 0.5, [vec3(0,113,3), vec3(0,105,5)])
-    _art("Renal artery (R)", 0, 0.35, [vec3(-2,110,-2), vec3(-6,110,-5)])
-    _art("Renal artery (L)", 0, 0.35, [vec3(2,110,-2), vec3(6,110,-5)])
-    _art("Posterior tibial artery (R)", 3, 0.2, [vec3(-9,30,0), vec3(-9,5,2)])
-    _vein("Popliteal vein (R)", 7, 0.5, [vec3(-9,30,-1), vec3(-9,50,-1)])
-    _vein("Femoral vein (R)", 7, 0.55, [vec3(-9,50,0), vec3(-9,70,0)])
-    _vein("Femoral vein (L)", 7, 0.55, [vec3(9,50,0), vec3(9,70,0)])
-    _vein("Internal jugular vein (R)", 7, 0.7, [vec3(-3,155,2), vec3(-2,135,3)])
-    _art("Carotid artery (R)", 0, 0.4, [vec3(-2,135,3), vec3(-3,160,2)])
-    _art("Carotid artery (L)", 0, 0.4, [vec3(2,135,3), vec3(3,160,2)])
+    # === ARTERIAL TREE (indices 0-25) ===
+    _art("Aorta", None, 1.5, [vec3(0,135,3), vec3(0,120,0), vec3(0,100,0), vec3(0,70,-2)],                 # 0
+         systolicPressure=120, diastolicPressure=80, oxygenSaturation=98)
+    _art("Common iliac (R)", 0, 0.8, [vec3(-3,70,-2), vec3(-7,60,-1)])                                      # 1
+    _art("Common iliac (L)", 0, 0.8, [vec3(3,70,-2), vec3(7,60,-1)])                                        # 2
+    _art("Femoral artery (R)", 1, 0.5, [vec3(-9,60,0), vec3(-9,45,0), vec3(-9,30,0)])                       # 3
+    _art("Femoral artery (L)", 2, 0.5, [vec3(9,60,0), vec3(9,45,0), vec3(9,30,0)])                          # 4
+    _art("Popliteal artery (R)", 3, 0.3, [vec3(-9,30,0), vec3(-9,25,-1)])                                   # 5
+    _art("Popliteal artery (L)", 4, 0.3, [vec3(9,30,0), vec3(9,25,-1)])                                     # 6
+    _art("Posterior tibial artery (R)", 5, 0.2, [vec3(-9,25,0), vec3(-9,15,1), vec3(-9,5,2)])                # 7
+    _art("Posterior tibial artery (L)", 6, 0.2, [vec3(9,25,0), vec3(9,15,1), vec3(9,5,2)])                   # 8
+    _art("Anterior tibial artery (R)", 5, 0.18, [vec3(-9,25,1), vec3(-9,15,3), vec3(-9,5,5)])                # 9
+    _art("Anterior tibial artery (L)", 6, 0.18, [vec3(9,25,1), vec3(9,15,3), vec3(9,5,5)])                   # 10
+    _art("Subclavian artery (R)", 0, 0.55, [vec3(-2,140,2), vec3(-12,145,1)])                                # 11
+    _art("Subclavian artery (L)", 0, 0.55, [vec3(2,140,2), vec3(12,145,1)])                                  # 12
+    _art("Brachial artery (R)", 11, 0.35, [vec3(-18,145,0), vec3(-23,130,0), vec3(-25,112,0)])               # 13
+    _art("Brachial artery (L)", 12, 0.35, [vec3(18,145,0), vec3(23,130,0), vec3(25,112,0)])                  # 14
+    _art("Radial artery (R)", 13, 0.15, [vec3(-25,112,2), vec3(-26,95,3)])                                   # 15
+    _art("Ulnar artery (R)", 13, 0.15, [vec3(-24,112,-1), vec3(-26,95,1)])                                   # 16
+    _art("Carotid artery (R)", 0, 0.4, [vec3(-2,135,3), vec3(-3,150,2), vec3(-3,160,2)])                     # 17
+    _art("Carotid artery (L)", 0, 0.4, [vec3(2,135,3), vec3(3,150,2), vec3(3,160,2)])                        # 18
+    _art("Celiac trunk", 0, 0.6, [vec3(0,115,3), vec3(0,112,5)])                                            # 19
+    _art("Superior mesenteric artery", 0, 0.5, [vec3(0,113,3), vec3(0,105,5)])                               # 20
+    _art("Inferior mesenteric artery", 0, 0.3, [vec3(0,95,2), vec3(0,85,4)])                                 # 21
+    _art("Renal artery (R)", 0, 0.35, [vec3(-2,110,-2), vec3(-6,110,-5)])                                    # 22
+    _art("Renal artery (L)", 0, 0.35, [vec3(2,110,-2), vec3(6,110,-5)])                                     # 23
+    # Coronary arteries
+    _art("Left coronary artery (LCA)", 0, 0.2, [vec3(-1,133,4), vec3(-3,131,5), vec3(-4,128,4)])             # 24
+    _art("Right coronary artery (RCA)", 0, 0.18, [vec3(1,133,4), vec3(2,131,5), vec3(3,128,3)])              # 25
+    # Pulmonary arteries
+    _art("Pulmonary trunk", None, 1.3, [vec3(1,132,5), vec3(0,130,4)], oxygenSaturation=75)                  # 26
+    _art("Pulmonary artery (R)", 26, 0.9, [vec3(-2,130,3), vec3(-8,132,1)])                                  # 27
+    _art("Pulmonary artery (L)", 26, 0.9, [vec3(2,130,3), vec3(8,132,1)])                                    # 28
+
+    # === VENOUS TREE (indices 29+) ===
+    _vein("Inferior vena cava", None, 1.8, [vec3(1,70,-2), vec3(1,100,0), vec3(1,135,3)], hasValves=False)   # 29
+    _vein("Superior vena cava", None, 1.2, [vec3(-1,145,2), vec3(-1,135,3)], hasValves=False)                # 30
+    _vein("Great saphenous (R)", 29, 0.4, [vec3(-10,5,2), vec3(-9,30,0), vec3(-9,60,0)])                     # 31
+    _vein("Great saphenous (L)", 29, 0.4, [vec3(10,5,2), vec3(9,30,0), vec3(9,60,0)])                        # 32
+    _vein("Femoral vein (R)", 29, 0.55, [vec3(-9,50,0), vec3(-9,70,0)])                                      # 33
+    _vein("Femoral vein (L)", 29, 0.55, [vec3(9,50,0), vec3(9,70,0)])                                        # 34
+    _vein("Popliteal vein (R)", 33, 0.5, [vec3(-9,25,-1), vec3(-9,45,-1)])                                   # 35
+    _vein("Popliteal vein (L)", 34, 0.5, [vec3(9,25,-1), vec3(9,45,-1)])                                     # 36
+    _vein("Internal jugular vein (R)", 30, 0.7, [vec3(-3,160,2), vec3(-2,145,3)])                            # 37
+    _vein("Internal jugular vein (L)", 30, 0.7, [vec3(3,160,2), vec3(2,145,3)])                              # 38
+    # Portal venous system
+    _vein("Portal vein", 29, 0.6, [vec3(0,108,4), vec3(-5,112,3)], hasValves=False)                          # 39
+    _vein("Hepatic vein (R)", 29, 0.5, [vec3(-8,115,2), vec3(-4,120,3)])                                     # 40
+    _vein("Hepatic vein (L)", 29, 0.5, [vec3(4,115,2), vec3(2,120,3)])                                       # 41
+    # Renal veins
+    _vein("Renal vein (R)", 29, 0.4, [vec3(-6,110,-4), vec3(-2,110,-2)])                                     # 42
+    _vein("Renal vein (L)", 29, 0.45, [vec3(6,110,-4), vec3(2,110,-2)])                                      # 43
+    # Pulmonary veins
+    _vein("Pulmonary vein (R superior)", None, 0.6, [vec3(-8,133,1), vec3(-1,133,3)],
+          hasValves=False, oxygenSaturation=98)                                                               # 44
+    _vein("Pulmonary vein (L superior)", None, 0.6, [vec3(8,133,1), vec3(1,133,3)],
+          hasValves=False, oxygenSaturation=98)                                                               # 45
     return vessels
-
-
 # =============================================================================
 # LIGAMENTS — 12
 # =============================================================================
@@ -916,15 +1276,35 @@ def gen_ligaments(r: Reg) -> list[dict]:
         ("Glenohumeral ligament (L)", B_SCAP_L, B_HUMER_L, J_SHOULDER_L, 3.5),
         ("Anterior longitudinal ligament (lumbar)", B_SACRUM, B_L1, J_L5S1, 15),
         ("Posterior longitudinal ligament (lumbar)", B_SACRUM, B_L1, J_L5S1, 14),
+        ("Deltoid ligament (R)", B_TIB_R, B_FOOT_R_TALUS, J_ANKLE_R, 4),
+        ("Deltoid ligament (L)", B_TIB_L, B_FOOT_L_START + 1, J_ANKLE_L, 4),
+        ("Anterior talofibular ligament (R)", B_FIB_R, B_FOOT_R_TALUS, J_ANKLE_R, 2),
+        ("Anterior talofibular ligament (L)", B_FIB_L, B_FOOT_L_START + 1, J_ANKLE_L, 2),
+        ("Calcaneofibular ligament (R)", B_FIB_R, B_FOOT_R_CALCANEUS, J_ANKLE_R, 3),
+        ("Calcaneofibular ligament (L)", B_FIB_L, B_FOOT_L_START, J_ANKLE_L, 3),
+        ("Pubofemoral ligament (R)", B_HIP_R, B_FEM_R, J_HIP_R, 6),
+        ("Pubofemoral ligament (L)", B_HIP_L, B_FEM_L, J_HIP_L, 6),
+        ("Ischiofemoral ligament (R)", B_HIP_R, B_FEM_R, J_HIP_R, 5),
+        ("Ischiofemoral ligament (L)", B_HIP_L, B_FEM_L, J_HIP_L, 5),
+        ("Coracoacromial ligament (R)", B_SCAP_R, B_SCAP_R, J_SHOULDER_R, 3),
+        ("Coracoacromial ligament (L)", B_SCAP_L, B_SCAP_L, J_SHOULDER_L, 3),
+        ("Medial collateral ligament (L)", B_FEM_L, B_TIB_L, J_KNEE_L, 8),
+        ("Lateral collateral ligament (L)", B_FEM_L, B_TIB_L, J_KNEE_L, 5.5),
     ]
     ligs = []
     for name, ob, ib, ji, length in defs:
         lid = uid(); r.ligament_ids.append(lid)
         ligs.append({"id": lid, "name": name,
             "originBoneId": r.bone_ids[ob],
-            "originPosition": vec3(random.uniform(-1,1), random.uniform(-1,1), random.uniform(-1,1)),
+            "originPosition": vec3(
+                random.uniform(-0.3, 0.3) * BONE_DEFS[ob][5],
+                BONE_DEFS[ob][4] * random.uniform(0.2, 0.4),
+                random.choice([-1, 1]) * random.uniform(0.2, 0.5) * BONE_DEFS[ob][6]),
             "insertionBoneId": r.bone_ids[ib],
-            "insertionPosition": vec3(random.uniform(-1,1), random.uniform(-1,1), random.uniform(-1,1)),
+            "insertionPosition": vec3(
+                random.uniform(-0.3, 0.3) * BONE_DEFS[ib][5],
+                -BONE_DEFS[ib][4] * random.uniform(0.2, 0.4),
+                random.choice([-1, 1]) * random.uniform(0.2, 0.5) * BONE_DEFS[ib][6]),
             "jointId": r.joint_ids[ji], "restingLength": length})
     return ligs
 
@@ -934,17 +1314,64 @@ def gen_ligaments(r: Reg) -> list[dict]:
 # =============================================================================
 
 def gen_cartilage(r: Reg) -> list[dict]:
-    defs = [
+    """Generate cartilage including articular surfaces, menisci, labra, and intervertebral discs.
+
+    Intervertebral disc data from:
+      - Thickness: Shao et al., Eur Spine J 11(6):513-517, 2002
+      - Surface area: estimated from vertebral body dimensions
+      - Material: biphasic model per Mow et al., J Biomech Eng 102(1):73-84, 1980
+    """
+    defs: list[tuple[str, str, int | None, int, float, float]] = [
+        # Knee cartilage (bilateral)
         ("Femoral condyle articular cartilage (R)", "hyaline", B_FEM_R, J_KNEE_R, 3.5, 12),
+        ("Femoral condyle articular cartilage (L)", "hyaline", B_FEM_L, J_KNEE_L, 3.5, 12),
         ("Tibial plateau articular cartilage (R)", "hyaline", B_TIB_R, J_KNEE_R, 3, 10),
+        ("Tibial plateau articular cartilage (L)", "hyaline", B_TIB_L, J_KNEE_L, 3, 10),
         ("Medial meniscus (R)", "fibrocartilage", None, J_KNEE_R, 5, 8),
+        ("Medial meniscus (L)", "fibrocartilage", None, J_KNEE_L, 5, 8),
         ("Lateral meniscus (R)", "fibrocartilage", None, J_KNEE_R, 4.5, 7),
+        ("Lateral meniscus (L)", "fibrocartilage", None, J_KNEE_L, 4.5, 7),
+        # Hip cartilage (bilateral)
         ("Acetabular cartilage (R)", "hyaline", B_HIP_R, J_HIP_R, 2.5, 16),
+        ("Acetabular cartilage (L)", "hyaline", B_HIP_L, J_HIP_L, 2.5, 16),
         ("Femoral head cartilage (R)", "hyaline", B_FEM_R, J_HIP_R, 2, 14),
+        ("Femoral head cartilage (L)", "hyaline", B_FEM_L, J_HIP_L, 2, 14),
         ("Acetabular labrum (R)", "fibrocartilage", None, J_HIP_R, 4, 6),
+        ("Acetabular labrum (L)", "fibrocartilage", None, J_HIP_L, 4, 6),
+        # Shoulder labra (bilateral)
         ("Glenoid labrum (R)", "fibrocartilage", None, J_SHOULDER_R, 3.5, 4),
         ("Glenoid labrum (L)", "fibrocartilage", None, J_SHOULDER_L, 3.5, 4),
     ]
+
+    # Intervertebral discs: L5-S1 through C2-C3 (23 discs)
+    # Thickness increases from cervical (~3mm) to lumbar (~10mm), then drops at L5-S1 (~9mm)
+    # Reference: Shao et al., Eur Spine J (2002)
+    ivd_joints = [
+        # (joint_idx, disc_name, thickness_mm, area_cm2)
+        (J_L5S1, "L5-S1 intervertebral disc", 9, 16),
+    ]
+    # L5-L4 through L2-L1 intervertebral joints are indices 9-12
+    lumbar_thicknesses = [10, 10.5, 10, 9]
+    lumbar_areas = [16, 15, 14, 13]
+    for i in range(4):
+        ivd_joints.append((9 + i, f"L{5-i}-L{4-i} intervertebral disc", lumbar_thicknesses[i], lumbar_areas[i]))
+    # T12-L1 = index 13
+    ivd_joints.append((13, "T12-L1 intervertebral disc", 8, 12))
+    # Remaining thoracic discs at indices 14-17 (only 4 thoracic joints modeled)
+    t_ji = [14, 15, 16, 17]
+    t_names = ["T12-T11", "T9-T8", "T5-T4", "T2-T1"]
+    for i, ji in enumerate(t_ji):
+        if ji < len(r.joint_ids):
+            defs.append((f"{t_names[i]} intervertebral disc", "fibrocartilage", None, ji, 5 + i * 0.5, 8))
+    # C7-T1 = index 18, C1-C2 = index 19
+    if 18 < len(r.joint_ids):
+        defs.append(("C7-T1 intervertebral disc", "fibrocartilage", None, 18, 4, 5))
+
+    # Add IVD joints to defs
+    for ji, name, thick, area in ivd_joints:
+        if ji < len(r.joint_ids):
+            defs.append((name, "fibrocartilage", None, ji, thick, area))
+
     carts = []
     for name, ctype, bone_idx, joint_idx, thickness, area in defs:
         cid = uid(); r.cartilage_ids.append(cid)
@@ -954,8 +1381,6 @@ def gen_cartilage(r: Reg) -> list[dict]:
         c["jointId"] = r.joint_ids[joint_idx]
         carts.append(c)
     return carts
-
-
 # =============================================================================
 # HAIR
 # =============================================================================
@@ -1014,26 +1439,89 @@ SEG_DEFS = [
 ]
 
 
-def gen_segments(r: Reg, weight: float) -> list[dict]:
+def gen_segments(r: Reg, weight: float, sex: str = "male") -> list[dict]:
+    """Generate body segments with sex-specific inertial properties.
+
+    Segment mass fractions, CoM ratios, and radii of gyration are from:
+      De Leva P, "Adjustments to Zatsiorsky-Seluyanov's segment inertia
+      parameters", J Biomech 29(9):1223-1230, 1996, Tables 2-4.
+
+    The SEG_DEFS table carries the male values as defaults. Female values
+    are applied via sex-specific overrides when biologicalSex == 'female'.
+
+    Inertia tensor is computed from radius of gyration ratios:
+      I_xx = m × (ρ_sagittal × L)²
+      I_yy = m × (ρ_longitudinal × L)²
+      I_zz = m × (ρ_frontal × L)²
+    where ρ is the ratio and L is the segment length.
+    """
+    # De Leva (1996) female overrides: (mass_frac, com_ratio)
+    # Only segments with >5% difference from male values are overridden
+    _FEMALE: dict[str, tuple[float, float]] = {
+        "Pelvis":       (0.1247, 0.5),     # male: 0.113
+        "Thigh (R)":    (0.1478, 0.4283),  # male: 0.14, 0.433
+        "Thigh (L)":    (0.1478, 0.4283),
+        "Shank (R)":    (0.0481, 0.4416),  # male: 0.046, 0.433
+        "Shank (L)":    (0.0481, 0.4416),
+        "Trunk":        (0.4257, 0.4964),  # male: 0.4306, 0.5
+        "Head-neck":    (0.0668, 0.4841),  # male: 0.0714, 0.5
+        "Upper arm (R)": (0.0255, 0.4559), # male: 0.027, 0.436
+        "Upper arm (L)": (0.0255, 0.4559),
+        "Forearm (R)":  (0.0138, 0.4343),  # male: 0.0164, 0.43
+        "Forearm (L)":  (0.0138, 0.4343),
+        "Hand (R)":     (0.0056, 0.5016),  # male: 0.0061, 0.506
+        "Hand (L)":     (0.0056, 0.5016),
+        "Foot (R)":     (0.0129, 0.4014),  # male: 0.014, 0.5
+        "Foot (L)":     (0.0129, 0.4014),
+    }
+
+    # Radii of gyration ratios (ρ/L): (sagittal, longitudinal, frontal)
+    # De Leva (1996) Table 4 — male values; female values are within ~5%
+    _GYRATION: dict[str, tuple[float, float, float]] = {
+        "Pelvis":       (0.313, 0.157, 0.315),
+        "Thigh (R)":    (0.329, 0.149, 0.329),
+        "Thigh (L)":    (0.329, 0.149, 0.329),
+        "Shank (R)":    (0.271, 0.093, 0.275),
+        "Shank (L)":    (0.271, 0.093, 0.275),
+        "Trunk":        (0.347, 0.191, 0.362),
+        "Head-neck":    (0.362, 0.312, 0.376),
+        "Upper arm (R)": (0.285, 0.158, 0.269),
+        "Upper arm (L)": (0.285, 0.158, 0.269),
+        "Forearm (R)":  (0.276, 0.121, 0.265),
+        "Forearm (L)":  (0.276, 0.121, 0.265),
+        "Hand (R)":     (0.288, 0.235, 0.184),
+        "Hand (L)":     (0.288, 0.235, 0.184),
+        "Foot (R)":     (0.257, 0.124, 0.245),
+        "Foot (L)":     (0.257, 0.124, 0.245),
+    }
+
     segs = []
     for name, bone_idxs, prox_j, distal_js, mass_frac, seg_len, com_ratio in SEG_DEFS:
         sid = uid(); r.segment_ids.append(sid)
+
+        # Apply sex-specific overrides
+        if sex == "female" and name in _FEMALE:
+            mass_frac, com_ratio = _FEMALE[name]
+
         seg_mass = round(weight * mass_frac, 2)
+
+        # Inertia from radii of gyration
+        rho = _GYRATION.get(name, (0.3, 0.15, 0.3))
+        ixx = round(seg_mass * (rho[0] * seg_len) ** 2, 1)   # sagittal
+        iyy = round(seg_mass * (rho[1] * seg_len) ** 2, 1)   # longitudinal
+        izz = round(seg_mass * (rho[2] * seg_len) ** 2, 1)   # frontal
+
         segs.append({
             "id": sid, "name": name,
             "boneIds": [r.bone_ids[i] for i in bone_idxs],
             "proximalJointId": r.joint_ids[prox_j] if prox_j is not None else None,
             "distalJointIds": [r.joint_ids[j] for j in distal_js],
             "mass": seg_mass,
-            "centerOfMass": vec3(0, seg_len * com_ratio, 0),
-            "inertiaTensor": sym_tensor(round(seg_mass * (seg_len * 0.3)**2, 1),
-                                         round(seg_mass * (seg_len * 0.1)**2, 1),
-                                         round(seg_mass * (seg_len * 0.3)**2, 1)),
+            "centerOfMass": vec3(0, round(seg_len * com_ratio, 2), 0),
+            "inertiaTensor": sym_tensor(ixx, iyy, izz),
             "segmentLength": seg_len,
         })
     return segs
-
-
 # =============================================================================
 # POSES, LOADING CONDITIONS, DERIVATION GRAPH, CONSTITUTIVE LAWS
 # (unchanged from 52-bone version — they reference joints/segments, not bones directly)
@@ -1053,15 +1541,104 @@ def gen_current_pose(r: Reg) -> dict:
 
 
 def gen_saved_poses(r: Reg) -> list[dict]:
+    """Generate named poses: anatomical, T-pose, seated, mid-stance gait.
+
+    Joint angles for gait from:
+      Winter DA, "Biomechanics and Motor Control of Human Movement",
+      4th ed., Ch.3, Table 3.1 (2009).
+    """
     r.saved_pose_id = uid()
     major = [J_HIP_R, J_HIP_L, J_KNEE_R, J_KNEE_L, J_SHOULDER_R, J_SHOULDER_L, J_ELBOW_R, J_ELBOW_L]
-    return [{"id": r.saved_pose_id, "name": "anatomical_position", "rootSegmentId": r.segment_ids[0],
-             "rootPose": rigid_pose(0, 95, 0),
-             "jointStates": [{"jointId": r.joint_ids[j], "angles": {"flexionExtension": 0, "abductionAdduction": 0, "internalExternalRotation": 0}} for j in major]}]
+    all_joints = list(range(len(r.joint_ids)))
 
+    def _pose(pid, name, root_y, joint_angles):
+        """Create a pose with specified joint angles (dict of joint_idx → angle_dict)."""
+        states = []
+        for ji in all_joints:
+            angles = joint_angles.get(ji, {})
+            states.append({"jointId": r.joint_ids[ji], "angles": {
+                "flexionExtension": angles.get("fe", 0),
+                "abductionAdduction": angles.get("aa", 0),
+                "internalExternalRotation": angles.get("ie", 0),
+            }})
+        return {"id": pid, "name": name, "rootSegmentId": r.segment_ids[0],
+                "rootPose": rigid_pose(0, root_y, 0), "jointStates": states}
 
+    poses = []
+
+    # 1. Anatomical position — all joints neutral
+    poses.append(_pose(r.saved_pose_id, "anatomical_position", 95, {}))
+
+    # 2. T-pose — shoulders abducted 90°, everything else neutral
+    t_id = uid()
+    poses.append(_pose(t_id, "t_pose", 95, {
+        J_SHOULDER_R: {"aa": 90}, J_SHOULDER_L: {"aa": 90},
+    }))
+
+    # 3. Seated — hips and knees flexed ~90°
+    seated_id = uid()
+    poses.append(_pose(seated_id, "seated", 55, {
+        J_HIP_R: {"fe": 90}, J_HIP_L: {"fe": 90},
+        J_KNEE_R: {"fe": 90}, J_KNEE_L: {"fe": 90},
+        J_ELBOW_R: {"fe": 90}, J_ELBOW_L: {"fe": 90},
+    }))
+
+    # 4. Mid-stance gait (R stance, L swing)
+    # Winter (2009) Table 3.1: mid-stance angles
+    midstance_id = uid()
+    poses.append(_pose(midstance_id, "gait_midstance_r", 95, {
+        J_HIP_R: {"fe": 8, "aa": -5},      # stance hip: slight flexion, adducted
+        J_HIP_L: {"fe": 25, "aa": 3},       # swing hip: flexing forward
+        J_KNEE_R: {"fe": 15},                # stance knee: slight flexion
+        J_KNEE_L: {"fe": 60},                # swing knee: flexed for clearance
+        J_ANKLE_R: {"fe": 5},                # stance ankle: slight dorsiflexion
+        J_ANKLE_L: {"fe": -15},              # swing ankle: plantarflexed
+        J_SHOULDER_R: {"fe": -15},            # arm swing back
+        J_SHOULDER_L: {"fe": 20},             # arm swing forward
+        J_ELBOW_R: {"fe": 15},
+        J_ELBOW_L: {"fe": 25},
+    }))
+
+    # 5. Heel-strike (R heel contact)
+    heelstrike_id = uid()
+    poses.append(_pose(heelstrike_id, "gait_heelstrike_r", 95, {
+        J_HIP_R: {"fe": 30, "aa": -3},       # stance hip: flexed at contact
+        J_HIP_L: {"fe": -10},                 # trailing leg: extended
+        J_KNEE_R: {"fe": 5},                  # stance knee: near full extension
+        J_KNEE_L: {"fe": 40},                 # trailing knee: flexing
+        J_ANKLE_R: {"fe": 0},                 # neutral at contact
+        J_ANKLE_L: {"fe": -20},               # push-off plantarflexion
+        J_SHOULDER_R: {"fe": -25},
+        J_SHOULDER_L: {"fe": 30},
+        J_ELBOW_R: {"fe": 20},
+        J_ELBOW_L: {"fe": 30},
+    }))
+
+    # 6. Toe-off (R push-off)
+    toeoff_id = uid()
+    poses.append(_pose(toeoff_id, "gait_toeoff_r", 95, {
+        J_HIP_R: {"fe": -10},                 # push-off hip: extended
+        J_HIP_L: {"fe": 30},                  # swing hip: flexed
+        J_KNEE_R: {"fe": 40},                 # push-off knee: flexing
+        J_KNEE_L: {"fe": 5},                  # stance knee: extending
+        J_ANKLE_R: {"fe": -20},               # push-off: plantarflexed
+        J_ANKLE_L: {"fe": 5},                 # stance: dorsiflexed
+        J_SHOULDER_R: {"fe": 25},
+        J_SHOULDER_L: {"fe": -20},
+        J_ELBOW_R: {"fe": 30},
+        J_ELBOW_L: {"fe": 15},
+    }))
+
+    return poses
 def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
-    forces: list[dict] = []
+    """Generate multiple loading conditions covering common biomechanical scenarios.
+
+    Force magnitudes from:
+      - GRF: Winter (2009) Table 4.1 — normalized to body weight
+      - Joint reactions: Bergmann et al., J Biomech 34(7):859-871, 2001 (hip)
+      - Muscle forces: estimated from inverse dynamics solutions
+    """
+    conditions: list[dict] = []
 
     def _grf(name, mag, side, seg_idx):
         return {"id": uid(), "name": name, "forceType": "ground_reaction", "magnitude": mag, "direction": unit_vec3(0,1,0),
@@ -1069,8 +1646,9 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
                 "contactSide": side, "contactSegmentId": r.segment_ids[seg_idx]}
 
     def _mf(name, mag, mname):
+        mid = r.muscle_ids[r.muscle_name_to_idx[mname]] if mname in r.muscle_name_to_idx else uid()
         return {"id": uid(), "name": name, "forceType": "muscle", "magnitude": mag, "direction": unit_vec3(0,-1,0),
-                "muscleId": r.muscle_ids[r.muscle_name_to_idx[mname]], "applicationPoint": vec3(),
+                "muscleId": mid, "applicationPoint": vec3(),
                 "activeComponent": mag*0.9, "passiveComponent": mag*0.1}
 
     def _grav(si):
@@ -1083,28 +1661,103 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
         return {"id": uid(), "name": name, "forceType": "joint_reaction", "magnitude": mag, "direction": unit_vec3(0,1,0),
                 "jointId": r.joint_ids[ji], "applicationPoint": vec3()}
 
-    tw = weight * 9.81; rf = random.uniform(0.55, 0.75)
-    forces += [_grf("GRF (R foot)", round(tw*rf), "right", 13), _grf("GRF (L foot)", round(tw*(1-rf)), "left", 14)]
-    forces += [_mf("Rectus femoris force (R)", 285, "Rectus Femoris (R)"), _mf("Gastrocnemius force (R)", 180, "Gastrocnemius (R)"),
-               _mf("L quad force", 120, "Rectus Femoris (L)"), _mf("L gastroc", 80, "Gastrocnemius (L)"),
-               _mf("R erector spinae", 350, "Erector Spinae (R)"), _mf("L erector spinae", 340, "Erector Spinae (L)"),
-               _mf("R gluteus max", 180, "Gluteus Maximus (R)"), _mf("R soleus", 220, "Soleus (R)")]
-    for si in range(15): forces.append(_grav(si))
-    forces += [_jr("R knee joint reaction", 1800, J_KNEE_R), _jr("R hip joint reaction", 2400, J_HIP_R), _jr("L5-S1 joint reaction", 900, J_L5S1)]
+    def _equil():
+        nf = vec3(round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.2,0.2),2))
+        return {"netForce": nf, "netMoment": vec3(round(random.uniform(-1,1),1), round(random.uniform(-0.5,0.5),1), round(random.uniform(-0.5,0.5),1)),
+                "isStatic": True, "residualForceMagnitude": round(math.sqrt(nf["x"]**2+nf["y"]**2+nf["z"]**2), 2),
+                "residualMomentMagnitude": round(random.uniform(0.5,2), 1)}
 
-    nf = vec3(round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.2,0.2),2))
-    return [{"id": uid(), "name": "contrapposto_standing", "poseId": r.pose_id, "forces": forces,
-             "moments": [{"id": uid(), "name": "Knee resultant moment (R)", "momentType": "joint_resultant",
-                           "aboutJointId": r.joint_ids[J_KNEE_R], "axis": unit_vec3(0,0,1), "magnitude": round(random.uniform(800,1500))}],
-             "contacts": [{"id": uid(), "name": "Right foot ground contact", "contactType": "foot_ground",
-                            "segmentId": r.segment_ids[13], "surfaceNormal": unit_vec3(0,1,0), "contactPoint": vec3(-9,0,5), "isActive": True},
-                           {"id": uid(), "name": "Left foot ground contact", "contactType": "foot_ground",
-                            "segmentId": r.segment_ids[14], "surfaceNormal": unit_vec3(0,1,0), "contactPoint": vec3(9,0,5), "isActive": True}],
-             "equilibrium": {"netForce": nf, "netMoment": vec3(round(random.uniform(-1,1),1), round(random.uniform(-0.5,0.5),1), round(random.uniform(-0.5,0.5),1)),
-                              "isStatic": True, "residualForceMagnitude": round(math.sqrt(nf["x"]**2+nf["y"]**2+nf["z"]**2), 2),
-                              "residualMomentMagnitude": round(random.uniform(0.5,2), 1)}}]
+    def _contacts_bilateral():
+        return [{"id": uid(), "name": "Right foot ground contact", "contactType": "foot_ground",
+                  "segmentId": r.segment_ids[13], "surfaceNormal": unit_vec3(0,1,0), "contactPoint": vec3(-9,0,5), "isActive": True},
+                {"id": uid(), "name": "Left foot ground contact", "contactType": "foot_ground",
+                  "segmentId": r.segment_ids[14], "surfaceNormal": unit_vec3(0,1,0), "contactPoint": vec3(9,0,5), "isActive": True}]
 
+    tw = weight * 9.81
+    gravs = [_grav(si) for si in range(15)]
 
+    # --- LC 1: Double-leg quiet standing ---
+    f1 = [_grf("GRF (R foot)", round(tw*0.5), "right", 13),
+          _grf("GRF (L foot)", round(tw*0.5), "left", 14)]
+    f1 += [_mf("R erector spinae", 150, "Erector Spinae (R)"),
+           _mf("L erector spinae", 150, "Erector Spinae (L)"),
+           _mf("R soleus standing", 80, "Soleus (R)"),
+           _mf("L soleus standing", 80, "Soleus (L)")]
+    f1 += gravs
+    f1 += [_jr("R hip joint reaction", round(tw*0.65), J_HIP_R),
+           _jr("L hip joint reaction", round(tw*0.65), J_HIP_L),
+           _jr("L5-S1 joint reaction", round(tw*0.55), J_L5S1)]
+    conditions.append({"id": uid(), "name": "double_leg_standing", "poseId": r.saved_pose_id,
+                        "forces": f1, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
+
+    # --- LC 2: Contrapposto (asymmetric weight shift) ---
+    rf = random.uniform(0.55, 0.75)
+    f2 = [_grf("GRF (R foot)", round(tw*rf), "right", 13),
+          _grf("GRF (L foot)", round(tw*(1-rf)), "left", 14)]
+    f2 += [_mf("Rectus femoris force (R)", 285, "Rectus Femoris (R)"),
+           _mf("Gastrocnemius force (R)", 180, "Gastrocnemius (R)"),
+           _mf("L quad force", 120, "Rectus Femoris (L)"),
+           _mf("L gastroc", 80, "Gastrocnemius (L)"),
+           _mf("R erector spinae", 350, "Erector Spinae (R)"),
+           _mf("L erector spinae", 340, "Erector Spinae (L)"),
+           _mf("R gluteus max", 180, "Gluteus Maximus (R)"),
+           _mf("R soleus", 220, "Soleus (R)")]
+    f2 += gravs
+    f2 += [_jr("R knee joint reaction", 1800, J_KNEE_R),
+           _jr("R hip joint reaction", 2400, J_HIP_R),
+           _jr("L5-S1 joint reaction", 900, J_L5S1)]
+    km = {"id": uid(), "name": "Knee resultant moment (R)", "momentType": "joint_resultant",
+          "aboutJointId": r.joint_ids[J_KNEE_R], "axis": unit_vec3(0,0,1), "magnitude": round(random.uniform(800,1500))}
+    conditions.append({"id": uid(), "name": "contrapposto_standing", "poseId": r.pose_id,
+                        "forces": f2, "moments": [km], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
+
+    # --- LC 3: Mid-stance gait (R stance phase) ---
+    # GRF ~ 1.0 BW at mid-stance (Winter 2009, Fig 4.4)
+    f3 = [_grf("GRF (R foot midstance)", round(tw*1.0), "right", 13)]
+    f3 += [_mf("R gluteus medius", 800, "Gluteus Medius (R)"),     # primary hip stabilizer
+           _mf("R soleus midstance", 350, "Soleus (R)"),
+           _mf("R gastroc midstance", 200, "Gastrocnemius (R)"),
+           _mf("R tibialis ant", 50, "Tibialis Anterior (R)"),
+           _mf("R vastus lat", 250, "Vastus Lateralis (R)"),
+           _mf("R erector spinae gait", 200, "Erector Spinae (R)"),
+           _mf("L erector spinae gait", 200, "Erector Spinae (L)")]
+    f3 += gravs
+    # Hip JRF ~ 2.5 BW at mid-stance (Bergmann 2001)
+    f3 += [_jr("R hip JRF midstance", round(tw*2.5), J_HIP_R),
+           _jr("R knee JRF midstance", round(tw*1.5), J_KNEE_R),
+           _jr("R ankle JRF midstance", round(tw*3.0), J_ANKLE_R)]
+    # Use the 4th saved pose (gait_midstance_r)
+    ms_pose_id = r.saved_pose_id  # will be overridden at runtime
+    conditions.append({"id": uid(), "name": "gait_midstance_r", "poseId": ms_pose_id,
+                        "forces": f3, "moments": [], "contacts": _contacts_bilateral()[:1], "equilibrium": _equil()})
+
+    # --- LC 4: Heel-strike (R foot initial contact) ---
+    # GRF ~ 1.2 BW at heel-strike impact (Winter 2009)
+    f4 = [_grf("GRF (R foot heelstrike)", round(tw*1.2), "right", 13),
+          _grf("GRF (L foot heelstrike)", round(tw*0.15), "left", 14)]  # trailing foot lifting
+    f4 += [_mf("R tibialis ant heelstrike", 250, "Tibialis Anterior (R)"),  # eccentric braking
+           _mf("R quad heelstrike", 400, "Rectus Femoris (R)"),
+           _mf("R hamstring heelstrike", 200, "Biceps Femoris (R)"),
+           _mf("R gluteus max heelstrike", 350, "Gluteus Maximus (R)")]
+    f4 += gravs
+    f4 += [_jr("R hip JRF heelstrike", round(tw*3.0), J_HIP_R),
+           _jr("R knee JRF heelstrike", round(tw*2.0), J_KNEE_R)]
+    conditions.append({"id": uid(), "name": "gait_heelstrike_r", "poseId": ms_pose_id,
+                        "forces": f4, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
+
+    # --- LC 5: Toe-off (R push-off) ---
+    # GRF ~ 1.1 BW at toe-off (Winter 2009)
+    f5 = [_grf("GRF (R foot toeoff)", round(tw*1.1), "right", 13)]
+    f5 += [_mf("R gastroc toeoff", 1200, "Gastrocnemius (R)"),     # peak ankle plantarflexor
+           _mf("R soleus toeoff", 2500, "Soleus (R)"),              # dominant push-off muscle
+           _mf("R hip flexor toeoff", 300, "Iliopsoas (R)")]
+    f5 += gravs
+    f5 += [_jr("R ankle JRF toeoff", round(tw*5.0), J_ANKLE_R),    # peak ankle force
+           _jr("R hip JRF toeoff", round(tw*2.0), J_HIP_R)]
+    conditions.append({"id": uid(), "name": "gait_toeoff_r", "poseId": ms_pose_id,
+                        "forces": f5, "moments": [], "contacts": _contacts_bilateral()[:1], "equilibrium": _equil()})
+
+    return conditions
 HILL_EQ = "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]"
 LIG_EQ = "F_lig = piecewise(ε ≤ 0: 0, ε ≤ ε_toe: k_toe×ε^n, ε ≤ ε_fail: k×(ε-ε₀), ε > ε_fail: FAILURE)"
 BONE_YIELD_EQ = "σ_bone = F / A ≤ σ_yield (rigid body assumption valid when σ_bone << σ_yield)"
@@ -1183,7 +1836,8 @@ def generate_human_body(variation: int = 0) -> dict:
     vascular = gen_vascular(r)
     ligaments = gen_ligaments(r)
     cartilage = gen_cartilage(r)
-    segments = gen_segments(r, weight)
+    sex = proportions.get("biologicalSex", "male")
+    segments = gen_segments(r, weight, sex)
     current_pose = gen_current_pose(r)
     saved_poses = gen_saved_poses(r)
     loading = gen_loading_conditions(r, weight)
