@@ -23,6 +23,9 @@
       "Bash(docker compose:*)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8090/)",
       "Bash(find /home/admin/spikes -name *.ts -type f)"
+    ],
+    "additionalDirectories": [
+      "/home/admin/codebases/codespaces-blank/session-3/human-controller/public/assets"
     ]
   }
 }

@@ -2579,7 +2579,19 @@ def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: floa
         return _lathe_mesh(profile, radial_segments, scale_x=width / max(width, depth), scale_z=depth / max(width, depth))
 
     if cls == "flat":
-        return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth / 2.0, 0.08),
+        # Cranial vault bones: use a hemisphere shell (open half-sphere) so they
+        # look like curved skull plates rather than solid discs.
+        # Depth is increased to ~20% of width for visible thickness.
+        is_cranial = any(k in name for k in ["Frontal", "Parietal", "Occipital", "Temporal"])
+        if is_cranial:
+            shell_depth = max(width * 0.2, depth)
+            return _uv_sphere_mesh(width / 2.0, length / 2.0, shell_depth,
+                                   radial_segments, axial_segments)
+        # Scapula: flatter with more depth than cranial
+        if "Scapula" in name:
+            return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth, width * 0.08),
+                                   radial_segments, axial_segments)
+        return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth / 2.0, 0.15),
                                radial_segments, axial_segments)
 
     if cls == "short":
