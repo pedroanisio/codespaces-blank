@@ -79,6 +79,10 @@ SINGLE_REF_FIELDS = {
     "inputRef", "targetQualityProfileRef", "qualityProfileRef",
     "audioRef", "speakerRef", "characterRef", "audioAssetRef",
     "fromRef", "toRef", "subjectRef", "targetRef",
+    "dubbedAudioRef", "adaptedMarketingRef", "storyRef",
+    "assemblyPlanRef", "thumbnailSourceRef", "sourceEditRef",
+    "renderPlanRef", "sceneRef", "shotRef",
+    "startBeatRef", "endBeatRef",
 }
 
 # Fields that should be arrays of EntityRef objects
@@ -87,6 +91,8 @@ ARRAY_REF_FIELDS = {
     "shotRefs", "storyBeatRefs", "scriptSegmentRefs", "directorNoteRefs",
     "referenceAssetRefs", "sceneRefs", "sourceRefs", "dependencyRefs",
     "inputRefs", "outputRefs",
+    "subtitleTrackRefs", "sourceSceneRefs", "sourceShotRefs", "sourceAssetRefs",
+    "adapterRefs", "environmentRefs",
 }
 
 
@@ -491,6 +497,497 @@ def fix_shots(shots: list) -> list:
     return fixed
 
 
+# ── Fragment category fix ─────────────────────────────────────────────────────
+
+CATEGORY_MAP = {
+    "contextual": "custom",
+    "end-state": "custom",
+    "visual": "appearance",
+    "character": "appearance",
+    "setting": "environment",
+    "tone": "mood",
+    "lighting": "style",
+    "camera": "style",
+}
+VALID_CATEGORIES = {"appearance", "style", "action", "environment", "mood", "constraint", "custom"}
+
+
+def fix_fragment_categories(obj: object) -> object:
+    """Fix non-enum category values in canonicalPromptFragments."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "canonicalPromptFragments" and isinstance(v, list):
+                for frag in v:
+                    if isinstance(frag, dict) and "category" in frag:
+                        cat = frag["category"]
+                        if cat not in VALID_CATEGORIES:
+                            frag["category"] = CATEGORY_MAP.get(cat, "custom")
+                result[k] = v
+            else:
+                result[k] = fix_fragment_categories(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_fragment_categories(item) for item in obj]
+    return obj
+
+
+# ── QC Results fix ────────────────────────────────────────────────────────────
+
+def fix_qc_result(qc: dict) -> dict:
+    """Convert rule-template qcResult to schema-compliant check result."""
+    result = {}
+    # ruleId → metric
+    result["metric"] = qc.get("ruleId") or qc.get("metric") or qc.get("name", "unknown")
+    # status → pass
+    status = qc.get("status", "")
+    result["pass"] = status in ("pass", "passed", "success", "ok", True)
+    # Keep allowed fields
+    if "severity" in qc:
+        sev = qc["severity"]
+        result["severity"] = sev if sev in ("info", "warning", "error") else "info"
+    if "notes" in qc:
+        result["notes"] = qc["notes"]
+    # measuredValue/targetValue → notes appendix
+    extras = []
+    if "measuredValue" in qc:
+        extras.append(f"measured={qc['measuredValue']}")
+    if "targetValue" in qc:
+        extras.append(f"target={qc['targetValue']}")
+    if extras:
+        existing = result.get("notes", "")
+        result["notes"] = f"{existing} ({', '.join(extras)})".strip()
+    return result
+
+
+def fix_qc_results_recursive(obj: object) -> object:
+    """Fix qcResults arrays throughout."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "qcResults" and isinstance(v, list):
+                result[k] = [fix_qc_result(qc) if isinstance(qc, dict) else qc for qc in v]
+            else:
+                result[k] = fix_qc_results_recursive(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_qc_results_recursive(item) for item in obj]
+    return obj
+
+
+# ── Platform deliveries fix ───────────────────────────────────────────────────
+
+PLATFORM_DELIVERY_ALLOWED = {
+    "platform", "format", "aspectRatio", "resolution", "frameRate",
+    "maxDurationSec", "publishSchedule", "metadata",
+}
+VALID_PLATFORMS = {"youtube", "instagram", "tiktok", "vimeo", "broadcast", "theatrical", "streaming", "custom"}
+
+
+def fix_platform_delivery(pd: dict) -> dict:
+    """Fix a platformDelivery to match schema."""
+    result = {}
+    # Keep allowed fields
+    platform = pd.get("platform", "custom")
+    result["platform"] = platform if platform in VALID_PLATFORMS else "custom"
+
+    if "format" in pd:
+        result["format"] = pd["format"]
+
+    # aspectRatio must be object {expression}
+    ar = pd.get("aspectRatio")
+    if isinstance(ar, str):
+        result["aspectRatio"] = {"expression": ar}
+    elif isinstance(ar, dict):
+        result["aspectRatio"] = ar
+
+    # resolution must be object {widthPx, heightPx}
+    res = pd.get("resolution")
+    if isinstance(res, dict):
+        fixed_res = {}
+        if "width" in res:
+            fixed_res["widthPx"] = res["width"]
+        if "height" in res:
+            fixed_res["heightPx"] = res["height"]
+        if "widthPx" in res:
+            fixed_res["widthPx"] = res["widthPx"]
+        if "heightPx" in res:
+            fixed_res["heightPx"] = res["heightPx"]
+        if fixed_res:
+            result["resolution"] = fixed_res
+
+    # frameRate must be object {fps}
+    fr = pd.get("frameRate")
+    if isinstance(fr, (int, float)):
+        result["frameRate"] = {"fps": fr}
+    elif isinstance(fr, dict):
+        result["frameRate"] = fr
+
+    if "maxDurationSec" in pd:
+        result["maxDurationSec"] = pd["maxDurationSec"]
+
+    # publishSchedule must have kind
+    ps = pd.get("publishSchedule")
+    if isinstance(ps, dict):
+        if "kind" not in ps:
+            ps["kind"] = "fixed"
+        result["publishSchedule"] = ps
+
+    # Move all technical spec fields into metadata
+    tech_fields = {
+        "codec", "profile", "bitrateMbps", "audioCodec", "audioSampleRateHz",
+        "audioBitDepth", "audioChannelLayout", "loudnessIntegratedLUFS",
+        "truePeakDbTP", "colorSpace", "dynamicRange", "containerNotes",
+    }
+    meta = {}
+    for tk in tech_fields:
+        if tk in pd:
+            meta[tk] = str(pd[tk])
+    # Also move non-schema schedule fields
+    for sk in ("fuzzy", "month", "year", "notes"):
+        if sk in pd and sk not in result:
+            meta[f"schedule_{sk}"] = str(pd[sk])
+    if meta:
+        result["metadata"] = meta
+
+    return result
+
+
+def fix_platform_deliveries_recursive(obj: object) -> object:
+    """Fix platformDeliveries arrays."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "platformDeliveries" and isinstance(v, list):
+                result[k] = [fix_platform_delivery(pd) if isinstance(pd, dict) else pd for pd in v]
+            else:
+                result[k] = fix_platform_deliveries_recursive(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_platform_deliveries_recursive(item) for item in obj]
+    return obj
+
+
+# ── Localization targets fix ──────────────────────────────────────────────────
+
+def fix_localization_targets_recursive(obj: object) -> object:
+    """Ensure localizationTargets refs are objects, handle None values."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "localizationTargets" and isinstance(v, list):
+                fixed = []
+                for lt in v:
+                    if isinstance(lt, dict):
+                        # Fix null refs
+                        if lt.get("dubbedAudioRef") is None:
+                            lt.pop("dubbedAudioRef", None)
+                        if lt.get("adaptedMarketingRef") is None:
+                            lt.pop("adaptedMarketingRef", None)
+                        fixed.append(lt)
+                    else:
+                        fixed.append(lt)
+                result[k] = fixed
+            else:
+                result[k] = fix_localization_targets_recursive(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_localization_targets_recursive(item) for item in obj]
+    return obj
+
+
+# ── Visual asset generation fix ───────────────────────────────────────────────
+
+GENERATION_STEP_ALLOWED = {
+    "stepId", "operationType", "provider", "tool", "model",
+    "executionEnvironment", "inputRefs", "outputRefs",
+    "prompt", "negativePrompt", "systemPrompt", "structuredPrompt",
+    "promptHistory", "seed", "guidanceScale", "inferenceSteps",
+    "sampler", "scheduler", "strength", "cfg", "durationSec",
+    "resolution", "aspectRatio", "frameRate", "referenceAssets",
+    "consistencyAnchors", "adapterInputs", "voiceSettings",
+    "cameraMotionHints", "parameters", "costEstimate",
+}
+
+# model allowed fields
+MODEL_ALLOWED = {
+    "provider", "tool", "modelId", "modelVersion", "checkpoint",
+    "endpoint", "adapterRefs", "parameters",
+}
+
+PROMPT_HISTORY_ALLOWED = {
+    "versionId", "prompt", "negativePrompt", "createdAt",
+    "parentVersionId", "changeNote",
+}
+
+CONSISTENCY_ANCHOR_ALLOWED = {
+    "anchorType", "name", "ref", "weight", "lockLevel", "attributes",
+}
+
+ANCHOR_TYPE_MAP = {
+    "hard": "character",  # will be refined per-anchor
+    "soft": "style",
+}
+
+
+def fix_consistency_anchor(anchor: dict) -> dict:
+    """Fix a consistencyAnchor to be schema-compliant."""
+    result = {}
+    # Determine anchorType from context
+    anchor_type = anchor.get("anchorType") or anchor.get("type", "custom")
+    if anchor_type not in {"character", "style", "environment", "prop", "camera", "spatial", "custom"}:
+        # Infer from sourceRef
+        source = anchor.get("sourceRef", "")
+        source_str = source if isinstance(source, str) else (source.get("id", "") if isinstance(source, dict) else "")
+        if "char-" in source_str:
+            anchor_type = "character"
+        elif "env-" in source_str:
+            anchor_type = "environment"
+        elif "prop-" in source_str:
+            anchor_type = "prop"
+        else:
+            anchor_type = "custom"
+    result["anchorType"] = anchor_type
+
+    if "name" in anchor:
+        result["name"] = anchor["name"]
+
+    # sourceRef → ref
+    source_ref = anchor.get("sourceRef") or anchor.get("ref")
+    if source_ref is not None:
+        result["ref"] = to_entity_ref(source_ref)
+
+    if "weight" in anchor:
+        result["weight"] = anchor["weight"]
+
+    lock = anchor.get("lockLevel") or anchor.get("type")
+    if lock in ("soft", "medium", "hard"):
+        result["lockLevel"] = lock
+
+    if "attributes" in anchor:
+        result["attributes"] = anchor["attributes"]
+
+    return result
+
+
+def fix_generation_step(step: dict) -> dict:
+    """Fix a generation step to only have schema-allowed fields."""
+    result = {}
+    for k, v in step.items():
+        if k in GENERATION_STEP_ALLOWED:
+            if k == "model" and isinstance(v, dict):
+                # Fix model to only have allowed fields
+                fixed_model = {}
+                if "name" in v:
+                    fixed_model["modelId"] = v["name"]
+                for mk in MODEL_ALLOWED:
+                    if mk in v:
+                        fixed_model[mk] = v[mk]
+                result[k] = fixed_model
+            elif k == "promptHistory" and isinstance(v, list):
+                fixed_ph = []
+                for ph in v:
+                    if isinstance(ph, dict):
+                        fixed = {}
+                        if "version" in ph and "versionId" not in ph:
+                            fixed["versionId"] = str(ph["version"])
+                        for phk in PROMPT_HISTORY_ALLOWED:
+                            if phk in ph:
+                                fixed[phk] = ph[phk]
+                        if "timestamp" in ph and "createdAt" not in fixed:
+                            fixed["createdAt"] = ph["timestamp"]
+                        fixed_ph.append(fixed)
+                    else:
+                        fixed_ph.append(ph)
+                result[k] = fixed_ph
+            elif k == "consistencyAnchors" and isinstance(v, list):
+                result[k] = [fix_consistency_anchor(a) if isinstance(a, dict) else a for a in v]
+            elif k == "aspectRatio" and isinstance(v, str):
+                result[k] = {"expression": v}
+            elif k == "frameRate" and isinstance(v, (int, float)):
+                result[k] = {"fps": v}
+            elif k == "cameraMotionHints" and isinstance(v, str):
+                result[k] = {"description": v}
+            else:
+                result[k] = v
+    # Ensure stepId
+    if "stepId" not in result:
+        result["stepId"] = "step-auto"
+    return result
+
+
+def fix_visual_asset_generation(obj: object) -> object:
+    """Fix generation blocks on visual assets."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "generation" and isinstance(v, dict):
+                gen = {}
+                # Keep allowed top-level generation fields
+                for gk, gv in v.items():
+                    if gk in ("mode", "consistencyAnchors", "reproducibility", "extensions"):
+                        if gk == "consistencyAnchors" and isinstance(gv, list):
+                            gen[gk] = [fix_consistency_anchor(a) if isinstance(a, dict) else a for a in gv]
+                        else:
+                            gen[gk] = gv
+                    elif gk == "steps" and isinstance(gv, list):
+                        gen[gk] = [fix_generation_step(s) if isinstance(s, dict) else s for s in gv]
+                if "mode" not in gen:
+                    gen["mode"] = "ai_generated"
+                result[k] = gen
+            else:
+                result[k] = fix_visual_asset_generation(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_visual_asset_generation(item) for item in obj]
+    return obj
+
+
+# ── Visual asset entity fixes ─────────────────────────────────────────────────
+
+VISUAL_ASSET_ALLOWED_EXTRA = {"sourceRef", "type"}  # Will be removed
+
+
+def fix_visual_assets(assets: list) -> list:
+    """Fix visualAsset items."""
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        ensure_entity_fields(asset, "visualAsset", name_fallback=asset.get("id", "visual"))
+        # Remove non-schema fields
+        asset.pop("type", None)
+        asset.pop("sourceRef", None)
+    return assets
+
+
+# ── Marketing asset fixes ─────────────────────────────────────────────────────
+
+def fix_marketing_assets(assets: list) -> list:
+    """Fix marketingAsset items."""
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        ensure_entity_fields(asset, "marketingAsset", name_fallback=asset.get("id", "marketing"))
+        # Fix null durationSec
+        if asset.get("durationSec") is None:
+            asset.pop("durationSec", None)
+    return assets
+
+
+# ── Script segments fix ───────────────────────────────────────────────────────
+
+SEGMENT_TYPES = {
+    "scene_heading", "action", "dialogue", "parenthetical",
+    "transition", "title_card", "voice_over", "on_screen_text", "custom",
+}
+
+
+def fix_script_segments(segments: list) -> list:
+    """Add missing required fields to script segments."""
+    for i, seg in enumerate(segments):
+        if not isinstance(seg, dict):
+            continue
+        if "order" not in seg:
+            seg["order"] = i + 1
+        if "segmentType" not in seg:
+            # Infer from context
+            if seg.get("audioAssetRef"):
+                seg["segmentType"] = "dialogue"
+            else:
+                seg["segmentType"] = "custom"
+    return segments
+
+
+# ── Story arcs fix ────────────────────────────────────────────────────────────
+
+def fix_story_arcs(arcs: list) -> list:
+    """Remove non-schema fields from story arcs, add required fields."""
+    for arc in arcs:
+        if not isinstance(arc, dict):
+            continue
+        arc.pop("entityType", None)
+        if "arcId" not in arc:
+            arc["arcId"] = arc.get("id", "arc-unknown")
+        if "name" not in arc:
+            arc["name"] = arc.get("arcId", "Unknown Arc")
+    return arcs
+
+
+# ── Workflow status fix ───────────────────────────────────────────────────────
+
+VALID_WORKFLOW_STATUS = {"pending", "running", "paused", "succeeded", "failed", "cancelled"}
+
+
+def fix_workflows(workflows: list) -> list:
+    """Fix workflow status values and edge structures."""
+    for wf in workflows:
+        if not isinstance(wf, dict):
+            continue
+        status = wf.get("status", "")
+        if status == "success":
+            wf["status"] = "succeeded"
+        elif status not in VALID_WORKFLOW_STATUS:
+            wf["status"] = "pending"
+    return workflows
+
+
+# ── Relationships fix ─────────────────────────────────────────────────────────
+
+def fix_relationships(rels: object) -> dict:
+    """Convert relationships list to schema-compliant {edges} with edgeId/dependencyType."""
+    if isinstance(rels, dict) and "edges" in rels:
+        edges = rels.get("edges", [])
+    elif isinstance(rels, list):
+        edges = rels
+    else:
+        return {"edges": []}
+
+    fixed = []
+    for i, edge in enumerate(edges):
+        if not isinstance(edge, dict):
+            continue
+        result = {}
+        result["edgeId"] = edge.get("edgeId") or edge.get("id") or f"rel-{i:03d}"
+
+        # fromRef/toRef stay as EntityRef
+        if "fromRef" in edge:
+            result["fromRef"] = to_entity_ref(edge["fromRef"])
+        if "toRef" in edge:
+            result["toRef"] = to_entity_ref(edge["toRef"])
+
+        dep_type = edge.get("dependencyType", "references")
+        valid_dep_types = {"requires", "blocks", "derives_from", "supersedes", "references", "syncs_with", "custom"}
+        result["dependencyType"] = dep_type if dep_type in valid_dep_types else "references"
+
+        if "required" in edge:
+            result["required"] = edge["required"]
+        if "notes" in edge:
+            result["notes"] = edge["notes"]
+
+        fixed.append(result)
+
+    return {"edges": fixed}
+
+
+# ── Audio technicalSpec fix ───────────────────────────────────────────────────
+
+def fix_audio_tech_spec_recursive(obj: object) -> object:
+    """Remove non-schema fields from audio technicalSpec."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "technicalSpec" and isinstance(v, dict):
+                # Remove durationSec if it's in technicalSpec (not allowed there)
+                cleaned = {tk: tv for tk, tv in v.items() if tk != "durationSec"}
+                result[k] = cleaned
+            else:
+                result[k] = fix_audio_tech_spec_recursive(v)
+        return result
+    elif isinstance(obj, list):
+        return [fix_audio_tech_spec_recursive(item) for item in obj]
+    return obj
+
+
 # ── Main migration ────────────────────────────────────────────────────────────
 
 def migrate(doc: dict) -> dict:
@@ -506,21 +1003,49 @@ def migrate(doc: dict) -> dict:
     # 3. Fix fragments throughout
     doc = fix_fragments_recursive(doc)
 
-    # 4. Fix syncPoints throughout
+    # 4. Fix fragment categories
+    doc = fix_fragment_categories(doc)
+
+    # 5. Fix syncPoints throughout
     doc = fix_sync_points_recursive(doc)
 
-    # 5. Fix operations throughout (before ref fixing, since we rename id→opId)
+    # 6. Fix operations throughout (before ref fixing, since we rename id→opId)
     doc = fix_operations_in_tree(doc)
 
-    # 6. Fix all refs throughout
+    # 7. Fix visual asset generation blocks (before ref fixing)
+    doc = fix_visual_asset_generation(doc)
+
+    # 8. Fix all refs throughout
     doc = fix_refs_recursive(doc)
 
-    # 7. Fix audio assets
+    # 9. Fix localization targets (null refs)
+    doc = fix_localization_targets_recursive(doc)
+
+    # 10. Fix qcResults
+    doc = fix_qc_results_recursive(doc)
+
+    # 11. Fix platformDeliveries
+    doc = fix_platform_deliveries_recursive(doc)
+
+    # 12. Fix audio technicalSpec
+    doc = fix_audio_tech_spec_recursive(doc)
+
+    # 13. Fix audio assets
     audio_assets = (doc.get("assetLibrary") or {}).get("audioAssets") or []
     for i, aa in enumerate(audio_assets):
         audio_assets[i] = fix_audio_asset(aa)
 
-    # 8. Fix assembly entities
+    # 14. Fix visual assets
+    visual_assets = (doc.get("assetLibrary") or {}).get("visualAssets") or []
+    if visual_assets:
+        doc["assetLibrary"]["visualAssets"] = fix_visual_assets(visual_assets)
+
+    # 15. Fix marketing assets
+    marketing_assets = (doc.get("assetLibrary") or {}).get("marketingAssets") or []
+    if marketing_assets:
+        doc["assetLibrary"]["marketingAssets"] = fix_marketing_assets(marketing_assets)
+
+    # 16. Fix assembly entities
     assembly = doc.get("assembly") or {}
 
     timelines = assembly.get("timelines") or []
@@ -535,19 +1060,40 @@ def migrate(doc: dict) -> dict:
     for i, rp in enumerate(render_plans):
         render_plans[i] = fix_render_plan(rp)
 
-    # 9. Fix dependencies
+    # 17. Fix dependencies (orchestration edges → fromNodeId/toNodeId)
     if "dependencies" in doc:
         doc["dependencies"] = fix_dependencies(doc["dependencies"])
 
-    # 10. Fix scenes
+    # 18. Fix relationships (list → {edges} with edgeId/dependencyType)
+    if "relationships" in doc:
+        doc["relationships"] = fix_relationships(doc["relationships"])
+
+    # 19. Fix scenes
     scenes = (doc.get("production") or {}).get("scenes") or []
     for scene in scenes:
         fix_scene_shot_refs(scene)
 
-    # 11. Fix shots
+    # 20. Fix shots
     shots = (doc.get("production") or {}).get("shots") or []
     if shots:
         doc["production"]["shots"] = fix_shots(shots)
+
+    # 21. Fix script segments
+    script = (doc.get("canonicalDocuments") or {}).get("script") or {}
+    segments = script.get("segments") or []
+    if segments:
+        fix_script_segments(segments)
+
+    # 22. Fix story arcs
+    story = (doc.get("canonicalDocuments") or {}).get("story") or {}
+    arcs = story.get("arcs") or []
+    if arcs:
+        fix_story_arcs(arcs)
+
+    # 23. Fix orchestration workflows
+    workflows = (doc.get("orchestration") or {}).get("workflows") or []
+    if workflows:
+        fix_workflows(workflows)
 
     return doc
 
