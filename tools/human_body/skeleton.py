@@ -1,155 +1,187 @@
+from typing import NamedTuple
+
 from .shared import *
+
 
 # =============================================================================
 # SKELETON — 206 bones
 # =============================================================================
 
-# BoneDef: (name, classification, region, parent_idx, length, width, depth, mass, (x,y,z))
-BoneDef = tuple[str, str, str, int | None, float, float, float, float, tuple[float, float, float]]
+class BoneDef(NamedTuple):
+    name: str
+    classification: str
+    region: str
+    parent_idx: int | None
+    length: float
+    width: float
+    depth: float
+    mass: float
+    pos: tuple[float, float, float]
+
 
 def _build_bone_defs() -> list[BoneDef]:
-    """Build the full 206-bone definition list."""
+    """Build the full 206-bone definition list.
+
+    Parents can be specified as int (index), str (bone name for forward refs),
+    or None (root). String parents are resolved to indices after all bones are added.
+    """
     bones: list[BoneDef] = []
 
-    def add(name: str, cls: str, region: str, parent: int | None,
+    def add(name: str, cls: str, region: str, parent: int | str | None,
             l: float, w: float, d: float, m: float, pos: tuple[float, float, float]) -> int:
         idx = len(bones)
-        bones.append((name, cls, region, parent, l, w, d, m, pos))
+        bones.append(BoneDef(name, cls, region, parent, l, w, d, m, pos))
         return idx
 
     # === PELVIC GIRDLE (2) + SACRUM/COCCYX (2) ===
-    add("Hip bone (R)", "irregular", "appendicular_pelvic", None, 18, 14, 8, 290, (-5, 95, 0))       # 0
-    add("Hip bone (L)", "irregular", "appendicular_pelvic", None, 18, 14, 8, 290, (5, 95, 0))        # 1
-    add("Sacrum", "irregular", "axial_vertebral", 0, 12, 10, 3, 180, (0, 90, -3))                     # 2
-    add("Coccyx", "irregular", "axial_vertebral", 2, 3, 2.5, 1.5, 8, (0, 87, -4))                    # 3
+    add("Hip bone (R)", "irregular", "appendicular_pelvic", None, 18, 14, 8, 290, (-5, 95, 0))
+    add("Hip bone (L)", "irregular", "appendicular_pelvic", None, 18, 14, 8, 290, (5, 95, 0))
+    add("Sacrum", "irregular", "axial_vertebral", "Hip bone (R)", 12, 10, 3, 180, (0, 90, -3))
+    add("Coccyx", "irregular", "axial_vertebral", "Sacrum", 3, 2.5, 1.5, 8, (0, 87, -4))
 
     # === CRANIAL BONES (8) ===
-    add("Frontal bone", "flat", "axial_cranium", None, 12, 12, 0.7, 90, (0, 174, 4))                  # 4  parent set later→C1
-    add("Parietal bone (R)", "flat", "axial_cranium", 4, 12, 11, 0.5, 55, (-5, 176, 0))               # 5
-    add("Parietal bone (L)", "flat", "axial_cranium", 4, 12, 11, 0.5, 55, (5, 176, 0))                # 6
-    add("Temporal bone (R)", "irregular", "axial_cranium", 5, 5, 4, 0.4, 30, (-6, 170, 0))             # 7
-    add("Temporal bone (L)", "irregular", "axial_cranium", 6, 5, 4, 0.4, 30, (6, 170, 0))              # 8
-    add("Occipital bone", "flat", "axial_cranium", 4, 10, 10, 0.8, 80, (0, 172, -5))                  # 9
-    add("Sphenoid bone", "irregular", "axial_cranium", 4, 5, 7, 3, 30, (0, 168, 1))                   # 10
-    add("Ethmoid bone", "irregular", "axial_cranium", 4, 3, 2.5, 3, 8, (0, 170, 4))                   # 11
+    # Frontal bone → C1 atlas (forward reference resolved after build)
+    add("Frontal bone", "flat", "axial_cranium", "C1 atlas", 12, 12, 0.7, 90, (0, 174, 4))
+    add("Parietal bone (R)", "flat", "axial_cranium", "Frontal bone", 12, 11, 0.5, 55, (-5, 176, 0))
+    add("Parietal bone (L)", "flat", "axial_cranium", "Frontal bone", 12, 11, 0.5, 55, (5, 176, 0))
+    add("Temporal bone (R)", "irregular", "axial_cranium", "Parietal bone (R)", 5, 4, 0.4, 30, (-6, 170, 0))
+    add("Temporal bone (L)", "irregular", "axial_cranium", "Parietal bone (L)", 5, 4, 0.4, 30, (6, 170, 0))
+    add("Occipital bone", "flat", "axial_cranium", "Frontal bone", 10, 10, 0.8, 80, (0, 172, -5))
+    add("Sphenoid bone", "irregular", "axial_cranium", "Frontal bone", 5, 7, 3, 30, (0, 168, 1))
+    add("Ethmoid bone", "irregular", "axial_cranium", "Frontal bone", 3, 2.5, 3, 8, (0, 170, 4))
 
     # === FACIAL BONES (14) ===
-    add("Maxilla (R)", "irregular", "axial_face", 10, 4, 3, 2, 15, (-1.5, 165, 5))                    # 12
-    add("Maxilla (L)", "irregular", "axial_face", 10, 4, 3, 2, 15, (1.5, 165, 5))                     # 13
-    add("Palatine bone (R)", "irregular", "axial_face", 12, 2.5, 2, 0.3, 3, (-1, 164, 3))             # 14
-    add("Palatine bone (L)", "irregular", "axial_face", 13, 2.5, 2, 0.3, 3, (1, 164, 3))              # 15
-    add("Zygomatic bone (R)", "irregular", "axial_face", 12, 3, 3, 0.5, 8, (-5, 167, 5))              # 16
-    add("Zygomatic bone (L)", "irregular", "axial_face", 13, 3, 3, 0.5, 8, (5, 167, 5))               # 17
-    add("Nasal bone (R)", "flat", "axial_face", 4, 2.5, 0.8, 0.2, 2, (-0.4, 168, 6))                 # 18
-    add("Nasal bone (L)", "flat", "axial_face", 4, 2.5, 0.8, 0.2, 2, (0.4, 168, 6))                  # 19
-    add("Lacrimal bone (R)", "flat", "axial_face", 11, 1.5, 1, 0.1, 1, (-1.5, 169, 5))                # 20
-    add("Lacrimal bone (L)", "flat", "axial_face", 11, 1.5, 1, 0.1, 1, (1.5, 169, 5))                 # 21
-    add("Inferior nasal concha (R)", "irregular", "axial_face", 12, 4, 1.5, 0.3, 2, (-1, 166, 5))     # 22
-    add("Inferior nasal concha (L)", "irregular", "axial_face", 13, 4, 1.5, 0.3, 2, (1, 166, 5))      # 23
-    add("Vomer", "flat", "axial_face", 10, 4, 3, 0.2, 3, (0, 166, 4))                                 # 24
-    add("Mandible", "irregular", "axial_face", 7, 10, 12, 3, 80, (0, 162, 4))                          # 25
+    add("Maxilla (R)", "irregular", "axial_face", "Sphenoid bone", 4, 3, 2, 15, (-1.5, 165, 5))
+    add("Maxilla (L)", "irregular", "axial_face", "Sphenoid bone", 4, 3, 2, 15, (1.5, 165, 5))
+    add("Palatine bone (R)", "irregular", "axial_face", "Maxilla (R)", 2.5, 2, 0.3, 3, (-1, 164, 3))
+    add("Palatine bone (L)", "irregular", "axial_face", "Maxilla (L)", 2.5, 2, 0.3, 3, (1, 164, 3))
+    add("Zygomatic bone (R)", "irregular", "axial_face", "Maxilla (R)", 3, 3, 0.5, 8, (-5, 167, 5))
+    add("Zygomatic bone (L)", "irregular", "axial_face", "Maxilla (L)", 3, 3, 0.5, 8, (5, 167, 5))
+    add("Nasal bone (R)", "flat", "axial_face", "Frontal bone", 2.5, 0.8, 0.2, 2, (-0.4, 168, 6))
+    add("Nasal bone (L)", "flat", "axial_face", "Frontal bone", 2.5, 0.8, 0.2, 2, (0.4, 168, 6))
+    add("Lacrimal bone (R)", "flat", "axial_face", "Ethmoid bone", 1.5, 1, 0.1, 1, (-1.5, 169, 5))
+    add("Lacrimal bone (L)", "flat", "axial_face", "Ethmoid bone", 1.5, 1, 0.1, 1, (1.5, 169, 5))
+    add("Inferior nasal concha (R)", "irregular", "axial_face", "Maxilla (R)", 4, 1.5, 0.3, 2, (-1, 166, 5))
+    add("Inferior nasal concha (L)", "irregular", "axial_face", "Maxilla (L)", 4, 1.5, 0.3, 2, (1, 166, 5))
+    add("Vomer", "flat", "axial_face", "Sphenoid bone", 4, 3, 0.2, 3, (0, 166, 4))
+    add("Mandible", "irregular", "axial_face", "Temporal bone (R)", 10, 12, 3, 80, (0, 162, 4))
 
     # === HYOID (1) ===
-    add("Hyoid", "irregular", "axial_vertebral", 25, 4, 3, 1, 3, (0, 157, 4))                          # 26
+    add("Hyoid", "irregular", "axial_vertebral", "Mandible", 4, 3, 1, 3, (0, 157, 4))
 
     # === EAR OSSICLES (6) ===
-    add("Malleus (R)", "irregular", "axial_cranium", 7, 0.8, 0.3, 0.3, 0.023, (-6, 170, 0.5))         # 27
-    add("Incus (R)", "irregular", "axial_cranium", 27, 0.7, 0.5, 0.3, 0.030, (-6, 170, 0.3))          # 28
-    add("Stapes (R)", "irregular", "axial_cranium", 28, 0.3, 0.3, 0.2, 0.003, (-6, 170, 0.1))         # 29
-    add("Malleus (L)", "irregular", "axial_cranium", 8, 0.8, 0.3, 0.3, 0.023, (6, 170, 0.5))          # 30
-    add("Incus (L)", "irregular", "axial_cranium", 30, 0.7, 0.5, 0.3, 0.030, (6, 170, 0.3))           # 31
-    add("Stapes (L)", "irregular", "axial_cranium", 31, 0.3, 0.3, 0.2, 0.003, (6, 170, 0.1))          # 32
+    add("Malleus (R)", "irregular", "axial_cranium", "Temporal bone (R)", 0.8, 0.3, 0.3, 0.023, (-6, 170, 0.5))
+    add("Incus (R)", "irregular", "axial_cranium", "Malleus (R)", 0.7, 0.5, 0.3, 0.030, (-6, 170, 0.3))
+    add("Stapes (R)", "irregular", "axial_cranium", "Incus (R)", 0.3, 0.3, 0.2, 0.003, (-6, 170, 0.1))
+    add("Malleus (L)", "irregular", "axial_cranium", "Temporal bone (L)", 0.8, 0.3, 0.3, 0.023, (6, 170, 0.5))
+    add("Incus (L)", "irregular", "axial_cranium", "Malleus (L)", 0.7, 0.5, 0.3, 0.030, (6, 170, 0.3))
+    add("Stapes (L)", "irregular", "axial_cranium", "Incus (L)", 0.3, 0.3, 0.2, 0.003, (6, 170, 0.1))
 
     # === STERNUM (1) ===
-    _t6 = 81 + 6  # T6 vertebra index (will be built below)
-    add("Sternum", "flat", "axial_thorax", _t6, 17, 5, 1.5, 40, (0, 130, 5))                          # 33
+    add("Sternum", "flat", "axial_thorax", "T6 vertebra", 17, 5, 1.5, 40, (0, 130, 5))
 
     # === RIBS (24): R1–R12 then L1–L12 ===
     rib_lengths = [7, 10, 12, 14, 15, 16, 15, 14, 13, 12, 10, 8]
     rib_masses = [10, 12, 14, 16, 18, 20, 18, 16, 14, 12, 10, 8]
     for i in range(12):
-        t_vert = 81 + (11 - i)  # T1→92, T2→91, ... T12→81 — rib attaches to its numbered thoracic
+        t_name = f"T{i+1} vertebra"
         y = 138 - i * 2.5
-        add(f"Rib {i+1} (R)", "flat", "axial_thorax", t_vert,
-            rib_lengths[i], 1.2, 0.6, rib_masses[i], (-10, y, 0))                                      # 34–45
+        add(f"Rib {i+1} (R)", "flat", "axial_thorax", t_name,
+            rib_lengths[i], 1.2, 0.6, rib_masses[i], (-10, y, 0))
     for i in range(12):
-        t_vert = 81 + (11 - i)
+        t_name = f"T{i+1} vertebra"
         y = 138 - i * 2.5
-        add(f"Rib {i+1} (L)", "flat", "axial_thorax", t_vert,
-            rib_lengths[i], 1.2, 0.6, rib_masses[i], (10, y, 0))                                       # 46–57
+        add(f"Rib {i+1} (L)", "flat", "axial_thorax", t_name,
+            rib_lengths[i], 1.2, 0.6, rib_masses[i], (10, y, 0))
 
     # === PECTORAL GIRDLE (4) ===
-    add("Scapula (R)", "flat", "appendicular_pectoral", _t6, 15, 10, 1, 60, (-18, 145, -5))            # 58
-    add("Scapula (L)", "flat", "appendicular_pectoral", _t6, 15, 10, 1, 60, (18, 145, -5))             # 59
-    add("Clavicle (R)", "long", "appendicular_pectoral", 33, 15, 1.3, 1.1, 25, (-8, 150, 3))          # 60
-    add("Clavicle (L)", "long", "appendicular_pectoral", 33, 15, 1.3, 1.1, 25, (8, 150, 3))           # 61
+    add("Scapula (R)", "flat", "appendicular_pectoral", "T6 vertebra", 15, 10, 1, 60, (-18, 145, -5))
+    add("Scapula (L)", "flat", "appendicular_pectoral", "T6 vertebra", 15, 10, 1, 60, (18, 145, -5))
+    add("Clavicle (R)", "long", "appendicular_pectoral", "Sternum", 15, 1.3, 1.1, 25, (-8, 150, 3))
+    add("Clavicle (L)", "long", "appendicular_pectoral", "Sternum", 15, 1.3, 1.1, 25, (8, 150, 3))
 
     # === UPPER LIMB LONG BONES (6) ===
-    add("Humerus (R)", "long", "appendicular_upper", 58, 36, 2.2, 2, 200, (-23, 148, 0))              # 62
-    add("Humerus (L)", "long", "appendicular_upper", 59, 36, 2.2, 2, 200, (23, 148, 0))               # 63
-    add("Radius (R)", "long", "appendicular_upper", 62, 26, 1.6, 1.4, 60, (-25, 112, 2))              # 64
-    add("Radius (L)", "long", "appendicular_upper", 63, 26, 1.6, 1.4, 60, (25, 112, 2))               # 65
-    add("Ulna (R)", "long", "appendicular_upper", 62, 28, 1.5, 1.3, 65, (-24, 112, -1))               # 66
-    add("Ulna (L)", "long", "appendicular_upper", 63, 28, 1.5, 1.3, 65, (24, 112, -1))                # 67
+    add("Humerus (R)", "long", "appendicular_upper", "Scapula (R)", 36, 2.2, 2, 200, (-23, 148, 0))
+    add("Humerus (L)", "long", "appendicular_upper", "Scapula (L)", 36, 2.2, 2, 200, (23, 148, 0))
+    add("Radius (R)", "long", "appendicular_upper", "Humerus (R)", 26, 1.6, 1.4, 60, (-25, 112, 2))
+    add("Radius (L)", "long", "appendicular_upper", "Humerus (L)", 26, 1.6, 1.4, 60, (25, 112, 2))
+    add("Ulna (R)", "long", "appendicular_upper", "Humerus (R)", 28, 1.5, 1.3, 65, (-24, 112, -1))
+    add("Ulna (L)", "long", "appendicular_upper", "Humerus (L)", 28, 1.5, 1.3, 65, (24, 112, -1))
 
     # === LOWER LIMB LONG BONES (8) ===
-    add("Femur (R)", "long", "appendicular_lower", 0, 45, 3.2, 2.8, 450, (-9, 92, 0))                 # 68
-    add("Femur (L)", "long", "appendicular_lower", 1, 45, 3.2, 2.8, 450, (9, 92, 0))                  # 69
-    add("Patella (R)", "sesamoid", "appendicular_lower", 68, 4, 4.5, 2, 25, (-9, 50, 3))              # 70
-    add("Patella (L)", "sesamoid", "appendicular_lower", 69, 4, 4.5, 2, 25, (9, 50, 3))               # 71
-    add("Tibia (R)", "long", "appendicular_lower", 68, 40, 2.8, 2.4, 340, (-9, 47, 0))                # 72
-    add("Tibia (L)", "long", "appendicular_lower", 69, 40, 2.8, 2.4, 340, (9, 47, 0))                 # 73
-    add("Fibula (R)", "long", "appendicular_lower", 72, 38, 1.2, 1, 55, (-12, 47, 0))                 # 74
-    add("Fibula (L)", "long", "appendicular_lower", 73, 38, 1.2, 1, 55, (12, 47, 0))                  # 75
+    add("Femur (R)", "long", "appendicular_lower", "Hip bone (R)", 45, 3.2, 2.8, 450, (-9, 92, 0))
+    add("Femur (L)", "long", "appendicular_lower", "Hip bone (L)", 45, 3.2, 2.8, 450, (9, 92, 0))
+    add("Patella (R)", "sesamoid", "appendicular_lower", "Femur (R)", 4, 4.5, 2, 25, (-9, 50, 3))
+    add("Patella (L)", "sesamoid", "appendicular_lower", "Femur (L)", 4, 4.5, 2, 25, (9, 50, 3))
+    add("Tibia (R)", "long", "appendicular_lower", "Femur (R)", 40, 2.8, 2.4, 340, (-9, 47, 0))
+    add("Tibia (L)", "long", "appendicular_lower", "Femur (L)", 40, 2.8, 2.4, 340, (9, 47, 0))
+    add("Fibula (R)", "long", "appendicular_lower", "Tibia (R)", 38, 1.2, 1, 55, (-12, 47, 0))
+    add("Fibula (L)", "long", "appendicular_lower", "Tibia (L)", 38, 1.2, 1, 55, (12, 47, 0))
 
     # === LUMBAR VERTEBRAE L5–L1 (5) ===
     for i, level in enumerate(range(5, 0, -1)):
-        parent = 2 if i == 0 else (76 + i - 1)  # Sacrum or previous lumbar
+        parent = "Sacrum" if i == 0 else f"L{level + 1} vertebra"
         y = 95 + i * 3.6
         add(f"L{level} vertebra", "irregular", "axial_vertebral", parent,
-            3.2, 5, 3.5, 40, (0, y, -2))                                                               # 76–80
+            3.2, 5, 3.5, 40, (0, y, -2))
 
     # === THORACIC VERTEBRAE T12–T1 (12) ===
     for i, level in enumerate(range(12, 0, -1)):
-        parent = 80 if i == 0 else (81 + i - 1)  # L1 or previous thoracic
+        parent = "L1 vertebra" if i == 0 else f"T{level + 1} vertebra"
         y = 113 + i * 2.3
         add(f"T{level} vertebra", "irregular", "axial_vertebral", parent,
-            2.3, 4.5, 3, 23, (0, y, -2))                                                               # 81–92
+            2.3, 4.5, 3, 23, (0, y, -2))
 
     # === CERVICAL VERTEBRAE C7–C1 (7) ===
     for i, level in enumerate(range(7, 0, -1)):
         name = f"C{level} vertebra" if level > 2 else ("C2 axis" if level == 2 else "C1 atlas")
-        parent = 92 if i == 0 else (93 + i - 1)  # T1 or previous cervical
+        parent = "T1 vertebra" if i == 0 else (
+            f"C{level + 1} vertebra" if level + 1 > 2 else ("C2 axis" if level + 1 == 2 else "C1 atlas")
+        )
         y = 155 + i * 1.7
         add(name, "irregular", "axial_vertebral", parent,
-            1.7, 3, 2.5, 11, (0, y, 0))                                                                # 93–99
+            1.7, 3, 2.5, 11, (0, y, 0))
 
     # === HAND R (27 bones: 8 carpals + 5 metacarpals + 14 phalanges) ===
-    _add_hand(bones, add, "R", 64, -26, 86)  # parent=Radius R, x=-26, y=86                            # 100–126
+    _add_hand(bones, add, "R", "Radius (R)", -26, 86)
 
     # === HAND L (27 bones) ===
-    _add_hand(bones, add, "L", 65, 26, 86)                                                              # 127–153
+    _add_hand(bones, add, "L", "Radius (L)", 26, 86)
 
     # === FOOT R (26 bones: 7 tarsals + 5 metatarsals + 14 phalanges) ===
-    _add_foot(bones, add, "R", 72, -9, 0)  # parent=Tibia R                                             # 154–179
+    _add_foot(bones, add, "R", "Tibia (R)", -9, 0)
 
     # === FOOT L (26 bones) ===
-    _add_foot(bones, add, "L", 73, 9, 0)                                                                # 180–205
+    _add_foot(bones, add, "L", "Tibia (L)", 9, 0)
 
-    # Fix frontal bone parent → C1 atlas (idx 99)
-    bones[4] = (bones[4][0], bones[4][1], bones[4][2], 99, *bones[4][4:])
+    # --- Resolve name-based parents to indices ---
+    name_to_idx: dict[str, int] = {b.name: i for i, b in enumerate(bones)}
+    resolved: list[BoneDef] = []
+    for b in bones:
+        if isinstance(b.parent_idx, str):
+            pidx = name_to_idx.get(b.parent_idx)
+            if pidx is None:
+                raise ValueError(f"Bone '{b.name}' references unknown parent '{b.parent_idx}'")
+            resolved.append(b._replace(parent_idx=pidx))
+        else:
+            resolved.append(b)
 
-    return bones
+    # --- Validate parent DAG: every parent index must be valid ---
+    for i, b in enumerate(resolved):
+        assert b.parent_idx is None or (0 <= b.parent_idx < len(resolved)), \
+            f"Bone {i} ({b.name}): invalid parent index {b.parent_idx}"
+
+    return resolved
 
 
-def _add_hand(bones: list, add, side: str, radius_idx: int, x: float, y: float) -> None:
+def _add_hand(bones: list, add, side: str, radius_parent: int | str, x: float, y: float) -> None:
     """Add 27 hand bones (8 carpals + 5 metacarpals + 14 phalanges)."""
     sign = -1 if side == "R" else 1
     start = len(bones)
 
     # Proximal carpal row (4) — attach to radius
-    add(f"Scaphoid ({side})", "short", "appendicular_upper", radius_idx, 2.5, 1.5, 1.2, 5, (x, y, 2))
-    add(f"Lunate ({side})", "short", "appendicular_upper", radius_idx, 2, 1.5, 1.2, 4, (x + sign, y, 1.5))
+    add(f"Scaphoid ({side})", "short", "appendicular_upper", radius_parent, 2.5, 1.5, 1.2, 5, (x, y, 2))
+    add(f"Lunate ({side})", "short", "appendicular_upper", radius_parent, 2, 1.5, 1.2, 4, (x + sign, y, 1.5))
     add(f"Triquetrum ({side})", "short", "appendicular_upper", start + 1, 1.8, 1.5, 1.2, 3.5, (x + sign * 2, y, 1))
     add(f"Pisiform ({side})", "short", "appendicular_upper", start + 2, 1.2, 1, 0.8, 1.5, (x + sign * 2.5, y, 0.5))
 
@@ -191,14 +223,14 @@ def _add_hand(bones: list, add, side: str, radius_idx: int, x: float, y: float) 
                 mp_idx, 2.2, 0.4, 0.3, 1, (xoff, ybase - 7.5, 2.5 - j * 0.3))
 
 
-def _add_foot(bones: list, add, side: str, tibia_idx: int, x: float, y: float) -> None:
+def _add_foot(bones: list, add, side: str, tibia_parent: int | str, x: float, y: float) -> None:
     """Add 26 foot bones (7 tarsals + 5 metatarsals + 14 phalanges)."""
     sign = -1 if side == "R" else 1
     start = len(bones)
 
     # Tarsals (7)
-    add(f"Calcaneus ({side})", "short", "appendicular_lower", tibia_idx, 8, 4, 4.5, 60, (x, y + 1, -2))
-    add(f"Talus ({side})", "short", "appendicular_lower", tibia_idx, 6, 4, 3, 35, (x, y + 3, 2))
+    add(f"Calcaneus ({side})", "short", "appendicular_lower", tibia_parent, 8, 4, 4.5, 60, (x, y + 1, -2))
+    add(f"Talus ({side})", "short", "appendicular_lower", tibia_parent, 6, 4, 3, 35, (x, y + 3, 2))
     add(f"Navicular ({side})", "short", "appendicular_lower", start + 1, 3.5, 2.5, 1.5, 12, (x - sign, y + 2, 5))
     add(f"Cuboid ({side})", "short", "appendicular_lower", start, 3, 2.5, 2, 10, (x + sign * 2, y + 1, 5))
     add(f"Medial cuneiform ({side})", "short", "appendicular_lower", start + 2, 3, 2, 1.5, 6, (x - sign, y + 1, 7))
@@ -244,8 +276,20 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
     Bone masses in BONE_DEFS are for a 75 kg, 175 cm reference male (ICRP 89, 2002).
     All masses scale linearly by (weight / 75), dimensions by (height / 175).
 
+    Known simplifications:
+      - Mass scaling is linear (weight ratio), not volumetric (ds³). This is valid
+        for body compositions near the 75 kg reference but diverges at extremes
+        because bone volume scales cubically with height while mass is scaled linearly.
+        ICRP 89 does not provide per-bone density data to support volumetric scaling.
+      - Inertia tensors are expressed in the bone's local frame (pre-rotation).
+        Downstream consumers that need world-frame inertia must apply R·I·Rᵀ using
+        the bone's rotation from the transform.
+      - centerOfMass is (0,0,0) for all bones — geometric center of the ellipsoid
+        approximation. For irregular bones (hip, scapula, mandible) the true CoM is
+        offset, but per-bone CoM data is not available in the reference dataset.
+
     Inertia tensor: uniform-density ellipsoid approximation.
-      I_xx = m/5 * (b^2 + c^2) where a=w/2, b=l/2, c=d/2
+      I_xx = m/5 * (b² + c²) where a=w/2, b=l/2, c=d/2
       Reference: Goldstein, Classical Mechanics, 3rd ed., Ch. 5.
     """
     REF_W = 75.0
@@ -308,4 +352,4 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
     return bones
 
 
-__all__ = [name for name in globals() if not name.startswith("__")]
+__all__ = [name for name in globals() if not name.startswith("_")]

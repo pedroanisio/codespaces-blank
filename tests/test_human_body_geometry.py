@@ -28,6 +28,8 @@ def test_csg_builder_branches():
     assert geometry._csg_long_bone(3, 1, 1, "Thumb distal phalanx (R)")["nodeType"] == "primitive"
 
     assert geometry._csg_flat_bone(10, 10, 1, "Frontal bone")["primitive"]["primitiveType"] == "ellipsoid"
+    temporal_flat = geometry._csg_flat_bone(6, 5, 1, "Temporal bone (R)")
+    assert temporal_flat["operation"] == "union"
     assert geometry._csg_flat_bone(10, 10, 1, "Scapula (R)")["operation"] == "union"
     assert geometry._csg_flat_bone(10, 5, 1, "Sternum")["operation"] == "union"
     assert geometry._csg_flat_bone(10, 2, 1, "Rib 1 (R)")["operation"] == "union"
@@ -39,11 +41,18 @@ def test_csg_builder_branches():
     assert geometry._csg_irregular_bone(10, 8, 6, "Hip bone (R)")["operation"] == "union"
     assert geometry._csg_irregular_bone(10, 8, 6, "Sacrum")["operation"] == "union"
     assert geometry._csg_irregular_bone(3, 2, 2, "Coccyx")["primitive"]["primitiveType"] == "cylinder"
-    assert geometry._csg_irregular_bone(10, 8, 4, "Mandible")["operation"] == "union"
-    assert geometry._csg_irregular_bone(5, 5, 5, "Sphenoid bone")["operation"] == "union"
+    mandible = geometry._csg_irregular_bone(10, 8, 4, "Mandible")
+    assert mandible["operation"] == "union"
+    assert len(mandible["children"]) >= 5
+    sphenoid = geometry._csg_irregular_bone(5, 5, 5, "Sphenoid bone")
+    assert sphenoid["operation"] == "union"
+    assert len(sphenoid["children"]) >= 3
     assert geometry._csg_irregular_bone(5, 5, 5, "Hyoid")["operation"] == "union"
     assert geometry._csg_irregular_bone(1, 1, 1, "Malleus (R)")["primitive"]["primitiveType"] == "ellipsoid"
-    assert geometry._csg_irregular_bone(3, 3, 3, "Maxilla (R)")["primitive"]["primitiveType"] == "ellipsoid"
+    maxilla = geometry._csg_irregular_bone(3, 3, 3, "Maxilla (R)")
+    assert maxilla["operation"] == "union"
+    zygomatic = geometry._csg_irregular_bone(3, 3, 3, "Zygomatic bone (R)")
+    assert zygomatic["operation"] == "union"
     assert geometry._csg_irregular_bone(3, 3, 3, "Random irregular")["primitive"]["primitiveType"] == "ellipsoid"
 
     assert geometry._csg_short_bone(8, 4, 4, "Calcaneus (R)")["operation"] == "union"
@@ -143,3 +152,12 @@ def test_geometry_loading_and_generation_variants(tmp_path, monkeypatch):
     assert all(g["geometryType"] == "parametric_csg" for g in parametric)
     assert any("surfaceRegions" in g for g in indexed)
     assert any("landmarks" in g for g in indexed)
+    indexed_by_bone = {g["boneId"]: g for g in indexed}
+    skull_landmark_names = {
+        lm["name"]
+        for lm in indexed_by_bone[reg.bone_ids[shared.B_SPHENOID]].get("landmarks", [])
+    }
+    assert "sella_turcica" in skull_landmark_names
+    frontal_csg = parametric[shared.B_FRONTAL]["csgTree"]
+    assert frontal_csg["operation"] == "union"
+    assert len(frontal_csg["children"]) >= 5

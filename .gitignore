@@ -24,3 +24,4 @@ session-02/.coverage
 node_modules/
 *.log
 generated/
+*.cover
