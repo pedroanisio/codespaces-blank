@@ -1,15 +1,9 @@
 from ..shared import *
 from ..skeleton import *
-
-
 def _round_list(values: list[float], digits: int = 6) -> list[float]:
     return [round(v, digits) for v in values]
-
-
 def _is_skull_bone(name: str, region: str) -> bool:
     return region in ("axial_cranium", "axial_face")
-
-
 def _deform_positions(
     positions: list[float],
     deform: Callable[[float, float, float], tuple[float, float, float]],
@@ -20,8 +14,30 @@ def _deform_positions(
         nx, ny, nz = deform(x, y, z)
         out[i], out[i + 1], out[i + 2] = nx, ny, nz
     return _round_list(out)
-
-
+def _translate_mesh(
+    mesh: tuple[list[float], list[int], list[float]],
+    dx: float = 0.0,
+    dy: float = 0.0,
+    dz: float = 0.0,
+) -> tuple[list[float], list[int], list[float]]:
+    positions, indices, uvs = mesh
+    out = positions[:]
+    for i in range(0, len(out), 3):
+        out[i] += dx
+        out[i + 1] += dy
+        out[i + 2] += dz
+    return _round_list(out), indices[:], uvs[:]
+def _merge_meshes(*meshes: tuple[list[float], list[int], list[float]]) -> tuple[list[float], list[int], list[float]]:
+    positions: list[float] = []
+    indices: list[int] = []
+    uvs: list[float] = []
+    vertex_offset = 0
+    for mesh_positions, mesh_indices, mesh_uvs in meshes:
+        positions.extend(mesh_positions)
+        indices.extend(idx + vertex_offset for idx in mesh_indices)
+        uvs.extend(mesh_uvs)
+        vertex_offset += len(mesh_positions) // 3
+    return _round_list(positions), indices, _round_list(uvs)
 def _skull_mesh_for_bone(name: str, cls: str, length: float, width: float, depth: float,
                          radial_segments: int, axial_segments: int) -> tuple[list[float], list[int], list[float]]:
     positions, indices, uvs = _mesh_for_bone(name, cls, length, width, depth, radial_segments, axial_segments)
@@ -53,8 +69,6 @@ def _skull_mesh_for_bone(name: str, cls: str, length: float, width: float, depth
         return (x, y, z)
 
     return _deform_positions(positions, deform), indices, uvs
-
-
 def _select_vertices(positions: list[float], predicate: Callable[[float, float, float], bool]) -> list[int]:
     indices: list[int] = []
     for vi in range(len(positions) // 3):
@@ -62,8 +76,6 @@ def _select_vertices(positions: list[float], predicate: Callable[[float, float, 
         if predicate(x, y, z):
             indices.append(vi)
     return indices
-
-
 def _skull_surface_regions(name: str, positions: list[float]) -> list[dict]:
     regions: list[dict] = []
     if "Frontal bone" in name:
@@ -97,8 +109,6 @@ def _skull_surface_regions(name: str, positions: list[float]) -> list[dict]:
         if len(idxs) >= 3:
             regions.append({"name": "alveolar_arch", "vertexIndices": idxs, "regionType": "attachment"})
     return regions
-
-
 def _mesh_vertex_normals(positions: list[float], indices: list[int]) -> list[float]:
     normals = [0.0] * len(positions)
     for i in range(0, len(indices), 3):
@@ -145,8 +155,6 @@ def _mesh_vertex_normals(positions: list[float], indices: list[int]) -> list[flo
                 fallback = (0.0, 1.0, 0.0)
             normals[i], normals[i + 1], normals[i + 2] = fallback
     return _round_list(normals)
-
-
 def _lathe_mesh(profile: list[tuple[float, float]], radial_segments: int,
                 scale_x: float = 1.0, scale_z: float = 1.0) -> tuple[list[float], list[int], list[float]]:
     positions: list[float] = []
@@ -179,8 +187,6 @@ def _lathe_mesh(profile: list[tuple[float, float]], radial_segments: int,
             indices.extend([a, c, b, b, c, d])
 
     return _round_list(positions), indices, _round_list(uvs)
-
-
 def _uv_sphere_mesh(rx: float, ry: float, rz: float,
                     lon_segments: int, lat_segments: int) -> tuple[list[float], list[int], list[float]]:
     positions: list[float] = []
@@ -211,13 +217,9 @@ def _uv_sphere_mesh(rx: float, ry: float, rz: float,
             indices.extend([a, c, b, b, c, d])
 
     return _round_list(positions), indices, _round_list(uvs)
-
-
 def _name_perturb(name: str, offset: int = 0) -> float:
     digest = hashlib.sha256(f"{name}:{offset}".encode("utf-8")).digest()
     return digest[0] / 255.0
-
-
 def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: float,
                    radial_segments: int, axial_segments: int) -> tuple[list[float], list[int], list[float]]:
     if cls == "long":
@@ -245,7 +247,20 @@ def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: floa
             shell_depth = max(width * 0.2, depth)
             return _uv_sphere_mesh(width / 2.0, length / 2.0, shell_depth,
                                    radial_segments, axial_segments)
-        # Scapula: flatter with more depth than cranial
+        if "Rib" in name:
+            half = length / 2.0
+            if "Rib 1 " in name:
+                profile = [(0.01, -half), (depth * 0.42, -half * 0.45), (depth * 0.55, 0.0), (depth * 0.35, half * 0.4), (0.01, half)]
+                mesh = _lathe_mesh(profile, radial_segments, scale_x=width * 0.75, scale_z=depth * 0.9)
+                return _deform_positions(mesh[0], lambda x, y, z: (x + (1.4 - abs(y) / max(half, 1e-6)) * 0.8, y, z + y * 0.08)), mesh[1], mesh[2]
+            if "Rib 11 " in name or "Rib 12 " in name:
+                profile = [(0.01, -half), (depth * 0.32, -half * 0.55), (depth * 0.4, 0.0), (depth * 0.25, half * 0.3), (0.01, half)]
+                mesh = _lathe_mesh(profile, radial_segments, scale_x=width * 0.65, scale_z=depth * 0.7)
+                return _deform_positions(mesh[0], lambda x, y, z: (x + (0.9 - abs(y) / max(half, 1e-6)) * 0.45, y, z + y * 0.04)), mesh[1], mesh[2]
+            profile = [(0.01, -half), (depth * 0.34, -half * 0.7), (depth * 0.46, -half * 0.1), (depth * 0.42, half * 0.32), (depth * 0.18, half * 0.72), (0.01, half)]
+            mesh = _lathe_mesh(profile, radial_segments, scale_x=width * 0.72, scale_z=depth * 0.82)
+            return _deform_positions(mesh[0], lambda x, y, z: (x + (1.6 - abs(y) / max(half, 1e-6)) * 0.9, y, z + y * 0.1)), mesh[1], mesh[2]
+
         if "Scapula" in name:
             return _uv_sphere_mesh(width / 2.0, length / 2.0, max(depth, width * 0.08),
                                    radial_segments, axial_segments)
@@ -259,6 +274,51 @@ def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: floa
     if cls == "sesamoid":
         return _uv_sphere_mesh(width / 2.0, length / 2.0, depth / 2.0,
                                radial_segments, axial_segments)
+
+    if "C1 atlas" in name:
+        arch_rx = width * 0.22
+        arch_ry = length * 0.18
+        arch_rz = depth * 0.18
+        return _merge_meshes(
+            _translate_mesh(_uv_sphere_mesh(arch_rx, arch_ry, arch_rz, radial_segments, axial_segments), -width * 0.18, 0.0, -depth * 0.04),
+            _translate_mesh(_uv_sphere_mesh(arch_rx, arch_ry, arch_rz, radial_segments, axial_segments), width * 0.18, 0.0, -depth * 0.04),
+            _translate_mesh(_uv_sphere_mesh(width * 0.18, length * 0.08, depth * 0.14, radial_segments, axial_segments), 0.0, length * 0.22, depth * 0.06),
+            _translate_mesh(_uv_sphere_mesh(width * 0.22, length * 0.08, depth * 0.12, radial_segments, axial_segments), 0.0, -length * 0.2, -depth * 0.08),
+        )
+
+    if "C2 axis" in name:
+        return _merge_meshes(
+            _uv_sphere_mesh(width * 0.34, length * 0.28, depth * 0.28, radial_segments, axial_segments),
+            _translate_mesh(_uv_sphere_mesh(width * 0.12, length * 0.2, depth * 0.12, radial_segments, axial_segments), 0.0, length * 0.32, depth * 0.1),
+            _translate_mesh(_uv_sphere_mesh(width * 0.4, length * 0.16, depth * 0.18, radial_segments, axial_segments), 0.0, 0.0, -depth * 0.08),
+        )
+
+    if "Hip bone" in name:
+        side = -1.0 if "(R)" in name else 1.0
+        wing = _translate_mesh(_uv_sphere_mesh(width * 0.3, length * 0.34, depth * 0.18, radial_segments, axial_segments), side * width * 0.06, length * 0.18, depth * 0.04)
+        body = _translate_mesh(_uv_sphere_mesh(width * 0.12, length * 0.24, depth * 0.16, radial_segments, axial_segments), side * width * 0.05, -length * 0.04, 0.0)
+        pubic = _translate_mesh(_uv_sphere_mesh(width * 0.1, length * 0.2, depth * 0.1, radial_segments, axial_segments), side * width * 0.18, -length * 0.16, depth * 0.08)
+        ischial = _translate_mesh(_uv_sphere_mesh(width * 0.08, length * 0.18, depth * 0.12, radial_segments, axial_segments), -side * width * 0.1, -length * 0.22, depth * 0.18)
+        ridge = _translate_mesh(_uv_sphere_mesh(width * 0.08, length * 0.12, depth * 0.08, radial_segments, axial_segments), -side * width * 0.14, length * 0.28, -depth * 0.04)
+        merged = _merge_meshes(wing, body, pubic, ischial, ridge)
+        return _deform_positions(
+            merged[0],
+            lambda x, y, z: (x + side * max(0.0, (y / max(length, 1e-6)) + 0.2) * 0.8, y, z - max(0.0, -y / max(length, 1e-6)) * 0.35),
+        ), merged[1], merged[2]
+    if name.startswith(("C", "T", "L")) and "vertebra" in name.lower():
+        is_cervical = name.startswith("C")
+        is_thoracic = name.startswith("T")
+        is_lumbar = name.startswith("L")
+        body = _uv_sphere_mesh(width * (0.3 if is_cervical else 0.32 if is_thoracic else 0.42), length * (0.22 if is_cervical else 0.24 if is_thoracic else 0.3), depth * 0.26, radial_segments, axial_segments)
+        arch = _translate_mesh(_uv_sphere_mesh(width * (0.36 if is_cervical else 0.28 if is_thoracic else 0.34), length * 0.16, depth * (0.14 if is_cervical else 0.18 if is_thoracic else 0.16), radial_segments, axial_segments), 0.0, 0.0, -depth * 0.08)
+        spine = _translate_mesh(_uv_sphere_mesh(width * 0.08, length * 0.1, depth * (0.12 if is_cervical else 0.24 if is_thoracic else 0.14), radial_segments, axial_segments), 0.0, 0.0, -depth * (0.24 if is_cervical else 0.34 if is_thoracic else 0.26))
+        transverse = _translate_mesh(_uv_sphere_mesh(width * (0.16 if is_cervical else 0.1 if is_thoracic else 0.12), length * 0.08, depth * 0.08, radial_segments, axial_segments), width * 0.26, 0.0, 0.0)
+        merged = _merge_meshes(body, arch, spine, transverse)
+        if is_thoracic:
+            merged = _merge_meshes(merged, _translate_mesh(_uv_sphere_mesh(width * 0.06, length * 0.05, depth * 0.06, radial_segments, axial_segments), width * 0.2, 0.0, depth * 0.14), _translate_mesh(_uv_sphere_mesh(width * 0.06, length * 0.05, depth * 0.06, radial_segments, axial_segments), -width * 0.2, 0.0, depth * 0.14))
+        if name.startswith("C7"):
+            merged = _merge_meshes(merged, _translate_mesh(_uv_sphere_mesh(width * 0.08, length * 0.08, depth * 0.2, radial_segments, axial_segments), 0.0, 0.0, -depth * 0.34))
+        return merged
 
     half = length / 2.0
     p0 = 0.75 + 0.25 * _name_perturb(name, 0)
@@ -274,8 +334,6 @@ def _mesh_for_bone(name: str, cls: str, length: float, width: float, depth: floa
         (0.01, half),
     ]
     return _lathe_mesh(profile, radial_segments, scale_x=width / max(width, depth), scale_z=depth / max(width, depth))
-
-
 def _lod_from_mesh(level: int, positions: list[float], indices: list[int], uvs: list[float]) -> dict:
     vertex_count = len(positions) // 3
     triangle_count = len(indices) // 3
@@ -291,8 +349,6 @@ def _lod_from_mesh(level: int, positions: list[float], indices: list[int], uvs: 
         },
         "indices": indices,
     }
-
-
 def _indexed_mesh_geometry(name: str, cls: str, region: str, bone_id: str,
                            length: float, width: float, depth: float) -> dict:
     if _is_skull_bone(name, region):
@@ -334,6 +390,4 @@ def _indexed_mesh_geometry(name: str, cls: str, region: str, bone_id: str,
     if surface_regions:
         geometry["surfaceRegions"] = surface_regions
     return geometry
-
-
 __all__ = [name for name in globals() if not name.startswith("_")]

@@ -35,13 +35,38 @@ def test_csg_builder_branches():
     assert temporal_flat["operation"] == "union"
     assert geometry._csg_flat_bone(10, 10, 1, "Scapula (R)")["operation"] == "union"
     assert geometry._csg_flat_bone(10, 5, 1, "Sternum")["operation"] == "union"
-    assert geometry._csg_flat_bone(10, 2, 1, "Rib 1 (R)")["operation"] == "union"
+    rib_1 = geometry._csg_flat_bone(10, 2, 1, "Rib 1 (R)")
+    rib_7 = geometry._csg_flat_bone(14, 2, 1, "Rib 7 (R)")
+    rib_12 = geometry._csg_flat_bone(8, 2, 1, "Rib 12 (R)")
+    assert rib_1["operation"] == "union"
+    assert len(rib_1["children"]) == 2
+    assert len(rib_7["children"]) == 3
+    assert len(rib_12["children"]) == 2
     assert geometry._csg_flat_bone(2, 1, 0.1, "Nasal bone (R)")["primitive"]["primitiveType"] == "box"
     assert geometry._csg_flat_bone(5, 5, 2, "Flat bone")["primitive"]["primitiveType"] == "box"
 
-    assert geometry._csg_irregular_bone(4, 4, 4, "T1 vertebra")["operation"] == "union"
-    assert geometry._csg_irregular_bone(4, 4, 4, "C1 atlas")["operation"] == "union"
-    assert geometry._csg_irregular_bone(10, 8, 6, "Hip bone (R)")["operation"] == "union"
+    t1 = geometry._csg_irregular_bone(4, 4, 4, "T1 vertebra")
+    c3 = geometry._csg_irregular_bone(4, 4, 4, "C3 vertebra")
+    c7 = geometry._csg_irregular_bone(4, 4, 4, "C7 vertebra")
+    l5 = geometry._csg_irregular_bone(4, 4, 4, "L5 vertebra")
+    atlas = geometry._csg_irregular_bone(4, 4, 4, "C1 atlas")
+    axis = geometry._csg_irregular_bone(4, 4, 4, "C2 axis")
+    hip = geometry._csg_irregular_bone(10, 8, 6, "Hip bone (R)")
+    assert t1["operation"] == "union"
+    assert c3["operation"] == "union"
+    assert c7["operation"] == "union"
+    assert l5["operation"] == "union"
+    assert atlas["operation"] == "union"
+    assert axis["operation"] == "union"
+    assert hip["operation"] == "union"
+    assert atlas["children"][0]["primitive"]["primitiveType"] == "capsule"
+    assert all(child["primitive"]["primitiveType"] != "sphere" for child in atlas["children"] if child["nodeType"] == "primitive")
+    assert axis["children"][1]["primitive"]["primitiveType"] == "capsule"
+    assert any(child["primitive"]["primitiveType"] == "sphere" for child in t1["children"] if child["nodeType"] == "primitive")
+    assert c7["children"][-1]["primitive"]["primitiveType"] == "cylinder"
+    assert l5["children"][0]["primitive"]["radiusTop"] > c3["children"][0]["primitive"]["radiusTop"]
+    assert any(child["nodeType"] == "operation" and child["operation"] == "subtract" for child in hip["children"])
+    assert len(hip["children"]) >= 6
     assert geometry._csg_irregular_bone(10, 8, 6, "Sacrum")["operation"] == "union"
     assert geometry._csg_irregular_bone(3, 2, 2, "Coccyx")["primitive"]["primitiveType"] == "cylinder"
     mandible = geometry._csg_irregular_bone(10, 8, 4, "Mandible")
@@ -118,9 +143,26 @@ def test_mesh_and_skull_helpers_cover_branches():
     assert geometry._mesh_for_bone("Femur (R)", "long", 40, 4, 4, 8, 6)[0]
     assert geometry._mesh_for_bone("Frontal bone", "flat", 10, 8, 1, 8, 6)[0]
     assert geometry._mesh_for_bone("Scapula (R)", "flat", 10, 8, 1, 8, 6)[0]
+    rib_1_mesh = geometry._mesh_for_bone("Rib 1 (R)", "flat", 10, 2, 1, 8, 6)
+    rib_7_mesh = geometry._mesh_for_bone("Rib 7 (R)", "flat", 14, 2, 1, 8, 6)
+    rib_12_mesh = geometry._mesh_for_bone("Rib 12 (R)", "flat", 8, 2, 1, 8, 6)
     assert geometry._mesh_for_bone("Scaphoid (R)", "short", 3, 3, 3, 8, 6)[0]
     assert geometry._mesh_for_bone("Patella (R)", "sesamoid", 3, 3, 3, 8, 6)[0]
     assert geometry._mesh_for_bone("Mandible", "irregular", 10, 8, 4, 8, 6)[0]
+    atlas_mesh = geometry._mesh_for_bone("C1 atlas", "irregular", 4, 4, 4, 8, 6)
+    axis_mesh = geometry._mesh_for_bone("C2 axis", "irregular", 4, 4, 4, 8, 6)
+    c3_mesh = geometry._mesh_for_bone("C3 vertebra", "irregular", 4, 4, 4, 8, 6)
+    c7_mesh = geometry._mesh_for_bone("C7 vertebra", "irregular", 4, 4, 4, 8, 6)
+    t1_mesh = geometry._mesh_for_bone("T1 vertebra", "irregular", 4, 4, 4, 8, 6)
+    l5_mesh = geometry._mesh_for_bone("L5 vertebra", "irregular", 4, 4, 4, 8, 6)
+    hip_mesh = geometry._mesh_for_bone("Hip bone (R)", "irregular", 10, 8, 6, 8, 6)
+    assert len(rib_1_mesh[0]) != len(rib_7_mesh[0]) or rib_1_mesh[0] != rib_7_mesh[0]
+    assert len(rib_12_mesh[0]) == len(rib_1_mesh[0])
+    assert len(atlas_mesh[0]) > len(axis_mesh[0])
+    assert len(c7_mesh[0]) > len(c3_mesh[0])
+    assert len(t1_mesh[0]) > len(c3_mesh[0])
+    assert max(l5_mesh[0][1::3]) > max(c3_mesh[0][1::3])
+    assert len(hip_mesh[0]) > len(axis_mesh[0])
 
     lod = geometry._lod_from_mesh(0, [0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0], [0, 1, 2], [0.0, 0.0, 1.0, 0.0, 0.0, 1.0])
     assert lod["triangleCount"] == 1
