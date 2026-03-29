@@ -34,7 +34,7 @@ import sys
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCHEMA_VERSION = "3.0.0"
 
@@ -2371,6 +2371,99 @@ def _round_list(values: list[float], digits: int = 6) -> list[float]:
     return [round(v, digits) for v in values]
 
 
+def _is_skull_bone(name: str, region: str) -> bool:
+    return region in ("axial_cranium", "axial_face")
+
+
+def _deform_positions(
+    positions: list[float],
+    deform: Callable[[float, float, float], tuple[float, float, float]],
+) -> list[float]:
+    out = positions[:]
+    for i in range(0, len(out), 3):
+        x, y, z = out[i], out[i + 1], out[i + 2]
+        nx, ny, nz = deform(x, y, z)
+        out[i], out[i + 1], out[i + 2] = nx, ny, nz
+    return _round_list(out)
+
+
+def _skull_mesh_for_bone(name: str, cls: str, length: float, width: float, depth: float,
+                         radial_segments: int, axial_segments: int) -> tuple[list[float], list[int], list[float]]:
+    positions, indices, uvs = _mesh_for_bone(name, cls, length, width, depth, radial_segments, axial_segments)
+
+    def deform(x: float, y: float, z: float) -> tuple[float, float, float]:
+        if "Frontal bone" in name:
+            return (x * 1.05, y * 1.02, z + max(0.0, y / max(length, 1)) * 0.6)
+        if "Parietal bone" in name:
+            side = -1.0 if "(R)" in name else 1.0
+            return (x + side * 0.4 * (1.0 - abs(y) / max(length, 1)), y * 1.03, z * 0.95)
+        if "Occipital bone" in name:
+            return (x * 0.96, y * 1.01, z - 0.7 * (1.0 - abs(y) / max(length, 1)))
+        if "Temporal bone" in name:
+            side = -1.0 if "(R)" in name else 1.0
+            return (x + side * 0.5, y * 0.96, z - 0.2)
+        if "Zygomatic" in name:
+            side = -1.0 if "(R)" in name else 1.0
+            return (x + side * 0.6, y, z + 0.4)
+        if "Maxilla" in name:
+            return (x * 1.08, y - 0.2, z + 0.5)
+        if "Mandible" in name:
+            return (x * 1.18, y * 0.92 - 0.4, z * 0.9 + 0.2)
+        if "Sphenoid" in name:
+            return (x * 1.2, y * 0.9, z * 0.85)
+        if "Ethmoid" in name:
+            return (x * 0.8, y * 1.05, z * 0.9)
+        if "Nasal bone" in name or "Vomer" in name:
+            return (x * 0.9, y, z + 0.25)
+        return (x, y, z)
+
+    return _deform_positions(positions, deform), indices, uvs
+
+
+def _select_vertices(positions: list[float], predicate: Callable[[float, float, float], bool]) -> list[int]:
+    indices: list[int] = []
+    for vi in range(len(positions) // 3):
+        x, y, z = positions[vi * 3:vi * 3 + 3]
+        if predicate(x, y, z):
+            indices.append(vi)
+    return indices
+
+
+def _skull_surface_regions(name: str, positions: list[float]) -> list[dict]:
+    regions: list[dict] = []
+    if "Frontal bone" in name:
+        idxs = _select_vertices(positions, lambda x, y, z: y > 0 and z > 0)
+        if len(idxs) >= 3:
+            regions.append({"name": "forehead_surface", "vertexIndices": idxs, "regionType": "periosteal"})
+        idxs = _select_vertices(positions, lambda x, y, z: y < 0 and z > 0)
+        if len(idxs) >= 3:
+            regions.append({"name": "supraorbital_margin", "vertexIndices": idxs, "regionType": "attachment"})
+    elif "Parietal bone" in name:
+        idxs = _select_vertices(positions, lambda x, y, z: abs(x) > 1 and y >= -1)
+        if len(idxs) >= 3:
+            regions.append({"name": "parietal_vault", "vertexIndices": idxs, "regionType": "periosteal"})
+    elif "Occipital bone" in name:
+        idxs = _select_vertices(positions, lambda x, y, z: z < 0)
+        if len(idxs) >= 3:
+            regions.append({"name": "occipital_surface", "vertexIndices": idxs, "regionType": "periosteal"})
+    elif "Temporal bone" in name:
+        idxs = _select_vertices(positions, lambda x, y, z: abs(x) > 1 and y < 1)
+        if len(idxs) >= 3:
+            regions.append({"name": "temporal_fossa", "vertexIndices": idxs, "regionType": "attachment"})
+    elif "Zygomatic" in name:
+        idxs = _select_vertices(positions, lambda x, y, z: abs(x) > 1 and z > 0)
+        if len(idxs) >= 3:
+            regions.append({"name": "malar_surface", "vertexIndices": idxs, "regionType": "periosteal"})
+    elif "Mandible" in name:
+        idxs = _select_vertices(positions, lambda x, y, z: y > 0)
+        if len(idxs) >= 3:
+            regions.append({"name": "mandibular_ramus", "vertexIndices": idxs, "regionType": "periosteal"})
+        idxs = _select_vertices(positions, lambda x, y, z: y < 0)
+        if len(idxs) >= 3:
+            regions.append({"name": "alveolar_arch", "vertexIndices": idxs, "regionType": "attachment"})
+    return regions
+
+
 def _mesh_vertex_normals(positions: list[float], indices: list[int]) -> list[float]:
     normals = [0.0] * len(positions)
     for i in range(0, len(indices), 3):
@@ -2530,25 +2623,47 @@ def _lod_from_mesh(level: int, positions: list[float], indices: list[int], uvs: 
     }
 
 
-def _indexed_mesh_geometry(name: str, cls: str, bone_id: str,
+def _indexed_mesh_geometry(name: str, cls: str, region: str, bone_id: str,
                            length: float, width: float, depth: float) -> dict:
-    hi_positions, hi_indices, hi_uvs = _mesh_for_bone(name, cls, length, width, depth, 18, 12)
-    lo_positions, lo_indices, lo_uvs = _mesh_for_bone(name, cls, length, width, depth, 10, 7)
-    return {
+    if _is_skull_bone(name, region):
+        hi_positions, hi_indices, hi_uvs = _skull_mesh_for_bone(name, cls, length, width, depth, 40, 28)
+        mid_positions, mid_indices, mid_uvs = _skull_mesh_for_bone(name, cls, length, width, depth, 24, 16)
+        lo_positions, lo_indices, lo_uvs = _skull_mesh_for_bone(name, cls, length, width, depth, 14, 9)
+        source = {
+            "method": "procedural",
+            "datasetId": "skull_test_v1",
+            "citation": "Skull-only experimental procedural mesh profile generated in tools/generate_human_body.py",
+        }
+        surface_regions = _skull_surface_regions(name, hi_positions)
+        lods = [
+            _lod_from_mesh(0, hi_positions, hi_indices, hi_uvs),
+            _lod_from_mesh(1, mid_positions, mid_indices, mid_uvs),
+            _lod_from_mesh(2, lo_positions, lo_indices, lo_uvs),
+        ]
+    else:
+        hi_positions, hi_indices, hi_uvs = _mesh_for_bone(name, cls, length, width, depth, 18, 12)
+        lo_positions, lo_indices, lo_uvs = _mesh_for_bone(name, cls, length, width, depth, 10, 7)
+        source = {
+            "method": "procedural",
+            "citation": "Procedurally generated from bone dimensions in tools/generate_human_body.py",
+        }
+        surface_regions = []
+        lods = [
+            _lod_from_mesh(0, hi_positions, hi_indices, hi_uvs),
+            _lod_from_mesh(1, lo_positions, lo_indices, lo_uvs),
+        ]
+    geometry = {
         "geometryType": "indexed_mesh",
         "id": uid(),
         "boneId": bone_id,
-        "lods": [
-            _lod_from_mesh(0, hi_positions, hi_indices, hi_uvs),
-            _lod_from_mesh(1, lo_positions, lo_indices, lo_uvs),
-        ],
+        "lods": lods,
         "isClosed": True,
         "isManifold": True,
-        "source": {
-            "method": "procedural",
-            "citation": "Procedurally generated from bone dimensions in tools/generate_human_body.py",
-        },
+        "source": source,
     }
+    if surface_regions:
+        geometry["surfaceRegions"] = surface_regions
+    return geometry
 
 
 def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh") -> list[dict]:
@@ -2579,7 +2694,7 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh") -> list[d
                 "collisionHull": "convex_hull" if cls in ("long", "irregular") else "aabb",
             })
         else:
-            geometries.append(_indexed_mesh_geometry(name, cls, r.bone_ids[i], length, width, depth))
+            geometries.append(_indexed_mesh_geometry(name, cls, _region, r.bone_ids[i], length, width, depth))
 
     # ── P0.4: Anatomical landmarks (ISB recommendations) ────────────────
     # Named points on bone surfaces required for reproducible joint
@@ -2682,6 +2797,46 @@ def gen_bone_geometries(r: Reg, geometry_format: str = "indexed_mesh") -> list[d
         # Sacrum
         "Sacrum": [
             {"name": "sacral_promontory", "position": vec3(0, 5, 1), "surfaceNormal": vec3(0, 0, 1)},
+        ],
+        # Skull test set
+        "Frontal bone": [
+            {"name": "glabella", "position": vec3(0, -2.5, 4.8), "surfaceNormal": vec3(0, 0, 1)},
+            {"name": "supraorbital_margin_r", "position": vec3(-3.2, -4.5, 4.2), "surfaceNormal": vec3(0, 0, 1)},
+            {"name": "supraorbital_margin_l", "position": vec3(3.2, -4.5, 4.2), "surfaceNormal": vec3(0, 0, 1)},
+        ],
+        "Parietal bone (R)": [
+            {"name": "parietal_eminence_r", "position": vec3(-4.8, 1.5, 0.0), "surfaceNormal": vec3(-1, 0, 0)},
+        ],
+        "Parietal bone (L)": [
+            {"name": "parietal_eminence_l", "position": vec3(4.8, 1.5, 0.0), "surfaceNormal": vec3(1, 0, 0)},
+        ],
+        "Temporal bone (R)": [
+            {"name": "mastoid_process_r", "position": vec3(-2.2, -1.8, -0.8), "surfaceNormal": vec3(-1, 0, -0.2)},
+            {"name": "zygomatic_root_r", "position": vec3(-1.8, 0.3, 1.0), "surfaceNormal": vec3(-1, 0, 0.2)},
+        ],
+        "Temporal bone (L)": [
+            {"name": "mastoid_process_l", "position": vec3(2.2, -1.8, -0.8), "surfaceNormal": vec3(1, 0, -0.2)},
+            {"name": "zygomatic_root_l", "position": vec3(1.8, 0.3, 1.0), "surfaceNormal": vec3(1, 0, 0.2)},
+        ],
+        "Occipital bone": [
+            {"name": "external_occipital_protuberance", "position": vec3(0, -1.2, -4.6), "surfaceNormal": vec3(0, 0, -1)},
+        ],
+        "Zygomatic bone (R)": [
+            {"name": "zygion_r", "position": vec3(-1.8, 0, 1.5), "surfaceNormal": vec3(-1, 0, 0.3)},
+        ],
+        "Zygomatic bone (L)": [
+            {"name": "zygion_l", "position": vec3(1.8, 0, 1.5), "surfaceNormal": vec3(1, 0, 0.3)},
+        ],
+        "Maxilla (R)": [
+            {"name": "infraorbital_foramen_r", "position": vec3(-0.9, 0.4, 1.1), "surfaceNormal": vec3(0, 0, 1)},
+        ],
+        "Maxilla (L)": [
+            {"name": "infraorbital_foramen_l", "position": vec3(0.9, 0.4, 1.1), "surfaceNormal": vec3(0, 0, 1)},
+        ],
+        "Mandible": [
+            {"name": "menton", "position": vec3(0, -4.5, 1.1), "surfaceNormal": vec3(0, -0.4, 1)},
+            {"name": "gonion_r", "position": vec3(-4.8, 1.6, -0.5), "surfaceNormal": vec3(-1, 0, -0.1)},
+            {"name": "gonion_l", "position": vec3(4.8, 1.6, -0.5), "surfaceNormal": vec3(1, 0, -0.1)},
         ],
     }
 
