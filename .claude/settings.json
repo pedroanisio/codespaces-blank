@@ -27,7 +27,8 @@
       "Bash(curl -s -o /dev/null -w \"App: %{http_code}\\\\n\" http://localhost:8090/)",
       "Bash(curl -s -o /dev/null -w \"GLB: %{http_code} \\(%{size_download} bytes\\)\\\\n\" http://localhost:8090/assets/bones/femur_r.glb)",
       "Bash(docker exec:*)",
-      "Bash(node build-mannequin_v4.mjs ../../skeleton.json)"
+      "Bash(node build-mannequin_v4.mjs ../../skeleton.json)",
+      "Bash(node assets/build-mannequin_v4.mjs ../skeleton.json)"
     ],
     "additionalDirectories": [
       "/home/admin/codebases/codespaces-blank/session-3/human-controller/public/assets"

@@ -32,7 +32,7 @@ canvas {
   top: 1.25rem;
   left: 1.25rem;
   z-index: 10;
-  max-width: min(24rem, calc(100vw - 2rem));
+  max-width: min(36rem, calc(100vw - 2rem));
   padding: 1rem 1.1rem;
   border: 1px solid rgba(21, 33, 42, 0.18);
   border-radius: 1rem;
@@ -64,6 +64,80 @@ h1 {
   margin-top: 0.55rem;
   font-size: 1rem;
   color: #304554;
+}
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.9rem;
+}
+
+.fighter-card {
+  padding: 0.8rem 0.85rem;
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(21, 33, 42, 0.1);
+}
+
+.fighter-card h2,
+.fighter-meta,
+.fighter-action,
+.logline {
+  margin: 0;
+}
+
+.fighter-card h2 {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.fighter-card-a h2 {
+  color: #305a8c;
+}
+
+.fighter-card-b h2 {
+  color: #8b4337;
+}
+
+.fighter-meta,
+.fighter-action,
+.logline {
+  font-size: 0.92rem;
+  color: #344957;
+}
+
+.fighter-meta,
+.fighter-action {
+  margin-top: 0.4rem;
+}
+
+.bar {
+  height: 0.42rem;
+  margin-top: 0.45rem;
+  border-radius: 999px;
+  background: rgba(18, 33, 45, 0.12);
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.bar-fill-hp {
+  background: linear-gradient(90deg, #cb5643 0%, #f19f55 100%);
+}
+
+.bar-fill-stamina {
+  background: linear-gradient(90deg, #2f6b82 0%, #7bb7c1 100%);
+}
+
+.logline {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(48, 69, 84, 0.14);
 }
 
 .error-panel {
@@ -100,5 +174,9 @@ h1 {
 
   .instructions {
     font-size: 0.92rem;
+  }
+
+  .scoreboard {
+    grid-template-columns: 1fr;
   }
 }

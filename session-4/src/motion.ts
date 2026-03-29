@@ -5,14 +5,20 @@ export type MovementInput = {
   turnRight: boolean;
   jump: boolean;
   roll: boolean;
+  moonwalk: boolean;
+  kickL: boolean;
+  kickR: boolean;
 };
 
 export type MovementState = {
   speed: number;
   turnSpeed: number;
-  animation: 'Idle' | 'Walk' | 'Jump' | 'Roll';
+  animation: 'Idle' | 'Walk' | 'Jump' | 'Roll' | 'Moonwalk' | 'KickL' | 'KickR';
   jumpRequested: boolean;
   rollRequested: boolean;
+  moonwalk: boolean;
+  kickL: boolean;
+  kickR: boolean;
 };
 
 const WALK_SPEED = 2.4;
@@ -29,7 +35,10 @@ export function resolveMovement(input: MovementInput, airborne = false): Movemen
         : 0;
   const jumpRequested = input.jump && !airborne;
   const rollRequested = input.roll && !airborne && !jumpRequested;
-  const animation = jumpRequested || airborne ? 'Jump' : rollRequested ? 'Roll' : speed === 0 && turnSpeed === 0 ? 'Idle' : 'Walk';
+  const moonwalk = input.moonwalk;
+  const kickL = input.kickL;
+  const kickR = input.kickR;
+  const animation = moonwalk ? 'Moonwalk' : kickL ? 'KickL' : kickR ? 'KickR' : jumpRequested || airborne ? 'Jump' : rollRequested ? 'Roll' : speed === 0 && turnSpeed === 0 ? 'Idle' : 'Walk';
 
   return {
     speed,
@@ -37,5 +46,8 @@ export function resolveMovement(input: MovementInput, airborne = false): Movemen
     animation,
     jumpRequested,
     rollRequested,
+    moonwalk,
+    kickL,
+    kickR,
   };
 }

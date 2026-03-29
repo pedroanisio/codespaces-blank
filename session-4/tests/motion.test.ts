@@ -12,6 +12,9 @@ describe('resolveMovement', () => {
         turnRight: false,
         jump: false,
         roll: false,
+        moonwalk: false,
+        kickL: false,
+        kickR: false,
       }),
     ).toEqual({
       speed: 0,
@@ -19,6 +22,9 @@ describe('resolveMovement', () => {
       animation: 'Idle',
       jumpRequested: false,
       rollRequested: false,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 
@@ -31,6 +37,9 @@ describe('resolveMovement', () => {
         turnRight: false,
         jump: false,
         roll: false,
+        moonwalk: false,
+        kickL: false,
+        kickR: false,
       }),
     ).toEqual({
       speed: 2.4,
@@ -38,6 +47,9 @@ describe('resolveMovement', () => {
       animation: 'Walk',
       jumpRequested: false,
       rollRequested: false,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 
@@ -50,6 +62,9 @@ describe('resolveMovement', () => {
         turnRight: true,
         jump: false,
         roll: false,
+        moonwalk: false,
+        kickL: false,
+        kickR: false,
       }),
     ).toEqual({
       speed: -1.4,
@@ -57,6 +72,9 @@ describe('resolveMovement', () => {
       animation: 'Walk',
       jumpRequested: false,
       rollRequested: false,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 
@@ -69,6 +87,9 @@ describe('resolveMovement', () => {
         turnRight: false,
         jump: true,
         roll: false,
+        moonwalk: false,
+        kickL: false,
+        kickR: false,
       }),
     ).toEqual({
       speed: 2.4,
@@ -76,6 +97,9 @@ describe('resolveMovement', () => {
       animation: 'Jump',
       jumpRequested: true,
       rollRequested: false,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 
@@ -89,6 +113,9 @@ describe('resolveMovement', () => {
           turnRight: false,
           jump: true,
           roll: false,
+          moonwalk: false,
+          kickL: false,
+          kickR: false,
         },
         true,
       ),
@@ -98,6 +125,9 @@ describe('resolveMovement', () => {
       animation: 'Jump',
       jumpRequested: false,
       rollRequested: false,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 
@@ -110,6 +140,9 @@ describe('resolveMovement', () => {
         turnRight: false,
         jump: false,
         roll: true,
+        moonwalk: false,
+        kickL: false,
+        kickR: false,
       }),
     ).toEqual({
       speed: 2.4,
@@ -117,6 +150,9 @@ describe('resolveMovement', () => {
       animation: 'Roll',
       jumpRequested: false,
       rollRequested: true,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 
@@ -130,6 +166,9 @@ describe('resolveMovement', () => {
           turnRight: false,
           jump: false,
           roll: true,
+          moonwalk: false,
+          kickL: false,
+          kickR: false,
         },
         true,
       ),
@@ -139,6 +178,9 @@ describe('resolveMovement', () => {
       animation: 'Jump',
       jumpRequested: false,
       rollRequested: false,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 
@@ -151,6 +193,9 @@ describe('resolveMovement', () => {
         turnRight: false,
         jump: true,
         roll: true,
+        moonwalk: false,
+        kickL: false,
+        kickR: false,
       }),
     ).toEqual({
       speed: 0,
@@ -158,6 +203,9 @@ describe('resolveMovement', () => {
       animation: 'Jump',
       jumpRequested: true,
       rollRequested: false,
+      moonwalk: false,
+      kickL: false,
+      kickR: false,
     });
   });
 });

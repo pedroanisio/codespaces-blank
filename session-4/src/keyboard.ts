@@ -4,6 +4,13 @@ export class KeyboardController {
   private readonly pressed = new Set<string>();
   private jumpQueued = false;
   private rollQueued = false;
+  private _moonwalk = false;
+  private _kickL = false;
+  private _kickR = false;
+
+  resetMoonwalk(): void {
+    this._moonwalk = false;
+  }
 
   attach(): void {
     window.addEventListener('keydown', this.handleKeyDown);
@@ -23,6 +30,11 @@ export class KeyboardController {
     this.jumpQueued = false;
     this.rollQueued = false;
 
+    const kickL = this._kickL;
+    const kickR = this._kickR;
+    this._kickL = false;
+    this._kickR = false;
+
     return {
       forward: this.pressed.has('ArrowUp'),
       backward: this.pressed.has('ArrowDown'),
@@ -30,10 +42,31 @@ export class KeyboardController {
       turnRight: this.pressed.has('ArrowRight'),
       jump,
       roll,
+      moonwalk: this._moonwalk,
+      kickL,
+      kickR,
     };
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'm' || event.key === 'M') {
+      event.preventDefault();
+      this._moonwalk = !this._moonwalk;
+      return;
+    }
+
+    if (event.key === 'q' || event.key === 'Q') {
+      event.preventDefault();
+      this._kickL = true;
+      return;
+    }
+
+    if (event.key === 'e' || event.key === 'E') {
+      event.preventDefault();
+      this._kickR = true;
+      return;
+    }
+
     if (event.key === 'r' || event.key === 'R') {
       event.preventDefault();
       this.rollQueued = true;
@@ -73,5 +106,6 @@ export class KeyboardController {
     this.pressed.clear();
     this.jumpQueued = false;
     this.rollQueued = false;
+    this._moonwalk = false;
   };
 }

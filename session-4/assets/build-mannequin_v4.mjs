@@ -19,6 +19,168 @@ const PALETTE = {
   skin:      [0.55, 0.48, 0.40, 1.0],
 };
 
+// ─── Boxing actions extracted from session-3/human-controller ───────
+// Source: session-3/human-controller/src/components/AIFightFK.jsx
+const BOXING_ACTIONS = {
+  guard: {
+    type: "stance",
+    joints: {
+      L5S1:{fe:3,aa:0,ie:0}, C7T1:{fe:-5,aa:0,ie:0},
+      shoulderR:{fe:25,aa:12,ie:10}, elbowR:{fe:125}, wristR:{fe:-5},
+      shoulderL:{fe:35,aa:18,ie:5},  elbowL:{fe:115}, wristL:{fe:-5},
+      hipR:{fe:12,aa:-5,ie:0}, kneeR:{fe:18}, ankleR:{fe:5},
+      hipL:{fe:8,aa:5,ie:0},  kneeL:{fe:14}, ankleL:{fe:5},
+    },
+  },
+  jab: {
+    type: "attack",
+    joints: {
+      L5S1:{fe:5,aa:0,ie:12},  C7T1:{fe:-3,aa:2,ie:5},
+      shoulderL:{fe:85,aa:5,ie:15}, elbowL:{fe:8}, wristL:{fe:-5,aa:0},
+      shoulderR:{fe:18,aa:10,ie:5}, elbowR:{fe:128}, wristR:{fe:-5},
+      hipR:{fe:15,aa:-3,ie:10}, kneeR:{fe:20}, ankleR:{fe:8},
+      hipL:{fe:6,aa:3,ie:0},   kneeL:{fe:14}, ankleL:{fe:5},
+    },
+  },
+  cross: {
+    type: "attack",
+    joints: {
+      L5S1:{fe:8,aa:-2,ie:-18}, C7T1:{fe:-5,aa:-3,ie:-8},
+      shoulderR:{fe:90,aa:5,ie:20}, elbowR:{fe:10}, wristR:{fe:-8,aa:-10},
+      shoulderL:{fe:15,aa:15,ie:0}, elbowL:{fe:120}, wristL:{fe:-5},
+      hipR:{fe:14,aa:-5,ie:20}, kneeR:{fe:22}, ankleR:{fe:10},
+      hipL:{fe:8,aa:3,ie:-5},  kneeL:{fe:16}, ankleL:{fe:6},
+    },
+  },
+  hook: {
+    type: "attack",
+    joints: {
+      L5S1:{fe:4,aa:0,ie:25}, C7T1:{fe:-5,aa:3,ie:10},
+      shoulderL:{fe:75,aa:-15,ie:45}, elbowL:{fe:92}, wristL:{fe:-10,aa:15},
+      shoulderR:{fe:20,aa:10,ie:0}, elbowR:{fe:125}, wristR:{fe:-5},
+      hipR:{fe:14,aa:-5,ie:15}, kneeR:{fe:20}, ankleR:{fe:8},
+      hipL:{fe:10,aa:5,ie:-10}, kneeL:{fe:16}, ankleL:{fe:6},
+    },
+  },
+  uppercut: {
+    type: "attack",
+    joints: {
+      L5S1:{fe:-5,aa:0,ie:-10}, C7T1:{fe:-8,aa:-2,ie:-5},
+      shoulderR:{fe:110,aa:5,ie:10}, elbowR:{fe:65}, wristR:{fe:-15},
+      shoulderL:{fe:20,aa:15,ie:0}, elbowL:{fe:118}, wristL:{fe:-5},
+      hipR:{fe:5,aa:-3,ie:8}, kneeR:{fe:8}, ankleR:{fe:12},
+      hipL:{fe:6,aa:3,ie:0},  kneeL:{fe:10}, ankleL:{fe:8},
+    },
+  },
+  bodyShot: {
+    type: "attack",
+    joints: {
+      L5S1:{fe:15,aa:-3,ie:-12}, C7T1:{fe:-10,aa:-3,ie:-5},
+      shoulderR:{fe:70,aa:-5,ie:10}, elbowR:{fe:25}, wristR:{fe:-10,aa:-5},
+      shoulderL:{fe:25,aa:12,ie:0}, elbowL:{fe:115}, wristL:{fe:-5},
+      hipR:{fe:20,aa:-5,ie:12}, kneeR:{fe:30}, ankleR:{fe:10},
+      hipL:{fe:15,aa:3,ie:0},  kneeL:{fe:25}, ankleL:{fe:8},
+    },
+  },
+  slip: {
+    type: "defense",
+    joints: {
+      L5S1:{fe:8,aa:-8,ie:5}, C7T1:{fe:-5,aa:30,ie:10},
+      shoulderR:{fe:22,aa:10,ie:5}, elbowR:{fe:120}, wristR:{fe:-5},
+      shoulderL:{fe:28,aa:15,ie:5}, elbowL:{fe:110}, wristL:{fe:-5},
+      hipR:{fe:15,aa:-8,ie:0}, kneeR:{fe:35}, ankleR:{fe:10,aa:-15},
+      hipL:{fe:12,aa:8,ie:0},  kneeL:{fe:30}, ankleL:{fe:8,aa:10},
+    },
+  },
+  block: {
+    type: "defense",
+    joints: {
+      L5S1:{fe:2,aa:0,ie:0}, C7T1:{fe:-8,aa:0,ie:0},
+      shoulderR:{fe:40,aa:15,ie:10}, elbowR:{fe:140}, wristR:{fe:10},
+      shoulderL:{fe:45,aa:20,ie:5},  elbowL:{fe:140}, wristL:{fe:10},
+      hipR:{fe:10,aa:-5,ie:0}, kneeR:{fe:15}, ankleR:{fe:5},
+      hipL:{fe:8,aa:5,ie:0},  kneeL:{fe:12}, ankleL:{fe:5},
+    },
+  },
+  duck: {
+    type: "defense",
+    joints: {
+      L5S1:{fe:20,aa:0,ie:0}, C7T1:{fe:-15,aa:0,ie:0},
+      shoulderR:{fe:25,aa:10,ie:5}, elbowR:{fe:120}, wristR:{fe:-5},
+      shoulderL:{fe:30,aa:15,ie:5}, elbowL:{fe:115}, wristL:{fe:-5},
+      hipR:{fe:55,aa:-5,ie:0}, kneeR:{fe:65}, ankleR:{fe:15},
+      hipL:{fe:50,aa:5,ie:0},  kneeL:{fe:60}, ankleL:{fe:12},
+    },
+  },
+  parry: {
+    type: "defense",
+    joints: {
+      L5S1:{fe:3,aa:0,ie:-5}, C7T1:{fe:-5,aa:0,ie:-3},
+      shoulderR:{fe:55,aa:10,ie:5}, elbowR:{fe:80}, wristR:{fe:-5,aa:20},
+      shoulderL:{fe:32,aa:15,ie:5}, elbowL:{fe:118}, wristL:{fe:-5},
+      hipR:{fe:12,aa:-5,ie:0}, kneeR:{fe:18}, ankleR:{fe:5},
+      hipL:{fe:8,aa:5,ie:0},  kneeL:{fe:14}, ankleL:{fe:5},
+    },
+  },
+  advance: {
+    type: "movement",
+    joints: {
+      L5S1:{fe:5,aa:0,ie:0}, C7T1:{fe:-3,aa:0,ie:0},
+      shoulderR:{fe:22,aa:10,ie:5}, elbowR:{fe:125}, wristR:{fe:-5},
+      shoulderL:{fe:30,aa:15,ie:5}, elbowL:{fe:118}, wristL:{fe:-5},
+      hipR:{fe:5,aa:-3,ie:0},  kneeR:{fe:25}, ankleR:{fe:-15},
+      hipL:{fe:25,aa:3,ie:0},  kneeL:{fe:20}, ankleL:{fe:8},
+    },
+  },
+  retreat: {
+    type: "movement",
+    joints: {
+      L5S1:{fe:0,aa:0,ie:0}, C7T1:{fe:-5,aa:0,ie:0},
+      shoulderR:{fe:22,aa:10,ie:5}, elbowR:{fe:125}, wristR:{fe:-5},
+      shoulderL:{fe:30,aa:15,ie:5}, elbowL:{fe:118}, wristL:{fe:-5},
+      hipR:{fe:-5,aa:-3,ie:0}, kneeR:{fe:10}, ankleR:{fe:5},
+      hipL:{fe:10,aa:5,ie:0},  kneeL:{fe:20}, ankleL:{fe:-10},
+    },
+  },
+  kickL: {
+    type: "attack",
+    joints: {
+      L5S1:{fe:5,aa:5,ie:8}, C7T1:{fe:5,aa:0,ie:3},
+      shoulderR:{fe:25,aa:12,ie:10}, elbowR:{fe:125}, wristR:{fe:-5},
+      shoulderL:{fe:35,aa:18,ie:5},  elbowL:{fe:115}, wristL:{fe:-5},
+      hipR:{fe:15,aa:-5,ie:0}, kneeR:{fe:25}, ankleR:{fe:8},
+      hipL:{fe:-95,aa:5,ie:0},  kneeL:{fe:-12}, ankleL:{fe:20},
+    },
+  },
+  kickR: {
+    type: "attack",
+    joints: {
+      L5S1:{fe:5,aa:-5,ie:-8}, C7T1:{fe:5,aa:0,ie:-3},
+      shoulderR:{fe:35,aa:18,ie:5}, elbowR:{fe:115}, wristR:{fe:-5},
+      shoulderL:{fe:25,aa:12,ie:10}, elbowL:{fe:125}, wristL:{fe:-5},
+      hipR:{fe:-95,aa:-5,ie:0},  kneeR:{fe:-12}, ankleR:{fe:20},
+      hipL:{fe:15,aa:5,ie:0},   kneeL:{fe:25}, ankleL:{fe:8},
+    },
+  },
+};
+
+const BOXING_MOTION = {
+  guard:    { offset:[0, 0, 0],           yaw: 0,     duration: 0.8 },
+  jab:      { offset:[0.11, 0.01, -0.01], yaw: 0.06,  duration: 0.5 },
+  cross:    { offset:[0.16, 0.015,-0.02], yaw: 0.16,  duration: 0.6 },
+  hook:     { offset:[0.10, 0.02, -0.12], yaw: 0.22,  duration: 0.7 },
+  uppercut: { offset:[0.09,-0.06,-0.015], yaw: 0.10,  duration: 0.7 },
+  bodyShot: { offset:[0.12,-0.045,-0.03], yaw: 0.11,  duration: 0.65 },
+  slip:     { offset:[-0.03,-0.03,-0.12], yaw:-0.10,  duration: 0.55 },
+  block:    { offset:[-0.04, 0.01, 0],    yaw: 0,     duration: 0.55 },
+  duck:     { offset:[-0.02,-0.11, 0],    yaw: 0.04,  duration: 0.65 },
+  parry:    { offset:[0.025,-0.01,-0.08], yaw: 0.05,  duration: 0.5 },
+  advance:  { offset:[0.18,-0.015, 0],    yaw: 0.03,  duration: 0.75 },
+  retreat:  { offset:[-0.16,0, 0],        yaw:-0.04,  duration: 0.75 },
+  kickL:    { offset:[0.08, 0.02, -0.05], yaw: 0.08,  duration: 0.7 },
+  kickR:    { offset:[0.08, 0.02, 0.05],  yaw:-0.08,  duration: 0.7 },
+};
+
 // ─── 1b. Digit data extraction (fingers & toes) ───────────────────
 
 /**
@@ -210,7 +372,35 @@ function extractLandmarks(skel) {
   };
 }
 
-// ─── 2. Mannequin bone hierarchy (data-driven) ─────────────────────
+// ─── 2a. Clip registry utility ──────────────────────────────────────
+
+/**
+ * Process a declarative clip registry, adding world positions and bone defs.
+ * Each clip: { name, parent, mirror?, pos, dims, color, shape? }
+ * - mirror: true  → L/R variants (R negates X). Parent gets L/R suffix
+ *                    when world[parent+"L"] exists, otherwise shared parent.
+ * - mirror: false → single clip, name and parent used as-is.
+ */
+function addClips(clips, world, defs) {
+  for (const clip of clips) {
+    const shape = clip.shape || "box";
+    if (clip.mirror) {
+      const nameL = clip.name + "L", nameR = clip.name + "R";
+      const hasLR = world[clip.parent + "L"] !== undefined;
+      const parentL = hasLR ? clip.parent + "L" : clip.parent;
+      const parentR = hasLR ? clip.parent + "R" : clip.parent;
+      world[nameL] = clip.pos;
+      world[nameR] = [-clip.pos[0], clip.pos[1], clip.pos[2]];
+      defs.push([nameL, parentL, shape, clip.dims, clip.color, null]);
+      defs.push([nameR, parentR, shape, clip.dims, clip.color, null]);
+    } else {
+      world[clip.name] = clip.pos;
+      defs.push([clip.name, clip.parent, shape, clip.dims, clip.color, null]);
+    }
+  }
+}
+
+// ─── 2b. Mannequin bone hierarchy (data-driven) ────────────────────
 
 /**
  * Build bone table from anatomical landmarks.
@@ -323,17 +513,7 @@ function buildBoneTable(lm) {
   const midfootH = 0.018;
   const midfootD = 0.055;
 
-  // Armor overlays
-  world.shoulderPadL = [world.upperArmL[0] + 0.02,  world.upperArmL[1] + 0.06, 0];
-  world.shoulderPadR = [world.upperArmR[0] - 0.02,  world.upperArmR[1] + 0.06, 0];
-  world.chestPlate   = [0, chestY + 0.04, chestD / 2 + 0.02];
-  world.beltFront    = [0, hipCenterY + 0.02, hipD / 2 + 0.02];
-  world.pouchL       = [ 0.14, hipCenterY, hipD / 2 - 0.01];
-  world.pouchR       = [-0.14, hipCenterY, hipD / 2 - 0.01];
-  world.kneePadL     = [ hipJointX, kneeY + 0.10, 0.05];
-  world.kneePadR     = [-hipJointX, kneeY + 0.10, 0.05];
-  world.visor        = [0, headBaseY - 0.01, headRz + 0.02];
-  world.helmetCrest  = [0, headBaseY + headRy * 0.8, -0.02];
+  // Armor overlays — world positions + bone defs added via clip registry below
 
   // ── Static bone definitions ──
   const defs = [
@@ -364,18 +544,32 @@ function buildBoneTable(lm) {
     ["heelR",        "lowerLegR",   "box",        [heelW, heelH, heelD],                         "sole",     null],
     ["midfootR",     "heelR",       "box",        [midfootW, midfootH, midfootD],                 "sole",     null],
 
-    // Armor detail pieces (rigid skinning only)
-    ["shoulderPadL", "upperArmL",   "box",        [0.14, 0.05, 0.14],                           "armor",    null],
-    ["shoulderPadR", "upperArmR",   "box",        [0.14, 0.05, 0.14],                           "armor",    null],
-    ["chestPlate",   "chest",       "box",        [chestW*0.65, 0.16, 0.04],                    "armorDark",null],
-    ["beltFront",    "hips",        "box",        [hipW*0.65, 0.06, 0.04],                      "belt",     null],
-    ["pouchL",       "hips",        "box",        [0.06, 0.08, 0.06],                           "armorDark",null],
-    ["pouchR",       "hips",        "box",        [0.06, 0.08, 0.06],                           "armorDark",null],
-    ["kneePadL",     "lowerLegL",   "box",        [0.08, 0.10, 0.04],                           "armor",    null],
-    ["kneePadR",     "lowerLegR",   "box",        [0.08, 0.10, 0.04],                           "armor",    null],
-    ["visor",        "head",        "box",        [headRx*1.8, 0.06, 0.04],                     "visor",    null],
-    ["helmetCrest",  "head",        "box",        [0.04, 0.04, headRz*1.4],                     "accent",   null],
   ];
+
+  // ── Armor clip registry (add new clips here — one entry per piece) ──
+  addClips([
+    { name: "shoulderPad", parent: "upperArm", mirror: true,
+      pos: [world.upperArmL[0] + 0.02, world.upperArmL[1] + 0.06, 0],
+      dims: [0.14, 0.05, 0.14], color: "armor" },
+    { name: "chestPlate", parent: "chest",
+      pos: [0, chestY + 0.04, chestD / 2 + 0.02],
+      dims: [chestW * 0.65, 0.16, 0.04], color: "armorDark" },
+    { name: "beltFront", parent: "hips",
+      pos: [0, hipCenterY + 0.02, hipD / 2 + 0.02],
+      dims: [hipW * 0.65, 0.06, 0.04], color: "belt" },
+    { name: "pouch", parent: "hips", mirror: true,
+      pos: [0.14, hipCenterY, hipD / 2 - 0.01],
+      dims: [0.06, 0.08, 0.06], color: "armorDark" },
+    { name: "kneePad", parent: "lowerLeg", mirror: true,
+      pos: [hipJointX, kneeY + 0.10, 0.05],
+      dims: [0.08, 0.10, 0.04], color: "armor" },
+    { name: "visor", parent: "head",
+      pos: [0, headBaseY - 0.01, headRz + 0.02],
+      dims: [headRx * 1.8, 0.06, 0.04], color: "visor" },
+    { name: "helmetCrest", parent: "head",
+      pos: [0, headBaseY + headRy * 0.8, -0.02],
+      dims: [0.04, 0.04, headRz * 1.4], color: "accent" },
+  ], world, defs);
 
   // ── Generate finger bone defs (capsules with smooth skinning) ──
   for (const side of ["L", "R"]) {
@@ -635,6 +829,165 @@ function rotateGeomZ90(geom, sign) {
   }
 }
 
+// ─── 4b. Boxing animation helpers ───────────────────────────────────
+
+const DEG = Math.PI / 180;
+
+function quatFromEulerXYZ(x = 0, y = 0, z = 0) {
+  const c1 = Math.cos(x / 2), c2 = Math.cos(y / 2), c3 = Math.cos(z / 2);
+  const s1 = Math.sin(x / 2), s2 = Math.sin(y / 2), s3 = Math.sin(z / 2);
+  return [
+    s1 * c2 * c3 + c1 * s2 * s3,
+    c1 * s2 * c3 - s1 * c2 * s3,
+    c1 * c2 * s3 + s1 * s2 * c3,
+    c1 * c2 * c3 - s1 * s2 * s3,
+  ];
+}
+
+function quatFromYaw(yaw = 0) {
+  return quatFromEulerXYZ(0, yaw, 0);
+}
+
+function emptyPoseMap() {
+  return new Map();
+}
+
+function addPoseEuler(pose, name, x = 0, y = 0, z = 0) {
+  const current = pose.get(name) || { x: 0, y: 0, z: 0 };
+  current.x += x;
+  current.y += y;
+  current.z += z;
+  pose.set(name, current);
+}
+
+function applyBoxingJointPose(pose, jointName, values) {
+  let fe = (values.fe || 0) * DEG;
+  let aa = (values.aa || 0) * DEG;
+  let ie = (values.ie || 0) * DEG;
+
+  if (jointName === "shoulderL" || jointName === "hipL") {
+    aa *= -1;
+    ie *= -1;
+  } else if (jointName === "wristL" || jointName === "ankleL") {
+    aa *= -1;
+  }
+
+  switch (jointName) {
+    case "L5S1":
+      addPoseEuler(pose, "hips",  fe * 0.35, ie * 0.55, aa * 0.35);
+      addPoseEuler(pose, "spine", fe * 0.40, ie * 0.30, aa * 0.40);
+      addPoseEuler(pose, "chest", fe * 0.25, ie * 0.15, aa * 0.25);
+      break;
+    case "C7T1":
+      addPoseEuler(pose, "neck", fe * 0.65, ie * 0.60, aa * 0.75);
+      addPoseEuler(pose, "head", fe * 0.25, ie * 0.25, aa * 0.20);
+      break;
+    case "shoulderL":
+      addPoseEuler(pose, "clavicleL", fe * 0.18, ie * 0.15, aa * 0.25);
+      addPoseEuler(pose, "upperArmL", fe * 0.82, ie * 0.85, aa * 0.75);
+      break;
+    case "shoulderR":
+      addPoseEuler(pose, "clavicleR", fe * 0.18, ie * 0.15, aa * 0.25);
+      addPoseEuler(pose, "upperArmR", fe * 0.82, ie * 0.85, aa * 0.75);
+      break;
+    case "elbowL":
+      addPoseEuler(pose, "lowerArmL", fe * 0.95, 0, 0);
+      break;
+    case "elbowR":
+      addPoseEuler(pose, "lowerArmR", fe * 0.95, 0, 0);
+      break;
+    case "wristL":
+      addPoseEuler(pose, "handL", fe * 0.85, 0, aa * 0.8);
+      break;
+    case "wristR":
+      addPoseEuler(pose, "handR", fe * 0.85, 0, aa * 0.8);
+      break;
+    case "hipL":
+      addPoseEuler(pose, "upperLegL", fe * 0.90, ie * 0.80, aa * 0.65);
+      break;
+    case "hipR":
+      addPoseEuler(pose, "upperLegR", fe * 0.90, ie * 0.80, aa * 0.65);
+      break;
+    case "kneeL":
+      addPoseEuler(pose, "lowerLegL", fe * 0.95, 0, 0);
+      break;
+    case "kneeR":
+      addPoseEuler(pose, "lowerLegR", fe * 0.95, 0, 0);
+      break;
+    case "ankleL":
+      addPoseEuler(pose, "footL", fe * 0.75, 0, aa * 0.75);
+      addPoseEuler(pose, "toeL", fe * 0.25, 0, 0);
+      break;
+    case "ankleR":
+      addPoseEuler(pose, "footR", fe * 0.75, 0, aa * 0.75);
+      addPoseEuler(pose, "toeR", fe * 0.25, 0, 0);
+      break;
+  }
+}
+
+function poseFromActionJoints(action) {
+  const pose = emptyPoseMap();
+  for (const [jointName, values] of Object.entries(action.joints || {})) {
+    applyBoxingJointPose(pose, jointName, values);
+  }
+  return pose;
+}
+
+function animationTimes(actionName) {
+  const motion = BOXING_MOTION[actionName];
+  const duration = motion?.duration || 0.6;
+  if (actionName === "guard") {
+    return new Float32Array([0, duration]);
+  }
+  const attack = BOXING_ACTIONS[actionName]?.type === "attack";
+  const movement = BOXING_ACTIONS[actionName]?.type === "movement";
+  if (movement) {
+    return new Float32Array([0, duration * 0.45, duration]);
+  }
+  if (attack) {
+    return new Float32Array([0, duration * 0.35, duration * 0.6, duration]);
+  }
+  return new Float32Array([0, duration * 0.4, duration]);
+}
+
+function translationFrames(actionName) {
+  const motion = BOXING_MOTION[actionName] || BOXING_MOTION.guard;
+  const [x, y, z] = motion.offset;
+  if (actionName === "guard") {
+    return [0, 0, 0, 0, 0, 0];
+  }
+  if (BOXING_ACTIONS[actionName]?.type === "movement") {
+    return [0, 0, 0, x, y, z, 0, 0, 0];
+  }
+  if (BOXING_ACTIONS[actionName]?.type === "attack") {
+    return [0, 0, 0, x * 0.8, y, z * 0.8, x, y, z, 0, 0, 0];
+  }
+  return [0, 0, 0, x, y, z, 0, 0, 0];
+}
+
+function yawFrames(actionName) {
+  const motion = BOXING_MOTION[actionName] || BOXING_MOTION.guard;
+  if (actionName === "guard") {
+    return [0, 0];
+  }
+  if (BOXING_ACTIONS[actionName]?.type === "movement") {
+    return [0, motion.yaw, 0];
+  }
+  if (BOXING_ACTIONS[actionName]?.type === "attack") {
+    return [0, motion.yaw * 0.75, motion.yaw, 0];
+  }
+  return [0, motion.yaw, 0];
+}
+
+function quaternionFramesFromEulerMaps(keys, poseMaps) {
+  const out = [];
+  for (const pose of poseMaps) {
+    const e = pose.get(keys) || { x: 0, y: 0, z: 0 };
+    out.push(...quatFromEulerXYZ(e.x, e.y, e.z));
+  }
+  return out;
+}
+
 /** Rotate capsule from Y-axis to +Z-axis (for toes extending forward) */
 function rotateGeomX90(geom) {
   const p = geom.positions, n = geom.normals;
@@ -725,7 +1078,191 @@ function computeSkinWeights(vWorld, boneIdx, wp, BONES) {
   return { joints, weights };
 }
 
-// ─── 7. Build GLB ───────────────────────────────────────────────────
+// ─── 7. Moonwalk animation clip ────────────────────────────────────
+
+/**
+ * Add a looping moonwalk animation to the GLB.
+ *
+ * 9 keyframes over a 1.6 s cycle (two half-strides).
+ * Phase A (0.0–0.8 s): right foot slides back, left foot pops.
+ * Phase B (0.8–1.6 s): mirror.
+ *
+ * Animated bones: root (translation), hips (rotation + bob),
+ * spine, head, upper/lower arms, upper/lower legs, heels, midfoot.
+ */
+function addMoonwalkAnimation(doc, buffer, BONES, nodes) {
+  const anim = doc.createAnimation("Moonwalk");
+
+  // ── Quaternion helpers ──
+  const deg = d => d * Math.PI / 180;
+
+  function qaa(ax, ay, az, angleDeg) {
+    const ha = deg(angleDeg) / 2, s = Math.sin(ha);
+    return [ax * s, ay * s, az * s, Math.cos(ha)];
+  }
+
+  function qmul(a, b) {
+    return [
+      a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1],
+      a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0],
+      a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3],
+      a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2],
+    ];
+  }
+
+  function qnorm(q) {
+    const len = Math.sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]) || 1;
+    return [q[0]/len, q[1]/len, q[2]/len, q[3]/len];
+  }
+
+  /** Euler XYZ → quaternion.  q = Qz · Qy · Qx  (extrinsic XYZ). */
+  function euler(xd, yd, zd) {
+    let q = qaa(1, 0, 0, xd);
+    if (yd) q = qmul(qaa(0, 1, 0, yd), q);
+    if (zd) q = qmul(qaa(0, 0, 1, zd), q);
+    return qnorm(q);
+  }
+
+  // ── Name → index ──
+  const nameIdx = new Map();
+  BONES.forEach(([name], i) => nameIdx.set(name, i));
+
+  // ── Shared keyframe times (9 frames, 0.2 s apart) ──
+  const times = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6];
+  const K = times.length;
+  const timeAcc = doc.createAccessor("mw_time")
+    .setType("SCALAR").setArray(new Float32Array(times)).setBuffer(buffer);
+
+  // ── Channel factories ──
+
+  function addRot(name, quats) {
+    if (!nameIdx.has(name)) return;
+    const arr = new Float32Array(K * 4);
+    quats.forEach((q, i) => arr.set(q, i * 4));
+    const samp = doc.createAnimationSampler()
+      .setInput(timeAcc)
+      .setOutput(doc.createAccessor(`mw_r_${name}`).setType("VEC4").setArray(arr).setBuffer(buffer))
+      .setInterpolation("LINEAR");
+    const chan = doc.createAnimationChannel()
+      .setTargetNode(nodes[nameIdx.get(name)])
+      .setTargetPath("rotation").setSampler(samp);
+    anim.addSampler(samp);
+    anim.addChannel(chan);
+  }
+
+  /** Translation channel — offsets are ADDED to the bone's bind-pose local translation. */
+  function addTrans(name, offsets) {
+    if (!nameIdx.has(name)) return;
+    const base = BONES[nameIdx.get(name)][2];
+    const arr  = new Float32Array(K * 3);
+    offsets.forEach(([dx, dy, dz], i) => {
+      arr[i * 3]     = base[0] + dx;
+      arr[i * 3 + 1] = base[1] + dy;
+      arr[i * 3 + 2] = base[2] + dz;
+    });
+    const samp = doc.createAnimationSampler()
+      .setInput(timeAcc)
+      .setOutput(doc.createAccessor(`mw_t_${name}`).setType("VEC3").setArray(arr).setBuffer(buffer))
+      .setInterpolation("LINEAR");
+    const chan = doc.createAnimationChannel()
+      .setTargetNode(nodes[nameIdx.get(name)])
+      .setTargetPath("translation").setSampler(samp);
+    anim.addSampler(samp);
+    anim.addChannel(chan);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // K E Y F R A M E   D A T A
+  // indices:              0     1     2     3     4     5     6     7     8
+  // times (s):          0.0   0.2   0.4   0.6   0.8   1.0   1.2   1.4   1.6
+  // Phase A (R slides): ├─────────────────────────┤
+  // Phase B (L slides):                           ├─────────────────────────┤
+  // ════════════════════════════════════════════════════════════════
+
+  // ── Root: backward glide (-Z) ──
+  const stride = 0.60;                                  // metres per cycle
+  addTrans("root", times.map(t => [0, 0, -(t / 1.6) * stride]));
+
+  // ── Hips: Y swagger + Z tilt + vertical bob ──
+  addRot("hips", [
+    euler(0,  0,  0),
+    euler(0,  2, -1),
+    euler(0,  4, -2),
+    euler(0,  2, -1),
+    euler(0,  0,  0),
+    euler(0, -2,  1),
+    euler(0, -4,  2),
+    euler(0, -2,  1),
+    euler(0,  0,  0),
+  ]);
+  addTrans("hips", [
+    [0, 0,     0], [0, 0.003, 0], [0, 0.006, 0], [0, 0.003, 0],
+    [0, 0,     0], [0, 0.003, 0], [0, 0.006, 0], [0, 0.003, 0],
+    [0, 0,     0],
+  ]);
+
+  // ── Spine: counter-swagger + slight forward lean ──
+  addRot("spine", [
+    euler(3,  0, 0), euler(3, -1, 0), euler(3, -2, 0), euler(3, -1, 0),
+    euler(3,  0, 0), euler(3,  1, 0), euler(3,  2, 0), euler(3,  1, 0),
+    euler(3,  0, 0),
+  ]);
+
+  // ── Head: subtle counter to keep gaze stable ──
+  addRot("head", [
+    euler(-3, 0, 0), euler(-3, 1, 0), euler(-3, 2, 0), euler(-3, 1, 0),
+    euler(-3, 0, 0), euler(-3,-1, 0), euler(-3,-2, 0), euler(-3,-1, 0),
+    euler(-3, 0, 0),
+  ]);
+
+  // ── Upper arms: bring down from T-pose (Z) + swing (X) ──
+  //   Left arm:  Z = −75° constant, X oscillates
+  //   Right arm: Z = +75° constant, opposite phase
+  addRot("upperArmL", [
+    euler( 5, 0, -75), euler(-3, 0, -75), euler(-15, 0, -75), euler(-8, 0, -75),
+    euler( 5, 0, -75), euler(12, 0, -75), euler( 18, 0, -75), euler(12, 0, -75),
+    euler( 5, 0, -75),
+  ]);
+  addRot("upperArmR", [
+    euler( 5, 0, 75), euler(12, 0, 75), euler( 18, 0, 75), euler(12, 0, 75),
+    euler( 5, 0, 75), euler(-3, 0, 75), euler(-15, 0, 75), euler(-8, 0, 75),
+    euler( 5, 0, 75),
+  ]);
+
+  // ── Lower arms: constant elbow bend ──
+  addRot("lowerArmL", Array(K).fill(euler(0, 0, -25)));
+  addRot("lowerArmR", Array(K).fill(euler(0, 0,  25)));
+
+  // ── Upper legs (hip flexion +X = forward) ──
+  //   R: sliding 0→0.8 (flex→ext), non-sliding 0.8→1.6
+  //   L: shifted half-cycle
+  addRot("upperLegR", [15, 8, 2, -5, -10, -2, 5, 10, 15].map(x => euler(x, 0, 0)));
+  addRot("upperLegL", [-10, -2, 5, 10, 15, 8, 2, -5, -10].map(x => euler(x, 0, 0)));
+
+  // ── Lower legs (knee flexion +X = bend) ──
+  //   Sliding phase: nearly straight ≈ 3°
+  //   Pop phase:     bent ≈ 30° (heel lifts off ground)
+  addRot("lowerLegR", [5, 3, 3, 4, 8, 18, 30, 20, 5].map(x => euler(x, 0, 0)));
+  addRot("lowerLegL", [8, 18, 30, 20, 5, 3, 3, 4, 8].map(x => euler(x, 0, 0)));
+
+  // ── Heels (ankle plantarflexion +X = toes down / heel up) ──
+  //   Sliding: flat (0°)
+  //   Pop:     plantarflexed ≈ 20° (on ball of foot)
+  addRot("heelR", [0, 0, 0, 0, 0, 10, 20, 10, 0].map(x => euler(x, 0, 0)));
+  addRot("heelL", [0, 10, 20, 10, 0, 0, 0, 0, 0].map(x => euler(x, 0, 0)));
+
+  // ── Midfoot: counter-rotate slightly to keep toe contact plausible ──
+  addRot("midfootR", [0, 0, 0, 0, 0, -5, -10, -5, 0].map(x => euler(x, 0, 0)));
+  addRot("midfootL", [0, -5, -10, -5, 0, 0, 0, 0, 0].map(x => euler(x, 0, 0)));
+
+  // ── Palms: slight wrist flexion for style (constant) ──
+  addRot("palmL", Array(K).fill(euler(0, 0, -10)));
+  addRot("palmR", Array(K).fill(euler(0, 0,  10)));
+
+  return anim;
+}
+
+// ─── 8. Build GLB ───────────────────────────────────────────────────
 
 async function main() {
   console.log(`Loading skeleton from ${SKELETON_PATH}…`);
@@ -751,6 +1288,7 @@ async function main() {
     n.setTranslation(local);
     return n;
   });
+  const nodeByName = Object.fromEntries(BONES.map(([name], i) => [name, nodes[i]]));
   for (let i = 0; i < BONES.length; i++) {
     const pi = BONES[i][1];
     if (pi >= 0) nodes[pi].addChild(nodes[i]);
@@ -766,6 +1304,91 @@ async function main() {
   );
   for (const n of nodes) skin.addJoint(n);
   skin.setSkeleton(nodes[0]);
+
+  // ── Boxing animations ──
+  const guardPose = poseFromActionJoints(BOXING_ACTIONS.guard);
+  const animatedBoneNames = [
+    "hips", "spine", "chest", "neck", "head",
+    "clavicleL", "upperArmL", "lowerArmL", "handL",
+    "clavicleR", "upperArmR", "lowerArmR", "handR",
+    "upperLegL", "lowerLegL", "footL", "toeL",
+    "upperLegR", "lowerLegR", "footR", "toeR",
+  ];
+
+  for (const [actionName, action] of Object.entries(BOXING_ACTIONS)) {
+    const animation = doc.createAnimation(actionName);
+    const times = animationTimes(actionName);
+    const timeAccessor = doc.createAccessor(`${actionName}_times`)
+      .setType("SCALAR")
+      .setArray(times)
+      .setBuffer(buffer);
+
+    let poseFrames;
+    if (actionName === "guard") {
+      poseFrames = [guardPose, guardPose];
+    } else {
+      const actionPose = poseFromActionJoints(action);
+      if (action.type === "movement") {
+        poseFrames = [guardPose, actionPose, guardPose];
+      } else if (action.type === "attack") {
+        poseFrames = [guardPose, actionPose, actionPose, guardPose];
+      } else {
+        poseFrames = [guardPose, actionPose, guardPose];
+      }
+    }
+
+    for (const boneName of animatedBoneNames) {
+      const node = nodeByName[boneName];
+      if (!node) continue;
+
+      const rotations = quaternionFramesFromEulerMaps(boneName, poseFrames);
+      const rotAccessor = doc.createAccessor(`${actionName}_${boneName}_rot`)
+        .setType("VEC4")
+        .setArray(new Float32Array(rotations))
+        .setBuffer(buffer);
+
+      const sampler = doc.createAnimationSampler(`${actionName}_${boneName}_sampler`)
+        .setInput(timeAccessor)
+        .setOutput(rotAccessor)
+        .setInterpolation("LINEAR");
+      const channel = doc.createAnimationChannel(`${actionName}_${boneName}_channel`)
+        .setTargetNode(node)
+        .setTargetPath("rotation")
+        .setSampler(sampler);
+
+      animation.addSampler(sampler).addChannel(channel);
+    }
+
+    const translationValues = translationFrames(actionName);
+    const translationAccessor = doc.createAccessor(`${actionName}_root_translation`)
+      .setType("VEC3")
+      .setArray(new Float32Array(translationValues))
+      .setBuffer(buffer);
+    const translationSampler = doc.createAnimationSampler(`${actionName}_root_translation_sampler`)
+      .setInput(timeAccessor)
+      .setOutput(translationAccessor)
+      .setInterpolation("LINEAR");
+    const translationChannel = doc.createAnimationChannel(`${actionName}_root_translation_channel`)
+      .setTargetNode(nodeByName.root)
+      .setTargetPath("translation")
+      .setSampler(translationSampler);
+    animation.addSampler(translationSampler).addChannel(translationChannel);
+
+    const yawValues = yawFrames(actionName).flatMap((yaw) => quatFromYaw(yaw));
+    const yawAccessor = doc.createAccessor(`${actionName}_root_rotation`)
+      .setType("VEC4")
+      .setArray(new Float32Array(yawValues))
+      .setBuffer(buffer);
+    const yawSampler = doc.createAnimationSampler(`${actionName}_root_rotation_sampler`)
+      .setInput(timeAccessor)
+      .setOutput(yawAccessor)
+      .setInterpolation("LINEAR");
+    const yawChannel = doc.createAnimationChannel(`${actionName}_root_rotation_channel`)
+      .setTargetNode(nodeByName.root)
+      .setTargetPath("rotation")
+      .setSampler(yawSampler);
+    animation.addSampler(yawSampler).addChannel(yawChannel);
+  }
 
   // ── Materials ──
   const mats = {};
@@ -859,6 +1482,9 @@ async function main() {
 
   scene.addChild(doc.createNode("MannequinMesh").setMesh(mesh).setSkin(skin));
 
+  // ── Animation ──
+  addMoonwalkAnimation(doc, buffer, BONES, nodes);
+
   const outPath = "./mannequin_v4.glb";
   await new NodeIO().write(outPath, doc);
 
@@ -872,6 +1498,7 @@ async function main() {
   console.log(`  Triangles:        ${tt}`);
   console.log(`  Materials:        ${Object.values(groups).filter(g => g.vc > 0).length}`);
   console.log(`  Geometry types:   capsule (limbs), trapezoid (torso), helmet (head), box (armor)`);
+  console.log(`  Animations:       ${Object.keys(BOXING_ACTIONS).length} (${Object.keys(BOXING_ACTIONS).join(", ")})`);
 
   console.log(`\n  Key proportions (from skeleton.json):`);
   console.log(`    Shoulder width: ${(lm.shoulderX * 200).toFixed(1)}cm`);

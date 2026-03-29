@@ -2,52 +2,69 @@ import './style.css';
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
-import { KeyboardController } from './keyboard';
-import { resolveMovement } from './motion';
+import {
+  type ActionName,
+  applyExchange,
+  chooseAiAction,
+  createFighter,
+  distanceBetween,
+  EXCHANGE_COOLDOWN,
+  recoverStamina,
+  resetFighters,
+  resolveExchange,
+  shouldResetRound,
+  type FighterRuntime,
+} from './combat';
 
 const MODEL_URL = '/assets/mannequin_v4.glb';
-const TARGET_MODEL_HEIGHT = 1.8;
-const CAMERA_OFFSET = new THREE.Vector3(0, 2.6, -6.5);
-const CAMERA_LOOK_AT_OFFSET = new THREE.Vector3(0, 1.4, 4);
-const GRAVITY = 18;
-const JUMP_VELOCITY = 6.25;
-const ROLL_DURATION = 0.62;
-const ROLL_SPEED = 4.8;
-const FORWARD_VECTOR = new THREE.Vector3(0, 0, 1);
+const TARGET_MODEL_HEIGHT = 1.82;
+const CAMERA_POSITION = new THREE.Vector3(0, 4.6, -9.5);
+const CAMERA_LOOK_AT = new THREE.Vector3(0, 1.35, 0);
+const FLOOR_RADIUS = 26;
+const ROUND_RESET_DELAY = 2.1;
+const REQUIRED_CLIPS: ActionName[] = [
+  'guard',
+  'jab',
+  'cross',
+  'hook',
+  'uppercut',
+  'bodyShot',
+  'slip',
+  'block',
+  'duck',
+  'parry',
+  'advance',
+  'retreat',
+];
 
-type RigBoneKey =
-  | 'hips'
-  | 'spine'
-  | 'chest'
-  | 'neck'
-  | 'head'
-  | 'upperArmL'
-  | 'lowerArmL'
-  | 'handL'
-  | 'upperArmR'
-  | 'lowerArmR'
-  | 'handR'
-  | 'upperLegL'
-  | 'lowerLegL'
-  | 'footL'
-  | 'upperLegR'
-  | 'lowerLegR'
-  | 'footR';
-
-type CharacterRig = {
-  model: THREE.Object3D;
-  bones: Partial<Record<RigBoneKey, THREE.Object3D>>;
-  baseRotations: Map<RigBoneKey, THREE.Euler>;
-  elapsed: number;
-  missingBones: RigBoneKey[];
+type FighterActor = {
+  runtime: FighterRuntime;
+  anchor: THREE.Group;
+  mixer: THREE.AnimationMixer;
+  actions: Partial<Record<ActionName, THREE.AnimationAction>>;
 };
 
-const mount = document.querySelector<HTMLDivElement>('#app');
+type DuelState = {
+  actorA: FighterActor;
+  actorB: FighterActor;
+  exchangeCount: number;
+  round: number;
+  resetTimer: number;
+  lastNarrative: string;
+  clipWarnings: string[];
+};
 
-if (!mount) {
-  throw new Error('Missing #app mount node.');
+const mountElement = document.querySelector<HTMLDivElement>('#app');
+const hudElement = document.querySelector<HTMLDivElement>('.hud');
+
+if (!mountElement || !hudElement) {
+  throw new Error('Missing application mount nodes.');
 }
+
+const mount = mountElement;
+const hud = hudElement;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -57,425 +74,364 @@ renderer.shadowMap.enabled = true;
 mount.append(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#c7d2df');
-scene.fog = new THREE.Fog('#c7d2df', 10, 38);
+scene.background = new THREE.Color('#d4dde6');
+scene.fog = new THREE.Fog('#d4dde6', 12, 36);
 
-const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 2.8, -7);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.copy(CAMERA_POSITION);
+camera.lookAt(CAMERA_LOOK_AT);
 
-const hemisphereLight = new THREE.HemisphereLight('#f5f5f5', '#617389', 2.4);
-scene.add(hemisphereLight);
+scene.add(new THREE.HemisphereLight('#fbfbf2', '#607488', 2.2));
 
-const sunlight = new THREE.DirectionalLight('#fff2d9', 2.8);
-sunlight.position.set(6, 12, 4);
-sunlight.castShadow = true;
-sunlight.shadow.mapSize.setScalar(2048);
-sunlight.shadow.camera.left = -20;
-sunlight.shadow.camera.right = 20;
-sunlight.shadow.camera.top = 20;
-sunlight.shadow.camera.bottom = -20;
-scene.add(sunlight);
+const keyLight = new THREE.DirectionalLight('#fff5df', 2.6);
+keyLight.position.set(6, 12, -2);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.setScalar(2048);
+keyLight.shadow.camera.left = -16;
+keyLight.shadow.camera.right = 16;
+keyLight.shadow.camera.top = 16;
+keyLight.shadow.camera.bottom = -16;
+scene.add(keyLight);
+
+const rimLight = new THREE.DirectionalLight('#d8e7ff', 1.2);
+rimLight.position.set(-9, 7, 6);
+scene.add(rimLight);
 
 const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(30, 96),
+  new THREE.CircleGeometry(FLOOR_RADIUS, 96),
   new THREE.MeshStandardMaterial({
-    color: '#5f7a56',
-    roughness: 0.95,
-    metalness: 0.02,
+    color: '#446148',
+    roughness: 0.94,
+    metalness: 0.03,
   }),
 );
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-const floorRing = new THREE.Mesh(
-  new THREE.RingGeometry(16, 23, 96),
+const ringFill = new THREE.Mesh(
+  new THREE.CircleGeometry(5.8, 96),
+  new THREE.MeshStandardMaterial({
+    color: '#d9dfdd',
+    roughness: 0.88,
+    metalness: 0.02,
+  }),
+);
+ringFill.rotation.x = -Math.PI / 2;
+ringFill.position.y = 0.015;
+ringFill.receiveShadow = true;
+scene.add(ringFill);
+
+const ringLine = new THREE.Mesh(
+  new THREE.RingGeometry(5.7, 5.92, 96),
   new THREE.MeshBasicMaterial({
-    color: '#7e9a71',
+    color: '#1f2b35',
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.72,
     side: THREE.DoubleSide,
   }),
 );
-floorRing.rotation.x = -Math.PI / 2;
-floorRing.position.y = 0.01;
-scene.add(floorRing);
+ringLine.rotation.x = -Math.PI / 2;
+ringLine.position.y = 0.02;
+scene.add(ringLine);
 
-const grid = new THREE.GridHelper(40, 40, '#2f3f4d', '#617389');
+const centerMark = new THREE.Mesh(
+  new THREE.RingGeometry(0.1, 0.16, 48),
+  new THREE.MeshBasicMaterial({
+    color: '#b6503d',
+    side: THREE.DoubleSide,
+  }),
+);
+centerMark.rotation.x = -Math.PI / 2;
+centerMark.position.y = 0.025;
+scene.add(centerMark);
+
+const grid = new THREE.GridHelper(32, 32, '#31404d', '#687787');
 grid.position.y = 0.02;
 scene.add(grid);
 
-const keyboard = new KeyboardController();
-keyboard.attach();
+const warningPanel = document.createElement('div');
+warningPanel.className = 'warning-panel';
+warningPanel.hidden = true;
+document.body.append(warningPanel);
 
-let character: CharacterRig | null = null;
-let verticalVelocity = 0;
-let isAirborne = false;
-let groundY = 0;
-let rollTimeRemaining = 0;
+const errorPanel = document.createElement('div');
+errorPanel.className = 'error-panel';
+errorPanel.hidden = true;
+document.body.append(errorPanel);
 
-function getBone(root: THREE.Object3D, name: string): THREE.Object3D | undefined {
-  const candidate = root.getObjectByName(name);
-
-  if (candidate) {
-    return candidate;
-  }
-
-  let match: THREE.Object3D | undefined;
-
-  root.traverse((child) => {
-    if (match || child.name !== name) {
-      return;
-    }
-
-    match = child;
-  });
-
-  if (match) {
-    return match;
-  }
-
-  root.traverse((child) => {
-    if (!(child instanceof THREE.SkinnedMesh) || !child.skeleton) {
-      return;
-    }
-
-    const skeletonMatch = child.skeleton.bones.find((bone) => bone.name === name);
-
-    if (skeletonMatch) {
-      match = skeletonMatch;
-    }
-  });
-
-  return match;
-}
-
-function getBoneByAliases(root: THREE.Object3D, names: string[]): THREE.Object3D | undefined {
-  for (const name of names) {
-    const bone = getBone(root, name);
-
-    if (bone) {
-      return bone;
-    }
-  }
-
-  return undefined;
-}
-
-function cloneEuler(source: THREE.Euler): THREE.Euler {
-  return new THREE.Euler(source.x, source.y, source.z, source.order);
-}
-
-function addOffset(base: THREE.Euler, x = 0, y = 0, z = 0): THREE.Euler {
-  return new THREE.Euler(base.x + x, base.y + y, base.z + z, base.order);
-}
-
-function applyRotation(
-  rig: CharacterRig,
-  key: RigBoneKey,
-  target: THREE.Euler,
-  delta: number,
-  responsiveness = 12,
-): void {
-  const bone = rig.bones[key];
-
-  if (!bone) {
-    return;
-  }
-
-  const alpha = 1 - Math.exp(-delta * responsiveness);
-  bone.rotation.x += (target.x - bone.rotation.x) * alpha;
-  bone.rotation.y += (target.y - bone.rotation.y) * alpha;
-  bone.rotation.z += (target.z - bone.rotation.z) * alpha;
-}
-
-function animateRig(
-  rig: CharacterRig,
-  delta: number,
-  speed: number,
-  isJumping: boolean,
-  jumpVelocity: number,
-  isRolling: boolean,
-  rollProgress: number,
-): void {
-  rig.elapsed += delta;
-
-  const bases = rig.baseRotations;
-  const swing = rig.elapsed * 7;
-  const walkAmount = THREE.MathUtils.clamp(Math.abs(speed) / 2.4, 0, 1);
-  const phase = speed >= 0 ? 1 : -1;
-  const stride = Math.sin(swing) * 0.7 * walkAmount * phase;
-  const counterStride = Math.sin(swing + Math.PI) * 0.7 * walkAmount * phase;
-  const kneeLiftL = Math.max(0, -stride) * 0.65;
-  const kneeLiftR = Math.max(0, -counterStride) * 0.65;
-  const armSwingL = Math.sin(swing + Math.PI) * 0.5 * walkAmount * phase;
-  const armSwingR = Math.sin(swing) * 0.5 * walkAmount * phase;
-  const idleBreath = Math.sin(rig.elapsed * 1.8) * 0.03;
-  const idleSway = Math.sin(rig.elapsed * 0.9) * 0.02;
-
-  if (isRolling) {
-    const fold = Math.sin(rollProgress * Math.PI);
-    const spin = rollProgress * Math.PI * 2;
-
-    applyRotation(rig, 'hips', addOffset(bases.get('hips')!, 0.45 + fold * 0.55, 0, 0), delta, 18);
-    applyRotation(rig, 'spine', addOffset(bases.get('spine')!, 0.15 + Math.sin(spin) * 0.25, 0, 0), delta, 18);
-    applyRotation(rig, 'chest', addOffset(bases.get('chest')!, -0.25 + Math.sin(spin) * 0.18, 0, 0), delta, 18);
-    applyRotation(rig, 'neck', addOffset(bases.get('neck')!, -0.2, 0, 0), delta, 16);
-    applyRotation(rig, 'head', addOffset(bases.get('head')!, -0.28, 0, 0), delta, 16);
-
-    applyRotation(rig, 'upperLegL', addOffset(bases.get('upperLegL')!, -0.9 + fold * 0.25, 0, 0.12), delta, 18);
-    applyRotation(rig, 'upperLegR', addOffset(bases.get('upperLegR')!, -0.9 + fold * 0.25, 0, -0.12), delta, 18);
-    applyRotation(rig, 'lowerLegL', addOffset(bases.get('lowerLegL')!, 1.3 - fold * 0.35, 0, 0), delta, 18);
-    applyRotation(rig, 'lowerLegR', addOffset(bases.get('lowerLegR')!, 1.3 - fold * 0.35, 0, 0), delta, 18);
-    applyRotation(rig, 'footL', addOffset(bases.get('footL')!, -0.55, 0, 0), delta, 18);
-    applyRotation(rig, 'footR', addOffset(bases.get('footR')!, -0.55, 0, 0), delta, 18);
-
-    applyRotation(rig, 'upperArmL', addOffset(bases.get('upperArmL')!, -1.1, 0, 0.45), delta, 18);
-    applyRotation(rig, 'upperArmR', addOffset(bases.get('upperArmR')!, -1.1, 0, -0.45), delta, 18);
-    applyRotation(rig, 'lowerArmL', addOffset(bases.get('lowerArmL')!, 0.9, 0, 0), delta, 18);
-    applyRotation(rig, 'lowerArmR', addOffset(bases.get('lowerArmR')!, 0.9, 0, 0), delta, 18);
-    applyRotation(rig, 'handL', addOffset(bases.get('handL')!, 0.2, 0, 0), delta, 16);
-    applyRotation(rig, 'handR', addOffset(bases.get('handR')!, 0.2, 0, 0), delta, 16);
-    return;
-  }
-
-  if (isJumping) {
-    const takeoff = jumpVelocity > 1;
-    const apex = Math.abs(jumpVelocity) <= 1;
-    const landing = jumpVelocity < -1;
-    const hipPitch = takeoff ? -0.3 : apex ? -0.12 : 0.22;
-    const legPitch = takeoff ? 0.55 : apex ? 0.25 : -0.42;
-    const kneeBend = takeoff ? -0.2 : apex ? 0.15 : 0.62;
-    const armPitch = takeoff ? -1.2 : apex ? -0.7 : -0.25;
-
-    applyRotation(rig, 'hips', addOffset(bases.get('hips')!, hipPitch, 0, 0), delta, 16);
-    applyRotation(rig, 'spine', addOffset(bases.get('spine')!, -hipPitch * 0.45, 0, 0), delta, 16);
-    applyRotation(rig, 'chest', addOffset(bases.get('chest')!, -hipPitch * 0.3, 0, 0), delta, 16);
-    applyRotation(rig, 'neck', addOffset(bases.get('neck')!, apex ? 0.06 : 0, 0, 0), delta, 14);
-    applyRotation(rig, 'head', addOffset(bases.get('head')!, landing ? -0.08 : 0.04, 0, 0), delta, 14);
-
-    applyRotation(rig, 'upperLegL', addOffset(bases.get('upperLegL')!, legPitch, 0, 0), delta, 16);
-    applyRotation(rig, 'upperLegR', addOffset(bases.get('upperLegR')!, legPitch, 0, 0), delta, 16);
-    applyRotation(rig, 'lowerLegL', addOffset(bases.get('lowerLegL')!, kneeBend, 0, 0), delta, 16);
-    applyRotation(rig, 'lowerLegR', addOffset(bases.get('lowerLegR')!, kneeBend, 0, 0), delta, 16);
-    applyRotation(rig, 'footL', addOffset(bases.get('footL')!, takeoff ? -0.22 : 0.18, 0, 0), delta, 16);
-    applyRotation(rig, 'footR', addOffset(bases.get('footR')!, takeoff ? -0.22 : 0.18, 0, 0), delta, 16);
-
-    applyRotation(rig, 'upperArmL', addOffset(bases.get('upperArmL')!, armPitch, 0, 0.12), delta, 16);
-    applyRotation(rig, 'upperArmR', addOffset(bases.get('upperArmR')!, armPitch, 0, -0.12), delta, 16);
-    applyRotation(rig, 'lowerArmL', addOffset(bases.get('lowerArmL')!, apex ? -0.18 : -0.38, 0, 0), delta, 16);
-    applyRotation(rig, 'lowerArmR', addOffset(bases.get('lowerArmR')!, apex ? -0.18 : -0.38, 0, 0), delta, 16);
-    applyRotation(rig, 'handL', cloneEuler(bases.get('handL')!), delta, 12);
-    applyRotation(rig, 'handR', cloneEuler(bases.get('handR')!), delta, 12);
-    return;
-  }
-
-  applyRotation(rig, 'hips', addOffset(bases.get('hips')!, idleBreath * 0.2, 0, idleSway * (1 - walkAmount)), delta);
-  applyRotation(rig, 'spine', addOffset(bases.get('spine')!, idleBreath * 0.6, 0, idleSway), delta);
-  applyRotation(rig, 'chest', addOffset(bases.get('chest')!, idleBreath, 0, idleSway * 1.2), delta);
-  applyRotation(rig, 'neck', addOffset(bases.get('neck')!, idleBreath * 0.25, 0, 0), delta);
-  applyRotation(rig, 'head', addOffset(bases.get('head')!, idleBreath * 0.35, 0, -idleSway * 0.5), delta);
-
-  applyRotation(rig, 'upperLegL', addOffset(bases.get('upperLegL')!, stride, 0, 0), delta);
-  applyRotation(rig, 'upperLegR', addOffset(bases.get('upperLegR')!, counterStride, 0, 0), delta);
-  applyRotation(rig, 'lowerLegL', addOffset(bases.get('lowerLegL')!, kneeLiftL, 0, 0), delta);
-  applyRotation(rig, 'lowerLegR', addOffset(bases.get('lowerLegR')!, kneeLiftR, 0, 0), delta);
-  applyRotation(rig, 'footL', addOffset(bases.get('footL')!, -kneeLiftL * 0.4, 0, 0), delta);
-  applyRotation(rig, 'footR', addOffset(bases.get('footR')!, -kneeLiftR * 0.4, 0, 0), delta);
-
-  applyRotation(rig, 'upperArmL', addOffset(bases.get('upperArmL')!, armSwingL, 0, 0.05), delta);
-  applyRotation(rig, 'upperArmR', addOffset(bases.get('upperArmR')!, armSwingR, 0, -0.05), delta);
-  applyRotation(rig, 'lowerArmL', addOffset(bases.get('lowerArmL')!, Math.max(0, -armSwingL) * 0.2, 0, 0), delta);
-  applyRotation(rig, 'lowerArmR', addOffset(bases.get('lowerArmR')!, Math.max(0, -armSwingR) * 0.2, 0, 0), delta);
-  applyRotation(rig, 'handL', cloneEuler(bases.get('handL')!), delta, 10);
-  applyRotation(rig, 'handR', cloneEuler(bases.get('handR')!), delta, 10);
-}
-
-async function loadCharacter(): Promise<CharacterRig> {
-  const loader = new GLTFLoader();
-  const gltf = await loader.loadAsync(MODEL_URL);
-  const model = gltf.scene;
-  model.position.set(0, 0, 0);
-
-  model.traverse((child: THREE.Object3D) => {
-    if (child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
-    }
-  });
-
+function normalizeModel(model: THREE.Object3D): void {
   const initialBounds = new THREE.Box3().setFromObject(model);
-  const initialSize = initialBounds.getSize(new THREE.Vector3());
-  const height = Math.max(initialSize.y, 0.001);
+  const size = initialBounds.getSize(new THREE.Vector3());
+  const height = Math.max(size.y, 0.001);
   const scale = TARGET_MODEL_HEIGHT / height;
   model.scale.setScalar(scale);
 
   const scaledBounds = new THREE.Box3().setFromObject(model);
-  const scaledCenter = scaledBounds.getCenter(new THREE.Vector3());
-  model.position.x = -scaledCenter.x;
-  model.position.z = -scaledCenter.z;
+  const center = scaledBounds.getCenter(new THREE.Vector3());
+  model.position.x = -center.x;
+  model.position.z = -center.z;
   model.position.y = -scaledBounds.min.y;
+}
 
-  scene.add(model);
+function collectActions(
+  mixer: THREE.AnimationMixer,
+  clips: THREE.AnimationClip[],
+): Partial<Record<ActionName, THREE.AnimationAction>> {
+  const actions: Partial<Record<ActionName, THREE.AnimationAction>> = {};
 
-  const bones: Partial<Record<RigBoneKey, THREE.Object3D>> = {
-    hips: getBoneByAliases(model, ['hips', 'Hips']),
-    spine: getBoneByAliases(model, ['spine', 'Spine']),
-    chest: getBoneByAliases(model, ['chest', 'Chest']),
-    neck: getBoneByAliases(model, ['neck', 'Neck']),
-    head: getBoneByAliases(model, ['head', 'Head']),
-    upperArmL: getBoneByAliases(model, ['upperArmL', 'UpperArmL', 'upper_arm.L', 'LeftArm']),
-    lowerArmL: getBoneByAliases(model, ['lowerArmL', 'LowerArmL', 'lower_arm.L', 'LeftForeArm']),
-    handL: getBoneByAliases(model, [
-      'handL',
-      'HandL',
-      'hand.L',
-      'LeftHand',
-      'thumb_metaL',
-      'index_metaL',
-      'middle_metaL',
-    ]),
-    upperArmR: getBoneByAliases(model, ['upperArmR', 'UpperArmR', 'upper_arm.R', 'RightArm']),
-    lowerArmR: getBoneByAliases(model, ['lowerArmR', 'LowerArmR', 'lower_arm.R', 'RightForeArm']),
-    handR: getBoneByAliases(model, [
-      'handR',
-      'HandR',
-      'hand.R',
-      'RightHand',
-      'thumb_metaR',
-      'index_metaR',
-      'middle_metaR',
-    ]),
-    upperLegL: getBoneByAliases(model, ['upperLegL', 'UpperLegL', 'upper_leg.L', 'LeftUpLeg']),
-    lowerLegL: getBoneByAliases(model, ['lowerLegL', 'LowerLegL', 'lower_leg.L', 'LeftLeg']),
-    footL: getBoneByAliases(model, ['footL', 'FootL', 'foot.L', 'LeftFoot', 'midfootL', 'heelL', 'hallux_metaL']),
-    upperLegR: getBoneByAliases(model, ['upperLegR', 'UpperLegR', 'upper_leg.R', 'RightUpLeg']),
-    lowerLegR: getBoneByAliases(model, ['lowerLegR', 'LowerLegR', 'lower_leg.R', 'RightLeg']),
-    footR: getBoneByAliases(model, ['footR', 'FootR', 'foot.R', 'RightFoot', 'midfootR', 'heelR', 'hallux_metaR']),
-  };
+  for (const name of REQUIRED_CLIPS) {
+    const clip = clips.find((candidate) => candidate.name === name);
 
-  const baseRotations = new Map<RigBoneKey, THREE.Euler>();
-  const missingBones: RigBoneKey[] = [];
-
-  (Object.keys(bones) as RigBoneKey[]).forEach((key) => {
-    const bone = bones[key];
-
-    if (bone) {
-      baseRotations.set(key, cloneEuler(bone.rotation));
-    } else {
-      missingBones.push(key);
+    if (!clip) {
+      continue;
     }
-  });
 
-  if (missingBones.length > 0) {
-    console.warn('Mannequin rig loaded with missing joints:', missingBones);
+    const action = mixer.clipAction(clip);
+    action.loop = name === 'guard' ? THREE.LoopRepeat : THREE.LoopOnce;
+    action.clampWhenFinished = true;
+    action.enabled = true;
+    action.setEffectiveWeight(1);
+    actions[name] = action;
   }
 
+  return actions;
+}
+
+function tintFighter(model: THREE.Object3D, color: string): void {
+  const tint = new THREE.Color(color);
+
+  model.traverse((child) => {
+    if (!(child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh)) {
+      return;
+    }
+
+    child.castShadow = true;
+    child.receiveShadow = true;
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of materials) {
+      if (!(material instanceof THREE.MeshStandardMaterial)) {
+        continue;
+      }
+
+      material.color = material.color.clone().lerp(tint, 0.28);
+      material.roughness = Math.min(material.roughness + 0.06, 1);
+    }
+  });
+}
+
+function createActor(
+  template: THREE.Object3D,
+  clips: THREE.AnimationClip[],
+  runtime: FighterRuntime,
+  rotationY: number,
+  tint: string,
+): FighterActor {
+  const anchor = new THREE.Group();
+  const model = clone(template);
+  const mixer = new THREE.AnimationMixer(model);
+  const actions = collectActions(mixer, clips);
+
+  tintFighter(model, tint);
+  model.rotation.y = rotationY;
+  anchor.position.set(0, 0, runtime.positionZ);
+  anchor.add(model);
+  scene.add(anchor);
+
+  const actor: FighterActor = {
+    runtime,
+    anchor,
+    mixer,
+    actions,
+  };
+
+  playAction(actor, 'guard', true);
+  return actor;
+}
+
+function playAction(actor: FighterActor, actionName: ActionName, immediate = false): void {
+  const nextAction = actor.actions[actionName] ?? actor.actions.guard;
+  const currentAction = actor.actions[actor.runtime.currentAction];
+
+  actor.runtime.currentAction = actionName;
+
+  if (!nextAction) {
+    return;
+  }
+
+  if (currentAction && currentAction !== nextAction) {
+    if (immediate) {
+      currentAction.stop();
+    } else {
+      currentAction.fadeOut(0.1);
+    }
+  }
+
+  nextAction.reset();
+  nextAction.paused = false;
+  nextAction.setEffectiveTimeScale(1);
+  nextAction.setEffectiveWeight(1);
+  nextAction.fadeIn(immediate ? 0 : 0.08);
+  nextAction.play();
+}
+
+function updateActorTransform(actor: FighterActor, delta: number): void {
+  actor.anchor.position.z += (actor.runtime.positionZ - actor.anchor.position.z) * (1 - Math.exp(-delta * 8));
+}
+
+function updateHud(duel: DuelState): void {
+  const { actorA, actorB } = duel;
+  const distance = distanceBetween(actorA.runtime, actorB.runtime);
+
+  hud.innerHTML = `
+    <p class="eyebrow">Session 4</p>
+    <h1>AI Fight Study</h1>
+    <p class="instructions">Two mannequins now pick boxing actions from the embedded v4 clips and resolve each exchange deterministically.</p>
+    <div class="scoreboard">
+      <section class="fighter-card fighter-card-a">
+        <h2>${actorA.runtime.name}</h2>
+        <p class="fighter-meta">Wins ${actorA.runtime.wins} · HP ${actorA.runtime.hp} · STA ${Math.round(actorA.runtime.stamina)}</p>
+        <div class="bar"><span class="bar-fill bar-fill-hp" style="width:${actorA.runtime.hp}%"></span></div>
+        <div class="bar"><span class="bar-fill bar-fill-stamina" style="width:${actorA.runtime.stamina}%"></span></div>
+        <p class="fighter-action">Action: ${actorA.runtime.currentAction}</p>
+      </section>
+      <section class="fighter-card fighter-card-b">
+        <h2>${actorB.runtime.name}</h2>
+        <p class="fighter-meta">Wins ${actorB.runtime.wins} · HP ${actorB.runtime.hp} · STA ${Math.round(actorB.runtime.stamina)}</p>
+        <div class="bar"><span class="bar-fill bar-fill-hp" style="width:${actorB.runtime.hp}%"></span></div>
+        <div class="bar"><span class="bar-fill bar-fill-stamina" style="width:${actorB.runtime.stamina}%"></span></div>
+        <p class="fighter-action">Action: ${actorB.runtime.currentAction}</p>
+      </section>
+    </div>
+    <p class="logline">Round ${duel.round} · Exchange ${duel.exchangeCount} · Distance ${distance.toFixed(2)}m · ${duel.lastNarrative}</p>
+  `;
+
+  warningPanel.hidden = duel.clipWarnings.length === 0;
+  warningPanel.textContent = duel.clipWarnings.length === 0
+    ? ''
+    : `Mannequin loaded with partial clip support. Missing clips: ${duel.clipWarnings.join(', ')}`;
+}
+
+async function createDuel(): Promise<DuelState> {
+  const loader = new GLTFLoader();
+  const gltf = await loader.loadAsync(MODEL_URL);
+  const template = gltf.scene;
+  normalizeModel(template);
+
+  const runtimeA = createFighter('Alpha', -1.5);
+  const runtimeB = createFighter('Beta', 1.5);
+  const actorA = createActor(template, gltf.animations, runtimeA, 0, '#4f76a8');
+  const actorB = createActor(template, gltf.animations, runtimeB, Math.PI, '#a86457');
+  const clipWarnings = REQUIRED_CLIPS.filter(
+    (clipName) => !gltf.animations.some((clip) => clip.name === clipName),
+  );
+
   return {
-    model,
-    bones,
-    baseRotations,
-    elapsed: 0,
-    missingBones,
+    actorA,
+    actorB,
+    exchangeCount: 0,
+    round: 1,
+    resetTimer: 0,
+    lastNarrative: 'Fighters enter guard.',
+    clipWarnings,
   };
 }
 
-function updateCamera(target: THREE.Object3D, delta: number): void {
-  const desiredPosition = CAMERA_OFFSET.clone().applyQuaternion(target.quaternion).add(target.position);
-  const lookAtTarget = CAMERA_LOOK_AT_OFFSET.clone().applyQuaternion(target.quaternion).add(target.position);
+function runExchange(duel: DuelState): void {
+  const { actorA, actorB } = duel;
+  const actionA = chooseAiAction(actorA.runtime, actorB.runtime);
+  const actionB = chooseAiAction(actorB.runtime, actorA.runtime);
+  const outcome = resolveExchange(
+    actionA,
+    actionB,
+    distanceBetween(actorA.runtime, actorB.runtime),
+  );
 
-  camera.position.lerp(desiredPosition, 1 - Math.exp(-delta * 6));
-  camera.lookAt(lookAtTarget);
+  applyExchange(actorA.runtime, actorB.runtime, outcome);
+  playAction(actorA, actionA);
+  playAction(actorB, actionB);
+
+  actorA.runtime.actionTimer = Math.max(outcome.actionA.duration, EXCHANGE_COOLDOWN);
+  actorB.runtime.actionTimer = Math.max(outcome.actionB.duration, EXCHANGE_COOLDOWN);
+  duel.exchangeCount += 1;
+  duel.lastNarrative = outcome.narrative;
 }
 
 const clock = new THREE.Clock();
+let duel: DuelState | null = null;
 
 function animate(): void {
   requestAnimationFrame(animate);
-
   const delta = Math.min(clock.getDelta(), 0.05);
 
-  if (character) {
-    const movement = resolveMovement(keyboard.snapshot(), isAirborne);
-    const isRolling = rollTimeRemaining > 0;
+  if (duel) {
+    const { actorA, actorB } = duel;
 
-    if (!isRolling) {
-      character.model.rotation.y += movement.turnSpeed * delta;
-    }
+    actorA.mixer.update(delta);
+    actorB.mixer.update(delta);
+    recoverStamina(actorA.runtime, delta);
+    recoverStamina(actorB.runtime, delta);
 
-    if (movement.rollRequested && rollTimeRemaining <= 0 && !isAirborne) {
-      rollTimeRemaining = ROLL_DURATION;
-    }
+    actorA.runtime.actionTimer = Math.max(0, actorA.runtime.actionTimer - delta);
+    actorB.runtime.actionTimer = Math.max(0, actorB.runtime.actionTimer - delta);
 
-    if (movement.speed !== 0 && !isRolling) {
-      const forward = FORWARD_VECTOR.clone().applyQuaternion(character.model.quaternion);
-      character.model.position.addScaledVector(forward, movement.speed * delta);
-    }
-
-    if (isRolling) {
-      rollTimeRemaining = Math.max(0, rollTimeRemaining - delta);
-      const rollForward = FORWARD_VECTOR.clone().applyQuaternion(character.model.quaternion);
-      const burst = ROLL_SPEED * (0.35 + (rollTimeRemaining / ROLL_DURATION) * 0.65);
-      character.model.position.addScaledVector(rollForward, burst * delta);
-    }
-
-    if (movement.jumpRequested) {
-      verticalVelocity = JUMP_VELOCITY;
-      isAirborne = true;
-      groundY = character.model.position.y;
-    }
-
-    if (isAirborne) {
-      verticalVelocity -= GRAVITY * delta;
-      character.model.position.y += verticalVelocity * delta;
-
-      if (character.model.position.y <= groundY) {
-        character.model.position.y = groundY;
-        verticalVelocity = 0;
-        isAirborne = false;
+    if (duel.resetTimer > 0) {
+      duel.resetTimer = Math.max(0, duel.resetTimer - delta);
+      if (duel.resetTimer === 0) {
+        resetFighters(actorA.runtime, actorB.runtime);
+        playAction(actorA, 'guard', true);
+        playAction(actorB, 'guard', true);
+        duel.exchangeCount = 0;
+        duel.round += 1;
+        duel.lastNarrative = 'New round begins from guard.';
       }
+    } else if (shouldResetRound(actorA.runtime, actorB.runtime)) {
+      if (actorA.runtime.hp > actorB.runtime.hp) {
+        actorA.runtime.wins += 1;
+        duel.lastNarrative = `${actorA.runtime.name} scores the knockout.`;
+      } else {
+        actorB.runtime.wins += 1;
+        duel.lastNarrative = `${actorB.runtime.name} scores the knockout.`;
+      }
+      duel.resetTimer = ROUND_RESET_DELAY;
+    } else if (actorA.runtime.actionTimer === 0 && actorB.runtime.actionTimer === 0) {
+      runExchange(duel);
     }
 
-    const rollProgress = rollTimeRemaining > 0 ? 1 - rollTimeRemaining / ROLL_DURATION : 0;
-    animateRig(
-      character,
-      delta,
-      movement.speed,
-      isAirborne,
-      verticalVelocity,
-      rollTimeRemaining > 0,
-      rollProgress,
-    );
-    updateCamera(character.model, delta);
+    if (actorA.runtime.actionTimer === 0 && actorA.runtime.currentAction !== 'guard') {
+      playAction(actorA, 'guard');
+    }
+
+    if (actorB.runtime.actionTimer === 0 && actorB.runtime.currentAction !== 'guard') {
+      playAction(actorB, 'guard');
+    }
+
+    updateActorTransform(actorA, delta);
+    updateActorTransform(actorB, delta);
+    updateHud(duel);
   }
 
+  camera.position.lerp(CAMERA_POSITION, 1 - Math.exp(-delta * 3));
+  camera.lookAt(CAMERA_LOOK_AT);
   renderer.render(scene, camera);
 }
-
-loadCharacter()
-  .then((rig) => {
-    character = rig;
-    groundY = rig.model.position.y;
-
-    if (rig.missingBones.length > 0) {
-      const warningPanel = document.createElement('div');
-      warningPanel.className = 'warning-panel';
-      warningPanel.textContent = `Mannequin loaded with partial rig support. Missing joints: ${rig.missingBones.join(', ')}`;
-      document.body.append(warningPanel);
-    }
-  })
-  .catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : 'Unknown loading error.';
-    const errorPanel = document.createElement('div');
-    errorPanel.className = 'error-panel';
-    errorPanel.textContent = `Failed to load character: ${message}`;
-    document.body.append(errorPanel);
-  });
-
-animate();
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+createDuel()
+  .then((state) => {
+    duel = state;
+    updateHud(state);
+  })
+  .catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : 'Unknown loading error.';
+    errorPanel.hidden = false;
+    errorPanel.textContent = `Failed to load fight scene: ${message}`;
+  });
+
+animate();

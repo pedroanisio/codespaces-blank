@@ -1,11 +1,11 @@
-# Session 4 | Three.js Mannequin
+# Session 4 | AI Fight Study
 
 ## Disclaimer
 
 This work is subject to the methodological caveats and commitments described in [@DISCLAIMER.md](../DISCLAIMER.md).
 > No statement or premise not backed by a real logical definition or verifiable reference should be taken for granted.
 
-This session contains a TypeScript + Three.js mannequin study built as a local Vite app rooted in `session-4`.
+This session contains a TypeScript + Three.js `AI vs AI` mannequin fight study built as a local Vite app rooted in `session-4`.
 
 ## Run
 
@@ -17,8 +17,7 @@ npm run dev
 ## Notes
 
 - The app uses the local mannequin asset at [`assets/mannequin_v4.glb`](./assets/mannequin_v4.glb).
-- Arrow keys control forward, backward, and turning movement.
-- `Space` triggers a jump with a simple gravity arc.
-- `R` triggers a short forward roll.
-- Idle, walk, and jump are driven procedurally from the mannequin rig because this asset does not embed authored animation clips.
+- The mannequins use embedded boxing clips: `guard`, `jab`, `cross`, `hook`, `uppercut`, `bodyShot`, `slip`, `block`, `duck`, `parry`, `advance`, and `retreat`.
+- Combat decisions are selected by a deterministic local AI policy, then resolved by a tested exchange model in [`src/combat.ts`](./src/combat.ts).
+- The scene runs two fighters, tracks HP, stamina, wins, and resets each round after a knockout.
 - This README links back to the project root: [../README.md](../README.md)
