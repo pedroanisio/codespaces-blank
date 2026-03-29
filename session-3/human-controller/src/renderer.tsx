@@ -212,13 +212,14 @@ function boneMaterial(region: string): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: BONE_COLORS[region] ?? 0xe8dbb8,
-    roughness: 0.55,
+    roughness: 0.45,
     metalness: 0.02,
-    clearcoat: 0.15,
-    clearcoatRoughness: 0.4,
-    sheen: 0.1,
-    sheenRoughness: 0.6,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.35,
+    sheen: 0.15,
+    sheenRoughness: 0.5,
     sheenColor: new THREE.Color(0xfffff0),
+    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -229,16 +230,17 @@ function muscleMaterial(region: string): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: MUSCLE_COLORS[region] ?? 0xaa3333,
-    roughness: 0.7,
+    roughness: 0.55,
     metalness: 0.0,
-    clearcoat: 0.08,
-    clearcoatRoughness: 0.6,
-    transmission: 0.02,
-    thickness: 0.5,
-    sheen: 0.15,
-    sheenRoughness: 0.5,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.4,
+    transmission: 0.03,
+    thickness: 0.8,
+    sheen: 0.25,
+    sheenRoughness: 0.4,
     sheenColor: new THREE.Color(0xff8888),
     side: THREE.DoubleSide,
+    envMapIntensity: 0.5,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -249,13 +251,14 @@ function tendonMaterial(): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xf0f0e8,
-    roughness: 0.6,
+    roughness: 0.5,
     metalness: 0.0,
-    clearcoat: 0.2,
-    clearcoatRoughness: 0.3,
-    sheen: 0.3,
-    sheenRoughness: 0.4,
+    clearcoat: 0.25,
+    clearcoatRoughness: 0.25,
+    sheen: 0.4,
+    sheenRoughness: 0.35,
     sheenColor: new THREE.Color(0xeeeedd),
+    envMapIntensity: 0.4,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -266,12 +269,13 @@ function arteryMaterial(): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xdd3322,
-    roughness: 0.5,
+    roughness: 0.4,
     metalness: 0.0,
-    clearcoat: 0.3,
-    clearcoatRoughness: 0.2,
-    transmission: 0.1,
-    thickness: 0.3,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.15,
+    transmission: 0.12,
+    thickness: 0.4,
+    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -282,12 +286,13 @@ function veinMaterial(): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0x3344aa,
-    roughness: 0.5,
+    roughness: 0.4,
     metalness: 0.0,
-    clearcoat: 0.3,
-    clearcoatRoughness: 0.2,
-    transmission: 0.1,
-    thickness: 0.3,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.15,
+    transmission: 0.12,
+    thickness: 0.4,
+    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -298,12 +303,13 @@ function nerveMaterial(): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xeedd44,
-    roughness: 0.6,
+    roughness: 0.5,
     metalness: 0.0,
     emissive: 0x332200,
     emissiveIntensity: 0.15,
-    clearcoat: 0.1,
-    clearcoatRoughness: 0.5,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.4,
+    envMapIntensity: 0.3,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -314,16 +320,17 @@ function organMaterial(system: string): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: ORGAN_COLORS[system] ?? 0xddaa88,
-    roughness: 0.65,
+    roughness: 0.5,
     metalness: 0.0,
-    clearcoat: 0.2,
-    clearcoatRoughness: 0.4,
-    transmission: 0.08,
-    thickness: 1.0,
-    sheen: 0.1,
-    sheenRoughness: 0.6,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.25,
+    transmission: 0.1,
+    thickness: 1.5,
+    sheen: 0.15,
+    sheenRoughness: 0.5,
     sheenColor: new THREE.Color(0xffcccc),
     side: THREE.DoubleSide,
+    envMapIntensity: 0.7,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -334,13 +341,14 @@ function ligamentMaterial(): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xd0d8c0,
-    roughness: 0.65,
+    roughness: 0.55,
     metalness: 0.0,
-    clearcoat: 0.15,
-    clearcoatRoughness: 0.4,
-    sheen: 0.2,
-    sheenRoughness: 0.5,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.35,
+    sheen: 0.25,
+    sheenRoughness: 0.45,
     sheenColor: new THREE.Color(0xeeeedd),
+    envMapIntensity: 0.4,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -352,12 +360,13 @@ function cartilageMaterial(type: string): THREE.MeshPhysicalMaterial {
   const color = type === "hyaline" ? 0xc8dde8 : 0xb0c8d0;
   const mat = new THREE.MeshPhysicalMaterial({
     color,
-    roughness: 0.4,
+    roughness: 0.3,
     metalness: 0.0,
-    clearcoat: 0.4,
-    clearcoatRoughness: 0.2,
-    transmission: 0.15,
-    thickness: 0.5,
+    clearcoat: 0.5,
+    clearcoatRoughness: 0.15,
+    transmission: 0.2,
+    thickness: 0.6,
+    envMapIntensity: 0.6,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -368,12 +377,13 @@ function jointMaterial(): THREE.MeshPhysicalMaterial {
   if (_materialCache.has(key)) return _materialCache.get(key) as THREE.MeshPhysicalMaterial;
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0x66aadd,
-    roughness: 0.3,
+    roughness: 0.25,
     metalness: 0.1,
     clearcoat: 0.5,
-    clearcoatRoughness: 0.15,
+    clearcoatRoughness: 0.1,
     emissive: 0x112244,
     emissiveIntensity: 0.2,
+    envMapIntensity: 0.8,
   });
   _materialCache.set(key, mat);
   return mat;
@@ -383,54 +393,65 @@ function jointMaterial(): THREE.MeshPhysicalMaterial {
 // 4. GEOMETRY FACTORIES
 // ═══════════════════════════════════════════════════════════════════════
 
-// Reusable geometry templates (pooled by LOD segments)
-const _capsuleGeoCache = new Map<string, THREE.BufferGeometry>();
+/**
+ * Creates a tube geometry with varying radius along its length.
+ * This is the key function for realistic muscle bellies and tapered bones.
+ */
+function variableRadiusTube(
+  path: THREE.Vector3[],
+  tubularSegments: number,
+  radiusFn: (t: number) => number,
+  radialSegments: number = 8,
+): THREE.BufferGeometry {
+  if (path.length < 2) return new THREE.SphereGeometry(radiusFn(0.5), 8, 6);
 
-function capsuleGeometry(radius: number, height: number, radialSeg: number = 8): THREE.BufferGeometry {
-  const key = `${radius.toFixed(3)}_${height.toFixed(3)}_${radialSeg}`;
-  if (_capsuleGeoCache.has(key)) return _capsuleGeoCache.get(key)!;
-  const geo = new THREE.CapsuleGeometry(radius, Math.max(0.01, height), Math.max(2, radialSeg >> 1), radialSeg);
-  _capsuleGeoCache.set(key, geo);
-  return geo;
-}
+  const curve = new THREE.CatmullRomCurve3(path, false, "catmullrom", 0.5);
+  const frames = curve.computeFrenetFrames(tubularSegments, false);
 
-function boneGeometry(bone: BoneData): THREE.BufferGeometry {
-  const cls = bone.classification;
-  // All lengths in cm
-  const l = bone.length;
-  const w = bone.width;
-  const d = bone.depth;
+  const vertices: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
 
-  switch (cls) {
-    case "long": {
-      // Capsule along Y axis: radius = avg(w,d)/2, cylindrical height = length - 2*radius
-      const r = (w + d) / 4;
-      const cylH = Math.max(0.1, l - 2 * r);
-      return capsuleGeometry(r, cylH, 10);
+  for (let i = 0; i <= tubularSegments; i++) {
+    const t = i / tubularSegments;
+    const P = curve.getPointAt(t);
+    const N = frames.normals[i]!;
+    const B = frames.binormals[i]!;
+    const r = radiusFn(t);
+
+    for (let j = 0; j <= radialSegments; j++) {
+      const v = (j / radialSegments) * Math.PI * 2;
+      const sin = Math.sin(v);
+      const cos = -Math.cos(v);
+
+      const nx = cos * N.x + sin * B.x;
+      const ny = cos * N.y + sin * B.y;
+      const nz = cos * N.z + sin * B.z;
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+
+      vertices.push(P.x + r * nx, P.y + r * ny, P.z + r * nz);
+      normals.push(nx / len, ny / len, nz / len);
+      uvs.push(j / radialSegments, t);
     }
-    case "flat": {
-      // Flattened box — cranial/rib bones
-      return new THREE.BoxGeometry(w, l * 0.15, d).toNonIndexed();
-    }
-    case "irregular": {
-      // Icosahedron scaled to bone dimensions — vertebrae, hip
-      const ico = new THREE.IcosahedronGeometry(1, 1);
-      ico.scale(w / 2, l / 2, d / 2);
-      return ico;
-    }
-    case "short": {
-      // Rounded box — carpals, tarsals
-      const r = Math.min(w, d, l) / 4;
-      return capsuleGeometry(r, Math.max(0.1, l - 2 * r), 6);
-    }
-    case "sesamoid": {
-      // Sphere — patella
-      const r = Math.max(w, d, l) / 2;
-      return new THREE.SphereGeometry(r, 10, 8);
-    }
-    default:
-      return new THREE.SphereGeometry(l / 2, 8, 6);
   }
+
+  for (let i = 0; i < tubularSegments; i++) {
+    for (let j = 0; j < radialSegments; j++) {
+      const a = i * (radialSegments + 1) + j;
+      const b = (i + 1) * (radialSegments + 1) + j;
+      const c = (i + 1) * (radialSegments + 1) + (j + 1);
+      const d = i * (radialSegments + 1) + (j + 1);
+      indices.push(a, b, d, b, c, d);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setIndex(indices);
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  return geo;
 }
 
 function tubeFromPath(points: THREE.Vector3[], radius: number, segments?: number): THREE.BufferGeometry {
@@ -440,18 +461,286 @@ function tubeFromPath(points: THREE.Vector3[], radius: number, segments?: number
   return new THREE.TubeGeometry(curve, tubeSeg, radius, 6, false);
 }
 
+function longBoneGeometry(length: number, width: number, depth: number): THREE.BufferGeometry {
+  const r = (width + depth) / 4;
+  const epiphR = r * 1.35;
+  const diaphR = r * 0.7;
+  const h = Math.max(0.5, length);
+
+  const nPts = 7;
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i < nPts; i++) {
+    pts.push(new THREE.Vector3(0, -h / 2 + (h * i) / (nPts - 1), 0));
+  }
+
+  return variableRadiusTube(pts, 16, (t) => {
+    const endProx = Math.exp(-((t * 5) ** 2));
+    const endDist = Math.exp(-(((1 - t) * 5) ** 2));
+    const endInfluence = Math.max(endProx, endDist);
+    return diaphR + (epiphR - diaphR) * endInfluence;
+  }, 10);
+}
+
+function boneGeometry(bone: BoneData): THREE.BufferGeometry {
+  const cls = bone.classification;
+  const l = bone.length;
+  const w = bone.width;
+  const d = bone.depth;
+
+  switch (cls) {
+    case "long": {
+      return longBoneGeometry(l, w, d);
+    }
+    case "flat": {
+      // Flattened box — cranial/rib bones, with slight curvature
+      const geo = new THREE.BoxGeometry(w, l * 0.15, d, 4, 1, 4);
+      // Bend flat bones slightly for anatomical curvature
+      const pos = geo.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const dist = Math.sqrt(x * x + z * z);
+        pos.setY(i, pos.getY(i) + dist * 0.05);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    }
+    case "irregular": {
+      // Organic-looking shape: smooth icosahedron with subtle perturbation
+      const ico = new THREE.IcosahedronGeometry(1, 2);
+      const pos = ico.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const len = Math.sqrt(x * x + y * y + z * z) || 1;
+        const nx = x / len, ny = y / len, nz = z / len;
+        // Subtle organic noise — just enough to break perfect symmetry
+        const noise = 1.0
+          + 0.04 * Math.sin(nx * 5.3 + ny * 3.1)
+          + 0.03 * Math.cos(nz * 4.7 + nx * 2.2);
+        pos.setXYZ(i, nx * (w / 2) * noise, ny * (l / 2) * noise, nz * (d / 2) * noise);
+      }
+      ico.computeVertexNormals();
+      return ico;
+    }
+    case "short": {
+      // Rounded cube — carpals, tarsals
+      const geo = new THREE.IcosahedronGeometry(1, 1);
+      geo.scale(w / 2, l / 2, d / 2);
+      return geo;
+    }
+    case "sesamoid": {
+      // Smooth sphere — patella, sesamoids
+      const r = Math.max(w, d, l) / 2;
+      return new THREE.SphereGeometry(r, 12, 10);
+    }
+    default:
+      return new THREE.SphereGeometry(l / 2, 8, 6);
+  }
+}
+
+/**
+ * Organ-specific geometry based on organ name/system.
+ * Each organ type gets a distinct silhouette instead of a generic ellipsoid.
+ */
 function organGeometry(organ: OrganData): THREE.BufferGeometry {
-  // Approximate organ volume as ellipsoid: V = 4/3 π abc
-  // Assume a:b:c ≈ 1:1.5:0.8 and solve for scale
-  const vol = organ.volume; // cm³
-  const k = Math.cbrt(vol / (4 / 3 * Math.PI * 1.0 * 1.5 * 0.8));
+  const name = organ.name.toLowerCase();
+  const vol = organ.volume;
+  const k = Math.cbrt(vol / ((4 / 3) * Math.PI));
+
+  if (name.includes("heart")) {
+    return heartGeometry(k);
+  }
+  if (name.includes("lung")) {
+    return lungGeometry(k, name.includes("(l)") || name.includes("left") ? -1 : 1);
+  }
+  if (name.includes("brain") || name.includes("cerebr")) {
+    return brainGeometry(k);
+  }
+  if (name.includes("kidney")) {
+    return kidneyGeometry(k);
+  }
+  if (name.includes("liver")) {
+    return liverGeometry(k);
+  }
+  if (name.includes("stomach")) {
+    return stomachGeometry(k);
+  }
+  if (name.includes("intestin")) {
+    return intestineGeometry(k, name.includes("large") || name.includes("colon"));
+  }
+  if (name.includes("bladder")) {
+    return bladderGeometry(k);
+  }
+
+  // Default: organic ellipsoid with perturbation
+  return defaultOrganGeometry(vol);
+}
+
+function heartGeometry(k: number): THREE.BufferGeometry {
+  // Heart-like shape: rounded top with tapered bottom (apex)
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;
+    const angle = t * Math.PI;
+    // Heart profile: wide at top 1/3, tapering to apex at bottom
+    let r: number;
+    if (t < 0.15) {
+      // Flat top (base of heart, where vessels attach)
+      r = 0.6 + t * 1.5;
+    } else if (t < 0.55) {
+      // Wide rounded body
+      r = Math.sin(angle) * 1.1;
+    } else {
+      // Taper to apex
+      const taper = (1 - t) / 0.45;
+      r = Math.sin(angle) * 0.9 * taper;
+    }
+    pts.push(new THREE.Vector2(Math.max(0.01, r * k * 1.0), (t - 0.5) * k * 2.8));
+  }
+  const geo = new THREE.LatheGeometry(pts, 16);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function lungGeometry(k: number, side: number): THREE.BufferGeometry {
+  // Elongated ellipsoid with medial flat surface and rounded lateral
+  const geo = new THREE.SphereGeometry(1, 16, 12);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    // Flatten medial side (towards center of body)
+    if (x * side < 0) {
+      x *= 0.6;
+    }
+    // Taper top (apex)
+    const yNorm = (y + 1) / 2; // 0=bottom, 1=top
+    const taperTop = yNorm > 0.7 ? 1 - (yNorm - 0.7) / 0.3 * 0.4 : 1;
+    // Widen bottom
+    const widenBot = yNorm < 0.3 ? 1 + (0.3 - yNorm) / 0.3 * 0.15 : 1;
+    pos.setXYZ(i,
+      x * k * 1.2 * taperTop * widenBot,
+      y * k * 1.8,
+      z * k * 1.0 * taperTop * widenBot,
+    );
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function brainGeometry(k: number): THREE.BufferGeometry {
+  // Sphere with sulci/gyri wrinkles via vertex displacement
+  const geo = new THREE.IcosahedronGeometry(k * 1.3, 4);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const len = Math.sqrt(x * x + y * y + z * z) || 1;
+    const nx = x / len, ny = y / len, nz = z / len;
+    // Multi-frequency noise for wrinkled surface
+    const wrinkle =
+      0.06 * Math.sin(nx * 18 + nz * 12) * Math.cos(ny * 15 + nx * 8) +
+      0.04 * Math.sin(ny * 22 + nz * 16) * Math.cos(nx * 20) +
+      0.03 * Math.cos(nz * 28 + nx * 14 + ny * 10);
+    const r = len * (1 + wrinkle);
+    // Slightly flatten top, elongate front-back
+    pos.setXYZ(i, nx * r * 1.05, ny * r * 0.85, nz * r * 1.15);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function kidneyGeometry(k: number): THREE.BufferGeometry {
+  // Bean shape using a torus section
+  const geo = new THREE.TorusGeometry(k * 0.8, k * 0.5, 12, 16, Math.PI * 1.3);
+  geo.rotateX(Math.PI / 2);
+  geo.rotateZ(Math.PI * 0.15);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function liverGeometry(k: number): THREE.BufferGeometry {
+  // Wide, flat, wedge-shaped organ
+  const geo = new THREE.SphereGeometry(1, 14, 10);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    // Flatten vertically, widen horizontally
+    // Right lobe larger than left
+    const xBias = x > 0 ? 1.3 : 0.8;
+    pos.setXYZ(i, x * k * 2.0 * xBias, y * k * 0.6, z * k * 1.4);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function stomachGeometry(k: number): THREE.BufferGeometry {
+  // J-shaped curved tube with variable radius
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12;
+    const angle = t * Math.PI * 0.8;
+    pts.push(new THREE.Vector3(
+      Math.sin(angle) * k * 1.5,
+      -t * k * 2.5,
+      Math.cos(angle) * k * 0.3,
+    ));
+  }
+  return variableRadiusTube(pts, 16, (t) => {
+    // Wide at fundus (top), narrow at pylorus (bottom)
+    const fundus = Math.exp(-((t * 3) ** 2)) * 0.4;
+    const body = Math.sin(t * Math.PI) * 0.6;
+    return k * (0.3 + fundus + body);
+  }, 10);
+}
+
+function intestineGeometry(k: number, isLarge: boolean): THREE.BufferGeometry {
+  // Coiled tube
+  const r = isLarge ? k * 0.5 : k * 0.2;
+  const coilR = isLarge ? k * 2.0 : k * 1.5;
+  const turns = isLarge ? 1.5 : 4;
+  const pts: THREE.Vector3[] = [];
+  const nPts = Math.ceil(turns * 12);
+  for (let i = 0; i <= nPts; i++) {
+    const t = i / nPts;
+    const angle = t * turns * Math.PI * 2;
+    pts.push(new THREE.Vector3(
+      Math.cos(angle) * coilR * (0.5 + t * 0.5),
+      -t * k * 3,
+      Math.sin(angle) * coilR * (0.5 + t * 0.5),
+    ));
+  }
+  return variableRadiusTube(pts, Math.max(12, nPts * 2), () => r, 8);
+}
+
+function bladderGeometry(k: number): THREE.BufferGeometry {
+  // Pear-shaped: wider at top, narrow at base
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i <= 16; i++) {
+    const t = i / 16;
+    const r = Math.sin(t * Math.PI) * (1 - t * 0.3);
+    pts.push(new THREE.Vector2(Math.max(0.01, r * k * 1.0), (t - 0.5) * k * 1.6));
+  }
+  return new THREE.LatheGeometry(pts, 12);
+}
+
+function defaultOrganGeometry(vol: number): THREE.BufferGeometry {
+  // Organic ellipsoid with slight perturbation
+  const k = Math.cbrt(vol / ((4 / 3) * Math.PI * 1.0 * 1.5 * 0.8));
   const a = k * 1.0;
   const b = k * 1.5;
   const c = k * 0.8;
 
-  const sp = new THREE.SphereGeometry(1, 14, 10);
-  sp.scale(a, b, c);
-  return sp;
+  const geo = new THREE.SphereGeometry(1, 14, 10);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const len = Math.sqrt(x * x + y * y + z * z) || 1;
+    const nx = x / len, ny = y / len, nz = z / len;
+    // Subtle organic noise
+    const noise = 1.0 + 0.05 * Math.sin(nx * 10 + ny * 8) * Math.cos(nz * 12);
+    pos.setXYZ(i, nx * a * noise, ny * b * noise, nz * c * noise);
+  }
+  geo.computeVertexNormals();
+  return geo;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -548,7 +837,7 @@ const UI_THEMES: Record<ThemeMode, UITheme> = {
   },
   light: {
     bg: "#eef2f7", bgOverlay: "rgba(255,255,255,.94)", border: "rgba(100,120,160,.2)",
-    text: "#1a1e2a", textMuted: "#6678889", textDim: "#8899aa",
+    text: "#1a1e2a", textMuted: "#667889", textDim: "#8899aa",
     panelBg: "rgba(255,255,255,.94)", panelBorder: "rgba(100,120,160,.18)",
     btnBg: "rgba(100,120,160,.08)", btnBorder: "rgba(100,120,160,.2)",
     btnText: "#4a5568", btnActiveText: "#1a1e2a", inactiveText: "#8899aa",
@@ -571,7 +860,7 @@ export interface SceneHandle {
     fillLight: THREE.DirectionalLight;
     rimLight: THREE.DirectionalLight;
     ground: THREE.Mesh;
-    grid: THREE.GridHelper; // mutable — replaced on theme swap
+    grid: THREE.GridHelper;
     bloom: UnrealBloomPass;
   };
   dispose: () => void;
@@ -613,6 +902,42 @@ function toV3(v: Vec3): THREE.Vector3 {
   return new THREE.Vector3(v.x, v.y, v.z);
 }
 
+/**
+ * Generates a procedural studio environment map for realistic PBR reflections.
+ * Produces soft top/side lighting that makes wet tissue surfaces look convincing.
+ */
+function generateEnvironmentMap(renderer: THREE.WebGLRenderer): THREE.Texture {
+  const pmremGen = new THREE.PMREMGenerator(renderer);
+  pmremGen.compileEquirectangularShader();
+
+  const envScene = new THREE.Scene();
+  envScene.background = new THREE.Color(0x202030);
+
+  // Soft studio lighting for the environment map
+  const envLight1 = new THREE.DirectionalLight(0xffeedd, 2.5);
+  envLight1.position.set(5, 8, 5);
+  envScene.add(envLight1);
+
+  const envLight2 = new THREE.DirectionalLight(0xddddff, 1.5);
+  envLight2.position.set(-5, 4, -5);
+  envScene.add(envLight2);
+
+  const envLight3 = new THREE.DirectionalLight(0xffffff, 1.0);
+  envLight3.position.set(0, 10, 0);
+  envScene.add(envLight3);
+
+  // Ground bounce
+  const envLight4 = new THREE.DirectionalLight(0x444455, 0.5);
+  envLight4.position.set(0, -5, 0);
+  envScene.add(envLight4);
+
+  const envRT = pmremGen.fromScene(envScene, 0.04);
+  const envMap = envRT.texture;
+  pmremGen.dispose();
+
+  return envMap;
+}
+
 export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHandle {
   const W = container.clientWidth;
   const H = container.clientHeight;
@@ -635,6 +960,10 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0c0c14);
   scene.fog = new THREE.FogExp2(0x0c0c14, 0.0008);
+
+  // ── Environment map for realistic PBR reflections ──
+  const envMap = generateEnvironmentMap(renderer);
+  scene.environment = envMap;
 
   // ── Camera — framing full body (Y range 0–180 cm) ──
   const camera = new THREE.PerspectiveCamera(40, W / H, 0.5, 500);
@@ -734,29 +1063,44 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   // ════════════════════════════════════════════════════════════════════
 
   for (const bone of body.skeleton) {
-    const geo = boneGeometry(bone);
     const mat = boneMaterial(bone.region);
-    const mesh = new THREE.Mesh(geo, mat);
+    let mesh: THREE.Mesh;
 
-    mesh.position.set(
-      bone.transform.position.x,
-      bone.transform.position.y,
-      bone.transform.position.z,
-    );
-
-    // Orient long bones along parent→child vector
     if (bone.parentBoneId && bone.classification === "long") {
       const parent = boneDataById.get(bone.parentBoneId);
       if (parent) {
+        // Long bones SPAN from parent position to this bone's position
         const from = toV3(parent.transform.position);
         const to = toV3(bone.transform.position);
+        const distance = from.distanceTo(to);
+        const midpoint = from.clone().add(to).multiplyScalar(0.5);
+
+        // Use actual parent-child distance for geometry length
+        const spanLen = Math.max(distance, 1);
+        const geo = longBoneGeometry(spanLen, bone.width, bone.depth);
+        mesh = new THREE.Mesh(geo, mat);
+
+        // Position at midpoint between parent and this bone
+        mesh.position.copy(midpoint);
+
+        // Orient along parent→child direction
         const dir = to.clone().sub(from).normalize();
         const up = new THREE.Vector3(0, 1, 0);
         if (Math.abs(dir.dot(up)) < 0.999) {
           const q = new THREE.Quaternion().setFromUnitVectors(up, dir);
           mesh.quaternion.copy(q);
         }
+      } else {
+        // Parent not found, fall back to schema position
+        const geo = boneGeometry(bone);
+        mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(bone.transform.position.x, bone.transform.position.y, bone.transform.position.z);
       }
+    } else {
+      // Non-long bones: place at their own position
+      const geo = boneGeometry(bone);
+      mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(bone.transform.position.x, bone.transform.position.y, bone.transform.position.z);
     }
 
     mesh.castShadow = true;
@@ -786,7 +1130,7 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   }
 
   // ════════════════════════════════════════════════════════════════════
-  // MUSCLES — 322 (with fiber tubes from origin to insertion)
+  // MUSCLES — spindle-shaped bellies with variable radius
   // ════════════════════════════════════════════════════════════════════
 
   const tMat = tendonMaterial();
@@ -811,33 +1155,49 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
       insertionBone.transform.position.z + insertionTendon.localPosition.z,
     );
 
-    // Muscle belly: curved tube between origin and insertion
-    // Bulge control point offset by fiber direction for anatomical curvature
+    // Muscle belly: curved spindle tube between origin and insertion
+    // Multiple control points for anatomical curvature
     const mid = oPos.clone().add(iPos).multiplyScalar(0.5);
     const fiberDir = toV3(muscle.fiberDirection);
     const span = oPos.distanceTo(iPos);
-    const bulge = span * 0.12;
-    const ctrl1 = oPos.clone().lerp(mid, 0.33).add(fiberDir.clone().multiplyScalar(bulge));
-    const ctrl2 = mid.clone().lerp(iPos, 0.33).add(fiberDir.clone().multiplyScalar(bulge * 0.7));
+    const bulge = span * 0.15;
 
-    // Radius from volume: V ≈ π r² L → r = sqrt(V / (π L))
-    const bellyR = Math.max(0.15, Math.min(2.5, Math.sqrt(muscle.volume / (Math.PI * Math.max(1, muscle.restingLength)))));
+    // 5 control points for smoother curvature
+    const q1 = oPos.clone().lerp(mid, 0.25).add(fiberDir.clone().multiplyScalar(bulge * 0.6));
+    const q2 = oPos.clone().lerp(mid, 0.5).add(fiberDir.clone().multiplyScalar(bulge));
+    const q3 = mid.clone().lerp(iPos, 0.5).add(fiberDir.clone().multiplyScalar(bulge * 0.8));
+    const q4 = mid.clone().lerp(iPos, 0.75).add(fiberDir.clone().multiplyScalar(bulge * 0.4));
 
-    const muscleTube = tubeFromPath([oPos, ctrl1, ctrl2, iPos], bellyR);
-    const muscleMesh = new THREE.Mesh(muscleTube, muscleMaterial(muscle.region));
+    // Belly radius from volume: V ≈ π r² L → r = sqrt(V / (π L))
+    const bellyR = Math.max(0.2, Math.min(3.0, Math.sqrt(muscle.volume / (Math.PI * Math.max(1, muscle.restingLength)))));
+    const tR = bellyR * 0.2; // Tendon is much thinner than belly
+
+    // Spindle-shaped tube: thin at tendons, thick at belly center
+    const muscleGeo = variableRadiusTube(
+      [oPos, q1, q2, q3, q4, iPos],
+      24, // more segments for smooth spindle
+      (t) => {
+        // Smooth spindle profile: sin^0.7 creates a natural muscle belly shape
+        const s = Math.pow(Math.sin(t * Math.PI), 0.7);
+        return tR + (bellyR - tR) * s;
+      },
+      8,
+    );
+
+    const muscleMesh = new THREE.Mesh(muscleGeo, muscleMaterial(muscle.region));
     muscleMesh.castShadow = true;
     muscleMesh.userData = { type: "muscle", id: muscle.id, name: muscle.name, region: muscle.region };
     layers.muscles.add(muscleMesh);
 
-    // Tendons: thin tubes at origin and insertion ends
-    const tR = Math.max(0.08, bellyR * 0.3);
+    // Tendons: tapered tubes at origin and insertion ends
+    const tendonR = Math.max(0.08, bellyR * 0.25);
     if (originTendon.length > 0.5) {
       const tEnd = oPos.clone().lerp(new THREE.Vector3(
         originBone.transform.position.x,
         originBone.transform.position.y,
         originBone.transform.position.z,
       ), 0.8);
-      const tGeo = tubeFromPath([tEnd, oPos], tR, 4);
+      const tGeo = tubeFromPath([tEnd, oPos], tendonR, 4);
       const tMesh = new THREE.Mesh(tGeo, tMat);
       tMesh.userData = { type: "tendon", name: originTendon.name };
       layers.tendons.add(tMesh);
@@ -848,7 +1208,7 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
         insertionBone.transform.position.y,
         insertionBone.transform.position.z,
       ), 0.8);
-      const tGeo = tubeFromPath([iPos, tEnd], tR, 4);
+      const tGeo = tubeFromPath([iPos, tEnd], tendonR, 4);
       const tMesh = new THREE.Mesh(tGeo, tMat);
       tMesh.userData = { type: "tendon", name: insertionTendon.name };
       layers.tendons.add(tMesh);
@@ -886,7 +1246,7 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   }
 
   // ════════════════════════════════════════════════════════════════════
-  // ORGANS — 38
+  // ORGANS — 38 (with organ-specific geometries)
   // ════════════════════════════════════════════════════════════════════
 
   for (const organ of body.organs) {
@@ -939,7 +1299,6 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
     const jointData = jointDataById.get(cart.jointId);
     if (!jointData) continue;
 
-    // Disc/meniscus at joint position, sized by surfaceArea
     const r = Math.sqrt(cart.surfaceArea / Math.PI);
     const geo = new THREE.CylinderGeometry(r, r, cart.thickness * 0.5, 12, 1);
     const mesh = new THREE.Mesh(geo, cartilageMaterial(cart.type));
@@ -957,10 +1316,9 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
     composer.dispose();
     renderer.dispose();
     controls.dispose();
+    envMap.dispose();
     _materialCache.forEach((m) => m.dispose());
     _materialCache.clear();
-    _capsuleGeoCache.forEach((g) => g.dispose());
-    _capsuleGeoCache.clear();
     scene.traverse((obj: THREE.Object3D) => {
       if (obj instanceof THREE.Mesh) {
         obj.geometry.dispose();
@@ -1018,16 +1376,16 @@ export interface AnatomyViewerProps {
 }
 
 const LAYER_ICONS: Record<LayerName, string> = {
-  skeleton: "🦴",
-  joints: "🔵",
-  muscles: "💪",
-  tendons: "🪢",
-  organs: "🫀",
-  arteries: "🔴",
-  veins: "🔵",
-  nerves: "⚡",
-  ligaments: "🩹",
-  cartilage: "🫧",
+  skeleton: "\u{1F9B4}",
+  joints: "\u{1F535}",
+  muscles: "\u{1F4AA}",
+  tendons: "\u{1FAA2}",
+  organs: "\u{1FAC0}",
+  arteries: "\u{1F534}",
+  veins: "\u{1F535}",
+  nerves: "\u26A1",
+  ligaments: "\u{1FA79}",
+  cartilage: "\u{1FAE7}",
 };
 
 const LAYER_COLORS: Record<LayerName, string> = {
@@ -1196,7 +1554,6 @@ export default function AnatomyViewer({ body }: AnatomyViewerProps) {
         <div style={{ fontSize: 10, fontWeight: 700, color: "#8899bb", letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>
           Layers
         </div>
-
         {ALL_LAYERS.map((ln) => {
           const active = visibleLayers.has(ln);
           return (
@@ -1267,8 +1624,21 @@ export default function AnatomyViewer({ body }: AnatomyViewerProps) {
         </div>
       )}
 
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        style={{
+          position: "absolute", top: 12, right: 200, zIndex: 10,
+          background: ui.btnBg, border: `1px solid ${ui.btnBorder}`,
+          color: ui.btnText, borderRadius: 6, padding: "4px 10px",
+          cursor: "pointer", fontSize: 10, fontFamily: "inherit",
+        }}
+      >
+        {theme === "dark" ? "Light" : "Dark"} Mode
+      </button>
+
       {/* Controls hint */}
-      <div style={{ position: "absolute", bottom: 16, right: 16, zIndex: 10, fontSize: 9, color: "#334455", textAlign: "right" }}>
+      <div style={{ position: "absolute", bottom: 16, right: 16, zIndex: 10, fontSize: 9, color: ui.textDim, textAlign: "right" }}>
         <div>LMB drag — orbit</div>
         <div>RMB drag — pan</div>
         <div>Scroll — zoom</div>

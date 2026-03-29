@@ -1688,6 +1688,40 @@ def gen_vascular(r: Reg) -> list[dict]:
     _art("Pulmonary artery (R)", 56, 0.9, [vec3(-2,130,3), vec3(-8,132,1)])                                  # 57
     _art("Pulmonary artery (L)", 56, 0.9, [vec3(2,130,3), vec3(8,132,1)])                                    # 58
 
+    # === BRANCH ARTERIES referenced by muscle bloodSupply ===
+    # These smaller arteries are required for bloodSupply.primaryArteryId resolution.
+    # Parent indices: 31=Brachial(R), 32=Brachial(L), 29=Subclavian(R), 30=Subclavian(L)
+    #   41=Ext carotid(R), 42=Ext carotid(L), 13=Int iliac(R), 14=Int iliac(L)
+    #   0=Aorta, 35=Ulnar(R), 36=Ulnar(L), 23=Post tib(R), 24=Post tib(L)
+    #   19=Deep fem(R), 20=Deep fem(L)
+    # Reference: Gray's Anatomy 42nd ed. (2020), arterial distribution tables
+    _art("Deep brachial artery (R)", 31, 0.15, [vec3(-22,140,0), vec3(-23,130,-2)])
+    _art("Deep brachial artery (L)", 32, 0.15, [vec3(22,140,0), vec3(23,130,-2)])
+    _art("Deep palmar arch (R)", 35, 0.08, [vec3(-26,88,2), vec3(-27,86,3)])
+    _art("Deep palmar arch (L)", 36, 0.08, [vec3(26,88,2), vec3(27,86,3)])
+    _art("External carotid artery (R)", 41, 0.2, [vec3(-4,158,4), vec3(-5,162,5)])
+    _art("External carotid artery (L)", 42, 0.2, [vec3(4,158,4), vec3(5,162,5)])
+    _art("Facial artery (R)", 41, 0.12, [vec3(-4,160,4), vec3(-3,165,6)])
+    _art("Facial artery (L)", 42, 0.12, [vec3(4,160,4), vec3(3,165,6)])
+    _art("Superior gluteal artery (R)", 13, 0.2, [vec3(-6,55,-3), vec3(-8,60,-4)])
+    _art("Superior gluteal artery (L)", 14, 0.2, [vec3(6,55,-3), vec3(8,60,-4)])
+    _art("Obturator artery (R)", 13, 0.15, [vec3(-6,55,-2), vec3(-7,52,0)])
+    _art("Obturator artery (L)", 14, 0.15, [vec3(6,55,-2), vec3(7,52,0)])
+    _art("Suprascapular artery (R)", 29, 0.12, [vec3(-10,148,0), vec3(-16,146,-3)])
+    _art("Suprascapular artery (L)", 30, 0.12, [vec3(10,148,0), vec3(16,146,-3)])
+    _art("Thoracoacromial artery (R)", 29, 0.12, [vec3(-10,148,1), vec3(-14,146,2)])
+    _art("Thoracoacromial artery (L)", 30, 0.12, [vec3(10,148,1), vec3(14,146,2)])
+    _art("Posterior interosseous artery (R)", 35, 0.08, [vec3(-24,112,-1), vec3(-25,100,-2)])
+    _art("Posterior interosseous artery (L)", 36, 0.08, [vec3(24,112,-1), vec3(25,100,-2)])
+    _art("Medial plantar artery (R)", 23, 0.1, [vec3(-9,3,3), vec3(-8,1,8)])
+    _art("Medial plantar artery (L)", 24, 0.1, [vec3(9,3,3), vec3(8,1,8)])
+    _art("Transverse cervical artery (R)", 29, 0.1, [vec3(-8,148,-1), vec3(-16,146,-4)])
+    _art("Transverse cervical artery (L)", 30, 0.1, [vec3(8,148,-1), vec3(16,146,-4)])
+    _art("Lumbar arteries", 0, 0.15, [vec3(0,105,-2), vec3(-3,100,-4), vec3(3,95,-4)])
+    _art("Superior epigastric artery", 0, 0.1, [vec3(0,120,4), vec3(0,110,5)])
+    _art("Intercostal arteries", 0, 0.08, [vec3(-8,130,0), vec3(-12,125,0)])
+    _art("Regional artery", 0, 0.08, [vec3(0,120,2), vec3(0,115,2)])
+
     # =======================  VENOUS TREE  =======================
     ivc_i = len(vessels)  # IVC index
     _vein("Inferior vena cava", None, 1.8, [vec3(1,70,-2), vec3(1,100,0), vec3(1,135,3)], hasValves=False)   # 59
@@ -2183,6 +2217,42 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
         return {"id": uid(), "name": name, "forceType": "joint_reaction", "magnitude": mag, "direction": unit_vec3(0,1,0),
                 "jointId": r.joint_ids[ji], "applicationPoint": vec3()}
 
+    def _ext(name, mag, seg_idx, desc="external load"):
+        return {"id": uid(), "name": name, "forceType": "external_applied", "magnitude": mag, "direction": unit_vec3(0,-1,0),
+                "applicationPoint": vec3(), "targetSegmentId": r.segment_ids[seg_idx],
+                "description": desc, "distributed": False}
+
+    def _lig(name, mag, lig_name, ji):
+        lid = None
+        for i, l in enumerate(r.ligament_ids):
+            if i < len(r.ligament_ids):
+                lid = l
+                break
+        return {"id": uid(), "name": name, "forceType": "ligamentous", "magnitude": mag, "direction": unit_vec3(0,1,0),
+                "ligamentName": lig_name, "jointId": r.joint_ids[ji], "applicationPoint": vec3(),
+                "strain": round(random.uniform(0.01, 0.04), 3)}
+
+    def _inertial(name, mag, seg_idx, ax=0, ay=0, az=0):
+        return {"id": uid(), "name": name, "forceType": "inertial", "magnitude": mag, "direction": unit_vec3(0,-1,0),
+                "targetSegmentId": r.segment_ids[seg_idx],
+                "segmentAcceleration": vec3(ax, ay, az)}
+
+    def _contact(name, mag, contact_id, seg_idx):
+        return {"id": uid(), "name": name, "forceType": "contact", "magnitude": mag, "direction": unit_vec3(0,1,0),
+                "contactId": contact_id, "applicationPoint": vec3(),
+                "normalForce": mag, "targetSegmentId": r.segment_ids[seg_idx]}
+
+    def _drag(name, mag, seg_idx, cd=1.1, area=1500):
+        return {"id": uid(), "name": name, "forceType": "aerodynamic_drag", "magnitude": mag, "direction": unit_vec3(0,0,-1),
+                "targetSegmentId": r.segment_ids[seg_idx], "dragCoefficient": cd,
+                "frontalArea": area, "fluidDensity": 0.001225,
+                "relativeVelocity": vec3(0, 0, round(random.uniform(100, 500), 1))}
+
+    def _buoy(name, mag, seg_idx, disp_vol, density=1.0):
+        return {"id": uid(), "name": name, "forceType": "buoyancy", "magnitude": mag, "direction": unit_vec3(0,1,0),
+                "targetSegmentId": r.segment_ids[seg_idx], "displacedVolume": disp_vol,
+                "fluidDensity": density, "centerOfBuoyancy": vec3(0, 50, 0)}
+
     def _equil():
         nf = vec3(round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.5,0.5),2), round(random.uniform(-0.2,0.2),2))
         return {"netForce": nf, "netMoment": vec3(round(random.uniform(-1,1),1), round(random.uniform(-0.5,0.5),1), round(random.uniform(-0.5,0.5),1)),
@@ -2209,6 +2279,9 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     f1 += [_jr("R hip joint reaction", round(tw*0.65), J_HIP_R),
            _jr("L hip joint reaction", round(tw*0.65), J_HIP_L),
            _jr("L5-S1 joint reaction", round(tw*0.55), J_L5S1)]
+    # Ligamentous: passive restraint in standing
+    f1 += [_lig("ACL passive (R)", 25, "Anterior cruciate ligament (R)", J_KNEE_R),
+           _lig("ACL passive (L)", 25, "Anterior cruciate ligament (L)", J_KNEE_L)]
     conditions.append({"id": uid(), "name": "double_leg_standing", "poseId": r.saved_pose_id,
                         "forces": f1, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
 
@@ -2248,6 +2321,10 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
     f3 += [_jr("R hip JRF midstance", round(tw*2.5), J_HIP_R),
            _jr("R knee JRF midstance", round(tw*1.5), J_KNEE_R),
            _jr("R ankle JRF midstance", round(tw*3.0), J_ANKLE_R)]
+    # Inertial: swing leg d'Alembert forces (~0.3g centripetal at swing thigh)
+    # Reference: Winter (2009) Ch.5 — segment accelerations during gait
+    f3 += [_inertial("L thigh inertial (swing)", round(weight*0.14*300), 2, 0, -300, 0),
+           _inertial("L shank inertial (swing)", round(weight*0.046*500), 4, 0, -500, 0)]
     # Use the 4th saved pose (gait_midstance_r)
     ms_pose_id = r.saved_pose_id  # will be overridden at runtime
     conditions.append({"id": uid(), "name": "gait_midstance_r", "poseId": ms_pose_id,
@@ -2278,6 +2355,58 @@ def gen_loading_conditions(r: Reg, weight: float) -> list[dict]:
            _jr("R hip JRF toeoff", round(tw*2.0), J_HIP_R)]
     conditions.append({"id": uid(), "name": "gait_toeoff_r", "poseId": ms_pose_id,
                         "forces": f5, "moments": [], "contacts": _contacts_bilateral()[:1], "equilibrium": _equil()})
+
+    # --- LC 6: External load — carrying object + wind + contact ---
+    # Scenario: carrying 10 kg box, walking into 3 m/s headwind
+    # Reference: Kinoshita, Ergonomics 39(9):1163-1178, 1996 (manual handling)
+    box_weight = 10 * G / 100  # 10 kg in N (G in cm/s²)
+    contacts6 = _contacts_bilateral()
+    # Contact of box against trunk
+    box_contact_id = contacts6[0]["id"]  # reuse contact ID for ref
+    contacts6.append({"id": uid(), "name": "Box-trunk contact", "contactType": "body_surface",
+                       "segmentId": r.segment_ids[5], "surfaceNormal": unit_vec3(0,0,1),
+                       "contactPoint": vec3(0, 120, 8), "isActive": True})
+    box_cid = contacts6[-1]["id"]
+    f6 = [_grf("GRF (R foot carry)", round(tw*0.55 + box_weight*0.5), "right", 13),
+          _grf("GRF (L foot carry)", round(tw*0.55 + box_weight*0.5), "left", 14)]
+    f6 += [_ext("Carried box weight", round(box_weight), 5, "10 kg box held at trunk level"),
+           _mf("R erector spinae carry", 450, "Erector Spinae (R)"),
+           _mf("L erector spinae carry", 450, "Erector Spinae (L)"),
+           _mf("R biceps carry", 120, "Biceps Brachii (R)"),
+           _mf("L biceps carry", 120, "Biceps Brachii (L)")]
+    f6 += gravs
+    f6 += [_jr("L5-S1 JRF carry", round(tw*1.2), J_L5S1)]
+    # Contact force: box pressing against trunk
+    f6.append(_contact("Box-trunk normal force", round(box_weight*0.3), box_cid, 5))
+    # Aerodynamic drag: 3 m/s headwind (300 cm/s), trunk frontal area ~1500 cm²
+    # F_drag = 0.5 × ρ × Cd × A × v² = 0.5 × 0.001225 × 1.1 × 1500 × 300² ≈ 9.1 N
+    f6.append(_drag("Headwind drag (trunk)", 9, 5, cd=1.1, area=1500))
+    # Ligamentous passive restraint at L5-S1 under load
+    f6.append(_lig("PLL L5-S1 carry", 80, "Posterior longitudinal ligament (lumbar)", J_L5S1))
+    conditions.append({"id": uid(), "name": "carrying_external_load", "poseId": r.saved_pose_id,
+                        "forces": f6, "moments": [], "contacts": contacts6, "equilibrium": _equil()})
+
+    # --- LC 7: Aquatic — partial submersion with buoyancy ---
+    # Scenario: standing in waist-deep water (pelvis + legs submerged)
+    # Reference: Harrison & Teixeira, J Sports Sci 19(7):497-504, 2001
+    f7 = [_grf("GRF (R foot underwater)", round(tw*0.3), "right", 13),
+          _grf("GRF (L foot underwater)", round(tw*0.3), "left", 14)]
+    f7 += gravs
+    # Buoyancy on submerged segments: pelvis, thighs, shanks, feet
+    # displaced volume ≈ segment mass / body density (~1.05 g/cm³) for each segment
+    for si, seg_name in [(0, "pelvis"), (1, "thigh R"), (2, "thigh L"),
+                          (3, "shank R"), (4, "shank L"), (13, "foot R"), (14, "foot L")]:
+        seg_mass_kg = weight * SEG_DEFS[si][4]
+        disp_vol = round(seg_mass_kg * 1000 / 1.05, 1)  # g / (g/cm³) = cm³
+        buoy_force = round(disp_vol * 1.0 * G / 100, 1)  # ρ_water × V × g
+        f7.append(_buoy(f"Buoyancy {seg_name}", buoy_force, si, disp_vol, density=1.0))
+    f7 += [_jr("R hip JRF aquatic", round(tw*0.4), J_HIP_R),
+           _jr("L hip JRF aquatic", round(tw*0.4), J_HIP_L)]
+    # Water drag on legs during walking (~0.5 m/s, Cd=1.2 for cylinders)
+    f7.append(_drag("Water drag (R shank)", 15, 3, cd=1.2, area=800))
+    f7.append(_drag("Water drag (L shank)", 15, 4, cd=1.2, area=800))
+    conditions.append({"id": uid(), "name": "aquatic_standing", "poseId": r.saved_pose_id,
+                        "forces": f7, "moments": [], "contacts": _contacts_bilateral(), "equilibrium": _equil()})
 
     return conditions
 HILL_EQ = "F_muscle ≤ F_max × [a × f_L(L̃) × f_V(Ṽ) + f_PE(L̃)]"
@@ -2603,6 +2732,35 @@ def generate_human_body(variation: int = 0) -> dict:
     tendons, muscles = gen_tendons_and_muscles(r)
     organs = gen_organs(r, sex)
     vascular = gen_vascular(r)
+
+    # Resolve bloodSupply.primaryArteryId for muscles (vascular must exist first).
+    # Muscle artery names are generic ("Brachial artery") but vessel names are
+    # lateralized ("Brachial artery (R)"). Match strategy:
+    #   1. Exact name match
+    #   2. Lateralized match: append " (R)" or " (L)" based on muscle side
+    #   3. Strip vessel laterality for generic match
+    vessel_name_to_id: dict[str, str] = {}
+    for v in vascular:
+        vessel_name_to_id[v["name"]] = v["id"]
+    # Also build a de-lateralized index: "Brachial artery" → first match
+    vessel_base_to_id: dict[str, str] = {}
+    for v in vascular:
+        base = v["name"].replace(" (R)", "").replace(" (L)", "")
+        if base not in vessel_base_to_id:
+            vessel_base_to_id[base] = v["id"]
+    for m in muscles:
+        artery_name = m["bloodSupply"]["primaryArteryName"]
+        vid = vessel_name_to_id.get(artery_name)
+        if not vid:
+            # Derive side from muscle name
+            side = "(R)" if "(R)" in m["name"] else ("(L)" if "(L)" in m["name"] else "")
+            if side:
+                vid = vessel_name_to_id.get(f"{artery_name} {side}")
+        if not vid:
+            vid = vessel_base_to_id.get(artery_name)
+        if vid:
+            m["bloodSupply"]["primaryArteryId"] = vid
+
     ligaments = gen_ligaments(r)
     cartilage = gen_cartilage(r)
     segments = gen_segments(r, weight, sex)
