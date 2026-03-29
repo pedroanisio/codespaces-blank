@@ -1,0 +1,2013 @@
+{
+  "$schema": "building-model-3d-v2.1.ts",
+  "$schemaVersion": "2.1.0",
+  "$generator": "Claude Opus 4.6 (1M context)",
+  "$disclaimer": "No information within this file should be taken for granted. Any statement or premise not backed by a real logical definition or verifiable reference may be invalid or a hallucination.",
+  "$source": "Pulp Fiction (1994), written and directed by Quentin Tarantino. Opening scene: INT. COFFEE SHOP. A Denny's/Spires-like diner in Los Angeles, circa 1994.",
+  "schemaVersion": "2.1.0",
+  "id": "b0a1c2d3-e4f5-6789-abcd-ef0123456789",
+  "title": "Pulp Fiction Coffee Shop — Hawthorne Grill / Spires-like Diner, Los Angeles",
+  "lengthUnit": "m",
+  "angleUnit": "deg",
+  "origin": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "trueNorthDeg": 0,
+  "upAxis": "z",
+  "siteCoordinateSystem": {
+    "id": "sc100000-0000-4000-8000-000000000001",
+    "name": "Hawthorne Grill Site Grid",
+    "buildingToSite": {
+      "translateX": 0.0,
+      "translateY": 0.0,
+      "rotationDeg": 0.0,
+      "scaleFactor": 1.0
+    },
+    "horizontalCRS": "EPSG:32611",
+    "siteUnit": "m",
+    "verticalOffset": 30.0,
+    "verticalDatum": "navd88",
+    "verticalDatumDescription": "NAVD88 elevation at Hawthorne Blvd / 137th St, Los Angeles County. Building datum Z=0 corresponds to approximately 30m NAVD88.",
+    "gridConvergenceDeg": 0.0,
+    "note": "Site grid for the Hawthorne Grill location. CRS is WGS 84 / UTM zone 11N, standard for the greater Los Angeles area. Building-to-site transform is identity (building axes aligned with site grid)."
+  },
+  "viewPoints": [
+    {
+      "id": "vp100000-0000-4000-8000-000000000001",
+      "name": "Pumpkin & Honey Bunny — Booth POV",
+      "eye": {
+        "x": 8.0,
+        "y": 3.5,
+        "z": 1.4
+      },
+      "target": {
+        "x": 5.0,
+        "y": 1.0,
+        "z": 0.8
+      },
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "projection": "perspective",
+      "fovDeg": 55,
+      "nearClip": 0.1,
+      "farClip": 30.0,
+      "note": "Inside the diner, looking from the center aisle toward Booth 1 by the south windows. Pumpkin smokes, Honey Bunny pours cream. Morning light through the plate glass."
+    },
+    {
+      "id": "vp100000-0000-4000-8000-000000000002",
+      "name": "Robbery — Pumpkin standing",
+      "eye": {
+        "x": 18.0,
+        "y": 6.0,
+        "z": 1.3
+      },
+      "target": {
+        "x": 6.0,
+        "y": 2.0,
+        "z": 1.4
+      },
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "projection": "perspective",
+      "fovDeg": 60,
+      "note": "A patron at a far table — Denver omelet mid-bite — sees Pumpkin spring up from Booth 1 with his .32. 'Everybody be cool this is a robbery!'"
+    },
+    {
+      "id": "vp100000-0000-4000-8000-000000000003",
+      "name": "Waitress station — coffee run",
+      "eye": {
+        "x": 4.5,
+        "y": 9.0,
+        "z": 1.6
+      },
+      "target": {
+        "x": 14.0,
+        "y": 4.0,
+        "z": 0.75
+      },
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "projection": "perspective",
+      "fovDeg": 70,
+      "note": "The Waitress's POV from behind the counter, looking out across the dining floor. Coffee pot in hand. 'Can I get anybody anymore coffee?'"
+    },
+    {
+      "id": "vp100000-0000-4000-8000-000000000004",
+      "name": "Isometric overview",
+      "eye": {
+        "x": -10.0,
+        "y": -10.0,
+        "z": 20.0
+      },
+      "target": {
+        "x": 12.0,
+        "y": 7.0,
+        "z": 0.0
+      },
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "projection": "isometric",
+      "orthoHeight": 20.0,
+      "note": "Bird's-eye isometric overview of the entire diner — used for the 3D renderer output."
+    }
+  ],
+  "drawingViews": [
+    {
+      "id": "dv100000-0000-4000-8000-000000000001",
+      "name": "A-101 Ground Floor Plan",
+      "kind": "plan",
+      "cuttingPlane": {
+        "point": {
+          "x": 12.0,
+          "y": 7.0,
+          "z": 1.2
+        },
+        "normal": {
+          "x": 0,
+          "y": 0,
+          "z": -1
+        }
+      },
+      "viewDepth": 3.6,
+      "viewForward": 0,
+      "scale": "1:100",
+      "floorIds": [
+        "f1000000-0000-4000-8000-000000000001"
+      ],
+      "viewAnnotations": [],
+      "note": "Standard ground floor plan — horizontal cut at 1.2m above datum (through windows and doors), viewed from above. Shows all spaces, walls, openings, and fixtures."
+    },
+    {
+      "id": "dv100000-0000-4000-8000-000000000002",
+      "name": "Section AA — North-South through dining",
+      "kind": "section",
+      "cuttingPlane": {
+        "point": {
+          "x": 12.0,
+          "y": 7.0,
+          "z": 0.0
+        },
+        "normal": {
+          "x": -1,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "viewDepth": 24.0,
+      "viewForward": 0,
+      "scale": "1:50",
+      "floorIds": [
+        "f1000000-0000-4000-8000-000000000001"
+      ],
+      "viewAnnotations": [],
+      "note": "Longitudinal section cutting east-west at x=12m, looking west. Shows the dining area ceiling height (2.7m), kitchen partition wall, counter, and roof structure."
+    },
+    {
+      "id": "dv100000-0000-4000-8000-000000000003",
+      "name": "South Elevation",
+      "kind": "elevation",
+      "cuttingPlane": {
+        "point": {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "normal": {
+          "x": 0,
+          "y": -1,
+          "z": 0
+        }
+      },
+      "viewDepth": 14.0,
+      "viewForward": 0,
+      "scale": "1:100",
+      "floorIds": [
+        "f1000000-0000-4000-8000-000000000001"
+      ],
+      "viewAnnotations": [],
+      "note": "South facade elevation — the main entrance view. Large plate glass windows, double-door entry, flat roof parapet. This is the face the audience sees from the parking lot."
+    },
+    {
+      "id": "dv100000-0000-4000-8000-000000000004",
+      "name": "3D Scene Overview",
+      "kind": "three_d",
+      "viewPointId": "vp100000-0000-4000-8000-000000000004",
+      "floorIds": [
+        "f1000000-0000-4000-8000-000000000001"
+      ],
+      "viewAnnotations": [],
+      "note": "Full 3D overview linked to the isometric viewpoint — used for rendering the complete building model."
+    }
+  ],
+  "building": {
+    "id": "a1000000-0000-4000-8000-000000000001",
+    "name": "Coffee Shop (Hawthorne Grill / Spires-type Diner)",
+    "address": "Los Angeles, California, USA",
+    "typology": "single_story_commercial_restaurant",
+    "geoReference": {
+      "latitude": 33.9164,
+      "longitude": -118.3526,
+      "altitudeM": 30
+    },
+    "note": "A normal Denny's, Spires-like coffee shop in Los Angeles. Modeled after the type of diner common in 1990s Southern California — rectangular, single-story, flat roof, large windows, booths along the perimeter, counter seating, visible kitchen."
+  },
+  "floors": [
+    {
+      "id": "f1000000-0000-4000-8000-000000000001",
+      "buildingId": "a1000000-0000-4000-8000-000000000001",
+      "level": 0,
+      "name": "Ground Floor",
+      "elevationAboveDatum": 0.0,
+      "floorToFloorHeight": 3.6,
+      "note": "Single-story diner. Floor-to-floor height of 3.6m accommodates the dropped ceiling at ~2.7m with MEP plenum above.",
+      "outline": {
+        "vertices": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 24,
+            "y": 0
+          },
+          {
+            "x": 24,
+            "y": 14
+          },
+          {
+            "x": 0,
+            "y": 14
+          }
+        ]
+      },
+      "walls": [
+        {
+          "id": "b2a6e7e1-beef-4671-bfbc-32c90e9905a8",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "load_bearing",
+          "centerline": {
+            "start": {
+              "x": 0,
+              "y": 0
+            },
+            "end": {
+              "x": 24,
+              "y": 0
+            }
+          },
+          "thickness": 0.2,
+          "height": 3.6,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "concrete_block",
+            "densityKgPerM3": 2000
+          },
+          "openings": [
+            {
+              "id": "183d35f3-0e8f-4a36-b0f2-54265eae013b",
+              "kind": "window",
+              "offsetAlongWall": 1.5,
+              "width": 3.0,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "Large plate glass window — south facade, booth seating side. Morning sun streams in."
+            },
+            {
+              "id": "52b66fc1-c8a6-4ada-9aa7-48d4b1f3dad5",
+              "kind": "window",
+              "offsetAlongWall": 5.5,
+              "width": 3.0,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "Second south window — Pumpkin and Honey Bunny's booth is near here."
+            },
+            {
+              "id": "e5526693-ee73-4d14-a89a-e8c686be1b5b",
+              "kind": "double_door",
+              "offsetAlongWall": 10.5,
+              "width": 1.8,
+              "height": 2.1,
+              "sillHeight": 0.0,
+              "swingDirection": "outward_right",
+              "note": "Main entrance — glass double doors, south facade."
+            },
+            {
+              "id": "d33179d9-b868-4b81-a352-306aa29ddfa6",
+              "kind": "window",
+              "offsetAlongWall": 14.0,
+              "width": 3.0,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "South window near register/counter area."
+            },
+            {
+              "id": "d1f4cc04-736f-4336-8e59-9f9906da7cb4",
+              "kind": "window",
+              "offsetAlongWall": 18.5,
+              "width": 3.0,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "South window — dining area east end."
+            }
+          ],
+          "note": "South exterior wall — main facade with large diner windows and entrance."
+        },
+        {
+          "id": "fb70a5af-66af-460f-bc64-d6b1956aedd1",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "load_bearing",
+          "centerline": {
+            "start": {
+              "x": 24,
+              "y": 0
+            },
+            "end": {
+              "x": 24,
+              "y": 14
+            }
+          },
+          "thickness": 0.2,
+          "height": 3.6,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "concrete_block",
+            "densityKgPerM3": 2000
+          },
+          "openings": [
+            {
+              "id": "6d7adadf-6f46-4afe-994c-328c302fa206",
+              "kind": "window",
+              "offsetAlongWall": 2.0,
+              "width": 2.5,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "East window — dining area."
+            },
+            {
+              "id": "50fedc13-652f-46fb-869c-1990e3d9f518",
+              "kind": "window",
+              "offsetAlongWall": 6.0,
+              "width": 2.5,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "East window — dining area."
+            }
+          ],
+          "note": "East exterior wall."
+        },
+        {
+          "id": "78f9345c-0ac2-4b2e-9e35-8992230f063d",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "load_bearing",
+          "centerline": {
+            "start": {
+              "x": 24,
+              "y": 14
+            },
+            "end": {
+              "x": 0,
+              "y": 14
+            }
+          },
+          "thickness": 0.2,
+          "height": 3.6,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "concrete_block",
+            "densityKgPerM3": 2000
+          },
+          "openings": [
+            {
+              "id": "530de215-3151-496c-81ed-b0f7a2b15092",
+              "kind": "single_door",
+              "offsetAlongWall": 22.0,
+              "width": 0.9,
+              "height": 2.1,
+              "sillHeight": 0.0,
+              "swingDirection": "outward_right",
+              "note": "Rear service/delivery door — kitchen access."
+            }
+          ],
+          "note": "North exterior wall — kitchen/back-of-house side."
+        },
+        {
+          "id": "d2630290-4ca5-4ad8-9594-41699ceb3cbe",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "load_bearing",
+          "centerline": {
+            "start": {
+              "x": 0,
+              "y": 14
+            },
+            "end": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "thickness": 0.2,
+          "height": 3.6,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "concrete_block",
+            "densityKgPerM3": 2000
+          },
+          "openings": [
+            {
+              "id": "253b908b-c88b-4a67-b74d-48e38eb1f598",
+              "kind": "window",
+              "offsetAlongWall": 3.0,
+              "width": 2.5,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "West window — booth seating side."
+            },
+            {
+              "id": "b215cca4-fe41-4b2b-a689-49dd30c02432",
+              "kind": "window",
+              "offsetAlongWall": 7.5,
+              "width": 2.5,
+              "height": 1.8,
+              "sillHeight": 0.6,
+              "swingDirection": "none",
+              "note": "West window — booth seating side."
+            }
+          ],
+          "note": "West exterior wall."
+        },
+        {
+          "id": "402b517a-f6fe-4193-8535-210ba61199d2",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "partition",
+          "centerline": {
+            "start": {
+              "x": 3,
+              "y": 9.5
+            },
+            "end": {
+              "x": 21,
+              "y": 9.5
+            }
+          },
+          "thickness": 0.15,
+          "height": 3.0,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "drywall_metal_stud",
+            "densityKgPerM3": 800
+          },
+          "openings": [
+            {
+              "id": "7c05bd99-776f-4c2b-a313-417fbd47a95b",
+              "kind": "archway",
+              "offsetAlongWall": 4.0,
+              "width": 1.5,
+              "height": 2.1,
+              "sillHeight": 0.0,
+              "swingDirection": "none",
+              "note": "Service pass-through from dining to kitchen corridor."
+            },
+            {
+              "id": "5fbe7aec-1f84-4783-bf69-06cb3ed37ae1",
+              "kind": "archway",
+              "offsetAlongWall": 14.0,
+              "width": 2.0,
+              "height": 2.1,
+              "sillHeight": 0.0,
+              "swingDirection": "none",
+              "note": "Wide service opening — order window / food pass."
+            }
+          ],
+          "note": "Main partition wall separating dining area (south) from kitchen/back-of-house (north). The counter runs along the dining side of this wall."
+        },
+        {
+          "id": "6598c534-6d24-47b1-95c4-f0cb8e1d6e03",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "partition",
+          "centerline": {
+            "start": {
+              "x": 1.0,
+              "y": 7.0
+            },
+            "end": {
+              "x": 3.0,
+              "y": 7.0
+            }
+          },
+          "thickness": 0.12,
+          "height": 3.0,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "drywall_metal_stud",
+            "densityKgPerM3": 800
+          },
+          "openings": [
+            {
+              "id": "c2894578-01aa-420e-91de-0af9aa63c161",
+              "kind": "single_door",
+              "offsetAlongWall": 0.5,
+              "width": 0.9,
+              "height": 2.1,
+              "sillHeight": 0.0,
+              "swingDirection": "inward_left",
+              "note": "Restroom corridor entry."
+            }
+          ],
+          "note": "Restroom corridor partition — south wall."
+        },
+        {
+          "id": "5f054ea2-8c79-4d39-88ff-4691a646784c",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "partition",
+          "centerline": {
+            "start": {
+              "x": 3.0,
+              "y": 7.0
+            },
+            "end": {
+              "x": 3.0,
+              "y": 9.5
+            }
+          },
+          "thickness": 0.12,
+          "height": 3.0,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "drywall_metal_stud",
+            "densityKgPerM3": 800
+          },
+          "openings": [],
+          "note": "Restroom block east wall."
+        },
+        {
+          "id": "e09b8f97-de16-419e-90a1-eb53a82a9ef0",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "wallType": "partition",
+          "centerline": {
+            "start": {
+              "x": 1.5,
+              "y": 8.25
+            },
+            "end": {
+              "x": 3.0,
+              "y": 8.25
+            }
+          },
+          "thickness": 0.12,
+          "height": 3.0,
+          "baseElevation": 0.0,
+          "material": {
+            "name": "drywall_metal_stud",
+            "densityKgPerM3": 800
+          },
+          "openings": [
+            {
+              "id": "fc6f2081-792f-4bb6-ba80-5af1ffa056c8",
+              "kind": "single_door",
+              "offsetAlongWall": 0.1,
+              "width": 0.8,
+              "height": 2.1,
+              "sillHeight": 0.0,
+              "swingDirection": "inward_right",
+              "note": "Women's restroom door."
+            }
+          ],
+          "note": "Partition between men's and women's restrooms."
+        }
+      ],
+      "spaces": [
+        {
+          "id": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "name": "Main Dining Area",
+          "usage": "commercial",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 3.0,
+                  "y": 0.2
+                },
+                {
+                  "x": 23.8,
+                  "y": 0.2
+                },
+                {
+                  "x": 23.8,
+                  "y": 9.4
+                },
+                {
+                  "x": 3.0,
+                  "y": 9.4
+                }
+              ]
+            },
+            "holes": []
+          },
+          "floorElevation": 0.0,
+          "ceilingElevation": 2.7,
+          "areaSqUnits": 191.36,
+          "volumeCuUnits": 516.67,
+          "finishFloor": "vinyl_tile_brown",
+          "finishWall": "painted_drywall_cream",
+          "finishCeiling": "acoustic_tile_white",
+          "note": "The main dining room. About 9:00 in the morning. While the place isn't jammed, there's a healthy number of people drinking coffee, munching on bacon and eating eggs. Booths line the south and east window walls. Freestanding tables and chairs fill the center. The counter with swivel stools runs along the north partition wall. Pumpkin and Honey Bunny sit in a booth along the south windows."
+        },
+        {
+          "id": "51a4b9fa-1dbb-41a3-904a-6addaa9be774",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "name": "Kitchen",
+          "usage": "commercial",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 5.0,
+                  "y": 9.6
+                },
+                {
+                  "x": 23.8,
+                  "y": 9.6
+                },
+                {
+                  "x": 23.8,
+                  "y": 13.8
+                },
+                {
+                  "x": 5.0,
+                  "y": 13.8
+                }
+              ]
+            },
+            "holes": []
+          },
+          "floorElevation": 0.0,
+          "ceilingElevation": 2.7,
+          "areaSqUnits": 78.96,
+          "finishFloor": "quarry_tile_red",
+          "finishWall": "stainless_steel_panels_lower_painted_upper",
+          "finishCeiling": "painted_gypsum",
+          "note": "Commercial kitchen — grill line, prep area, dish pit. The Cook works the flat-top grill. Visible through the food pass window from the dining area. Stainless steel surfaces, exhaust hood over the grill line."
+        },
+        {
+          "id": "70232445-a89d-4ee8-bd46-0eefd6822cf2",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "name": "Waitress Station / Service Corridor",
+          "usage": "commercial",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 3.1,
+                  "y": 9.6
+                },
+                {
+                  "x": 5.0,
+                  "y": 9.6
+                },
+                {
+                  "x": 5.0,
+                  "y": 13.8
+                },
+                {
+                  "x": 3.1,
+                  "y": 13.8
+                }
+              ]
+            },
+            "holes": []
+          },
+          "floorElevation": 0.0,
+          "ceilingElevation": 2.7,
+          "finishFloor": "vinyl_tile_brown",
+          "note": "Service station — coffee maker, soda fountain, order tickets. The Waitress comes by with a pot of coffee from here. Coffee pots on warmers, stacks of mugs."
+        },
+        {
+          "id": "cf7e2b2b-0d37-429f-a51e-3fb082e7edff",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "name": "Men's Restroom",
+          "usage": "restroom",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 0.2,
+                  "y": 7.1
+                },
+                {
+                  "x": 2.9,
+                  "y": 7.1
+                },
+                {
+                  "x": 2.9,
+                  "y": 8.2
+                },
+                {
+                  "x": 0.2,
+                  "y": 8.2
+                }
+              ]
+            },
+            "holes": []
+          },
+          "floorElevation": 0.0,
+          "ceilingElevation": 2.7,
+          "finishFloor": "ceramic_tile_white",
+          "finishWall": "ceramic_tile_white_lower_painted_upper",
+          "finishCeiling": "painted_gypsum",
+          "note": "Men's restroom — single occupancy."
+        },
+        {
+          "id": "2b9cae60-7f22-4b4d-b8fa-e8e77a70ecf7",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "name": "Women's Restroom",
+          "usage": "restroom",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 0.2,
+                  "y": 8.3
+                },
+                {
+                  "x": 2.9,
+                  "y": 8.3
+                },
+                {
+                  "x": 2.9,
+                  "y": 9.4
+                },
+                {
+                  "x": 0.2,
+                  "y": 9.4
+                }
+              ]
+            },
+            "holes": []
+          },
+          "floorElevation": 0.0,
+          "ceilingElevation": 2.7,
+          "finishFloor": "ceramic_tile_white",
+          "finishWall": "ceramic_tile_white_lower_painted_upper",
+          "finishCeiling": "painted_gypsum",
+          "note": "Women's restroom — single occupancy."
+        },
+        {
+          "id": "862852f0-1fbf-4fa5-8f11-9be42db9cd50",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "architectural",
+          "name": "Storage / Dry Goods",
+          "usage": "storage",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 0.2,
+                  "y": 9.6
+                },
+                {
+                  "x": 3.0,
+                  "y": 9.6
+                },
+                {
+                  "x": 3.0,
+                  "y": 13.8
+                },
+                {
+                  "x": 0.2,
+                  "y": 13.8
+                }
+              ]
+            },
+            "holes": []
+          },
+          "floorElevation": 0.0,
+          "ceilingElevation": 2.7,
+          "finishFloor": "sealed_concrete",
+          "note": "Back-of-house dry storage. Shelving with canned goods, coffee supplies, napkins, etc."
+        }
+      ],
+      "slabs": [
+        {
+          "id": "be6962be-351c-438d-a8ca-5350db5c27ab",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "structural",
+          "kind": "floor",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 24,
+                  "y": 0
+                },
+                {
+                  "x": 24,
+                  "y": 14
+                },
+                {
+                  "x": 0,
+                  "y": 14
+                }
+              ]
+            },
+            "holes": []
+          },
+          "thickness": 0.15,
+          "elevation": 0.0,
+          "material": {
+            "name": "reinforced_concrete",
+            "densityKgPerM3": 2400
+          },
+          "slopePercent": 0,
+          "note": "Ground floor slab on grade — 150mm reinforced concrete."
+        },
+        {
+          "id": "c833bd9a-c0b7-4d36-a5fa-6d412d2cbab0",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "structural",
+          "kind": "ceiling",
+          "boundary": {
+            "outer": {
+              "vertices": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 24,
+                  "y": 0
+                },
+                {
+                  "x": 24,
+                  "y": 14
+                },
+                {
+                  "x": 0,
+                  "y": 14
+                }
+              ]
+            },
+            "holes": []
+          },
+          "thickness": 0.1,
+          "elevation": 3.6,
+          "material": {
+            "name": "steel_deck_concrete",
+            "densityKgPerM3": 2200
+          },
+          "slopePercent": 0,
+          "note": "Roof deck — steel deck with concrete topping. Dropped ceiling below at 2.7m."
+        }
+      ],
+      "structuralElements": [
+        {
+          "id": "61d9b8cc-10e0-424a-8008-6e5eb6a2660a",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "structural",
+          "kind": "column",
+          "position": {
+            "x": 8.0,
+            "y": 4.75,
+            "z": 0.0
+          },
+          "geometry": {
+            "type": "extrusion",
+            "extrusion": {
+              "profile": {
+                "outer": {
+                  "vertices": [
+                    {
+                      "x": -0.15,
+                      "y": -0.15
+                    },
+                    {
+                      "x": 0.15,
+                      "y": -0.15
+                    },
+                    {
+                      "x": 0.15,
+                      "y": 0.15
+                    },
+                    {
+                      "x": -0.15,
+                      "y": 0.15
+                    }
+                  ]
+                },
+                "holes": []
+              },
+              "depth": 3.6,
+              "direction": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+              },
+              "position": {
+                "x": 8.0,
+                "y": 4.75,
+                "z": 0.0
+              },
+              "rotationDeg": 0
+            }
+          },
+          "material": {
+            "name": "steel",
+            "densityKgPerM3": 7850
+          },
+          "note": "Interior column — steel W-shape, supporting roof structure."
+        },
+        {
+          "id": "28a86bef-b45e-424f-b960-f01f9120ff53",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "structural",
+          "kind": "column",
+          "position": {
+            "x": 16.0,
+            "y": 4.75,
+            "z": 0.0
+          },
+          "geometry": {
+            "type": "extrusion",
+            "extrusion": {
+              "profile": {
+                "outer": {
+                  "vertices": [
+                    {
+                      "x": -0.15,
+                      "y": -0.15
+                    },
+                    {
+                      "x": 0.15,
+                      "y": -0.15
+                    },
+                    {
+                      "x": 0.15,
+                      "y": 0.15
+                    },
+                    {
+                      "x": -0.15,
+                      "y": 0.15
+                    }
+                  ]
+                },
+                "holes": []
+              },
+              "depth": 3.6,
+              "direction": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+              },
+              "position": {
+                "x": 16.0,
+                "y": 4.75,
+                "z": 0.0
+              },
+              "rotationDeg": 0
+            }
+          },
+          "material": {
+            "name": "steel",
+            "densityKgPerM3": 7850
+          },
+          "note": "Interior column — steel W-shape."
+        }
+      ],
+      "fixtures": [
+        {
+          "id": "8ca427f3-7e18-416a-b03e-b463c1ad2165",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Booth 1 — Pumpkin & Honey Bunny",
+          "position": {
+            "x": 5.0,
+            "y": 0.8,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 1.2,
+            "depth": 0.6,
+            "height": 0.75
+          },
+          "note": "Vinyl-upholstered booth with Formica table. Pumpkin and Honey Bunny sit here. Two .32-caliber pistols will be laid on this table. A cup of coffee with a ton of cream and sugar. An ashtray with cigarette butts. Morning sunlight through the window."
+        },
+        {
+          "id": "37ca26f0-3bbb-419c-b16b-f1b41002bb53",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Booth 2",
+          "position": {
+            "x": 7.0,
+            "y": 0.8,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 1.2,
+            "depth": 0.6,
+            "height": 0.75
+          },
+          "note": "Adjacent booth — patrons eating, lost in conversations."
+        },
+        {
+          "id": "b8c94bad-c311-45ca-ae01-09622800ba03",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Booth 3",
+          "position": {
+            "x": 9.0,
+            "y": 0.8,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 1.2,
+            "depth": 0.6,
+            "height": 0.75
+          },
+          "note": "Booth — patrons having Denver omelets."
+        },
+        {
+          "id": "7e476940-408d-46b1-af4d-23fd7c4955cb",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Booth 4 — East Windows",
+          "position": {
+            "x": 23.2,
+            "y": 2.5,
+            "z": 0.0
+          },
+          "rotationDeg": 90,
+          "boundingSize": {
+            "width": 1.2,
+            "depth": 0.6,
+            "height": 0.75
+          },
+          "note": "Booth along east window wall."
+        },
+        {
+          "id": "47b34c14-4f68-468e-bd7e-2b7f98465c75",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Booth 5 — East Windows",
+          "position": {
+            "x": 23.2,
+            "y": 4.5,
+            "z": 0.0
+          },
+          "rotationDeg": 90,
+          "boundingSize": {
+            "width": 1.2,
+            "depth": 0.6,
+            "height": 0.75
+          },
+          "note": "Booth along east window wall."
+        },
+        {
+          "id": "03e5a3e7-c148-4010-b1f9-f589c44710d2",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Counter — Swivel Stools",
+          "position": {
+            "x": 12.0,
+            "y": 8.5,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 10.0,
+            "depth": 0.6,
+            "height": 1.05
+          },
+          "note": "Long Formica counter with chrome-and-vinyl swivel stools. Runs along the kitchen partition wall. The Waitress pours coffee here. Classic diner counter — napkin dispensers, sugar caddies, ketchup bottles."
+        },
+        {
+          "id": "afc7c671-aa56-446b-87a1-eacc30d399b0",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Freestanding Table 1",
+          "position": {
+            "x": 13.0,
+            "y": 3.5,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 0.75
+          },
+          "note": "Freestanding four-top — patrons eating eggs and bacon."
+        },
+        {
+          "id": "5395c741-6ec3-46b1-bf07-9d0a5e8369d1",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Freestanding Table 2",
+          "position": {
+            "x": 15.5,
+            "y": 3.5,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 0.75
+          },
+          "note": "Freestanding four-top."
+        },
+        {
+          "id": "db355a4c-3317-48a9-9a7d-93bb0cf0597f",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Freestanding Table 3",
+          "position": {
+            "x": 18.0,
+            "y": 3.5,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 0.75
+          },
+          "note": "Freestanding four-top."
+        },
+        {
+          "id": "36398f90-dd93-4d39-9d3b-27548b2fb166",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Freestanding Table 4",
+          "position": {
+            "x": 13.0,
+            "y": 6.0,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 0.75
+          },
+          "note": "Freestanding four-top — customers with food in their mouths."
+        },
+        {
+          "id": "49d2e901-033f-4efe-92a0-de28d9076f55",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Freestanding Table 5",
+          "position": {
+            "x": 15.5,
+            "y": 6.0,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 0.75
+          },
+          "note": "Freestanding four-top."
+        },
+        {
+          "id": "a940c9e5-add6-48be-86ce-480dffa73200",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "furniture_table",
+          "label": "Freestanding Table 6",
+          "position": {
+            "x": 18.0,
+            "y": 6.0,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 0.75
+          },
+          "note": "Freestanding four-top."
+        },
+        {
+          "id": "ba8cc940-c752-4845-b058-2f01ef9635a7",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "furniture",
+          "category": "other",
+          "label": "Cash Register / Hostess Station",
+          "position": {
+            "x": 11.4,
+            "y": 1.5,
+            "z": 0.0
+          },
+          "rotationDeg": 180,
+          "boundingSize": {
+            "width": 1.0,
+            "depth": 0.6,
+            "height": 1.1
+          },
+          "note": "Cash register on a podium near the entrance. Toothpick dispenser, mints, stack of takeout menus."
+        },
+        {
+          "id": "2e78eb5a-4641-4ec2-ae6e-6520e207d49c",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "51a4b9fa-1dbb-41a3-904a-6addaa9be774",
+          "layer": "furniture",
+          "category": "appliance_stove",
+          "label": "Flat-Top Grill",
+          "position": {
+            "x": 14.0,
+            "y": 12.5,
+            "z": 0.0
+          },
+          "rotationDeg": 180,
+          "boundingSize": {
+            "width": 2.4,
+            "depth": 0.9,
+            "height": 0.9
+          },
+          "note": "Commercial flat-top griddle. The Cook works here, under the exhaust hood."
+        },
+        {
+          "id": "347fa969-edb3-4a6b-81e6-213cdfe8ab35",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "51a4b9fa-1dbb-41a3-904a-6addaa9be774",
+          "layer": "furniture",
+          "category": "appliance_refrigerator",
+          "label": "Walk-in Cooler",
+          "position": {
+            "x": 20.0,
+            "y": 12.0,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 2.4,
+            "depth": 2.0,
+            "height": 2.4
+          },
+          "note": "Commercial walk-in refrigerator, kitchen back wall."
+        },
+        {
+          "id": "f85eccfc-d7eb-40f2-913f-b751dd49ee3f",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "70232445-a89d-4ee8-bd46-0eefd6822cf2",
+          "layer": "furniture",
+          "category": "other",
+          "label": "Coffee Station",
+          "position": {
+            "x": 4.0,
+            "y": 11.0,
+            "z": 0.0
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 1.2,
+            "depth": 0.6,
+            "height": 0.9
+          },
+          "note": "Bunn coffee makers on warmers — multiple pots. The Waitress comes by with a pot of coffee from here. 'Can I get anybody anymore coffee?'"
+        },
+        {
+          "id": "a8b21423-2778-4e3b-b0a8-00ea293d7b5f",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "cf7e2b2b-0d37-429f-a51e-3fb082e7edff",
+          "layer": "plumbing",
+          "category": "plumbing_toilet",
+          "label": "Men's Toilet",
+          "position": {
+            "x": 0.6,
+            "y": 7.5,
+            "z": 0.0
+          },
+          "rotationDeg": 270,
+          "boundingSize": {
+            "width": 0.4,
+            "depth": 0.7,
+            "height": 0.4
+          }
+        },
+        {
+          "id": "02fa4ff1-204c-4498-9289-4b79b19d5cf7",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "cf7e2b2b-0d37-429f-a51e-3fb082e7edff",
+          "layer": "plumbing",
+          "category": "plumbing_sink",
+          "label": "Men's Sink",
+          "position": {
+            "x": 2.2,
+            "y": 7.3,
+            "z": 0.0
+          },
+          "rotationDeg": 180,
+          "boundingSize": {
+            "width": 0.5,
+            "depth": 0.4,
+            "height": 0.85
+          }
+        },
+        {
+          "id": "102fac0c-7e3e-4a7b-b39e-c5c132638c4a",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "2b9cae60-7f22-4b4d-b8fa-e8e77a70ecf7",
+          "layer": "plumbing",
+          "category": "plumbing_toilet",
+          "label": "Women's Toilet",
+          "position": {
+            "x": 0.6,
+            "y": 8.7,
+            "z": 0.0
+          },
+          "rotationDeg": 270,
+          "boundingSize": {
+            "width": 0.4,
+            "depth": 0.7,
+            "height": 0.4
+          }
+        },
+        {
+          "id": "a56718a5-cb57-4729-a110-91661ac75d64",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "2b9cae60-7f22-4b4d-b8fa-e8e77a70ecf7",
+          "layer": "plumbing",
+          "category": "plumbing_sink",
+          "label": "Women's Sink",
+          "position": {
+            "x": 2.2,
+            "y": 8.5,
+            "z": 0.0
+          },
+          "rotationDeg": 180,
+          "boundingSize": {
+            "width": 0.5,
+            "depth": 0.4,
+            "height": 0.85
+          }
+        },
+        {
+          "id": "727cafc4-e83c-4534-aead-7a39b611a68a",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "electrical",
+          "category": "electrical_light",
+          "label": "Pendant Light — Booth Row",
+          "position": {
+            "x": 7.0,
+            "y": 1.0,
+            "z": 2.5
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 0.3,
+            "depth": 0.3,
+            "height": 0.4
+          },
+          "note": "Warm-toned pendant lights over each booth — classic diner ambiance."
+        },
+        {
+          "id": "0ea25351-b20e-45a8-b291-fed99769c0bf",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "spaceId": "15f71e2c-95be-45e3-8aa2-3c3cbefa0885",
+          "layer": "electrical",
+          "category": "electrical_light",
+          "label": "Fluorescent — Dining Ceiling",
+          "position": {
+            "x": 14.0,
+            "y": 5.0,
+            "z": 2.65
+          },
+          "rotationDeg": 0,
+          "boundingSize": {
+            "width": 1.2,
+            "depth": 0.3,
+            "height": 0.1
+          },
+          "note": "Recessed fluorescent panels in dropped ceiling — typical diner lighting."
+        }
+      ],
+      "annotations": [
+        {
+          "id": "8bd889fc-72c4-4cd3-97d0-b2ba205e3f04",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "annotation",
+          "kind": "dimension_linear",
+          "anchorPoints": [
+            {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            },
+            {
+              "x": 24,
+              "y": -1,
+              "z": 0
+            }
+          ],
+          "text": "24.0 m",
+          "measuredValue": 24.0,
+          "offsetFromGeometry": 1.0,
+          "projectionPlane": "xy",
+          "note": "Overall building length — east/west."
+        },
+        {
+          "id": "eb9cfede-9750-4c70-a6d9-76e3adc897ca",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "annotation",
+          "kind": "dimension_linear",
+          "anchorPoints": [
+            {
+              "x": -1,
+              "y": 0,
+              "z": 0
+            },
+            {
+              "x": -1,
+              "y": 14,
+              "z": 0
+            }
+          ],
+          "text": "14.0 m",
+          "measuredValue": 14.0,
+          "offsetFromGeometry": 1.0,
+          "projectionPlane": "xy",
+          "note": "Overall building depth — north/south."
+        },
+        {
+          "id": "8335149f-c405-495b-a575-a7fc2d52a453",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "annotation",
+          "kind": "text_label",
+          "anchorPoints": [
+            {
+              "x": 12,
+              "y": 5,
+              "z": 1.5
+            }
+          ],
+          "text": "INT. COFFEE SHOP — PULP FICTION (1994)",
+          "projectionPlane": "xy",
+          "note": "Scene identification label."
+        },
+        {
+          "id": "bb8cd2b5-8307-4265-b3be-9730061c2de1",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "annotation",
+          "kind": "text_label",
+          "anchorPoints": [
+            {
+              "x": 5.0,
+              "y": 0.8,
+              "z": 1.0
+            }
+          ],
+          "text": "PUMPKIN & HONEY BUNNY",
+          "projectionPlane": "xy",
+          "note": "Character position marker — the Young Man (Pumpkin) and Young Woman (Honey Bunny) at Booth 1."
+        },
+        {
+          "id": "1da38125-1b4c-498a-a1df-8ef3cf8ef300",
+          "floorId": "f1000000-0000-4000-8000-000000000001",
+          "layer": "annotation",
+          "kind": "dimension_elevation",
+          "anchorPoints": [
+            {
+              "x": 25,
+              "y": 7,
+              "z": 0
+            },
+            {
+              "x": 25,
+              "y": 7,
+              "z": 3.6
+            }
+          ],
+          "text": "3.6 m floor-to-roof",
+          "measuredValue": 3.6,
+          "offsetFromGeometry": 1.0,
+          "projectionPlane": "xz",
+          "note": "Building height — single story."
+        }
+      ]
+    }
+  ],
+  "roofs": [
+    {
+      "id": "1b4ed8f7-234d-48e1-9af6-6eb1d2b117ae",
+      "buildingId": "a1000000-0000-4000-8000-000000000001",
+      "layer": "architectural",
+      "form": "flat",
+      "ridgeElevation": 3.6,
+      "eaveElevation": 3.6,
+      "overhang": 0.3,
+      "surfaces": [
+        {
+          "id": "d872c648-9254-4b07-9cda-e805340e4d55",
+          "name": "Main Roof — Flat",
+          "geometry": {
+            "type": "extrusion",
+            "extrusion": {
+              "profile": {
+                "outer": {
+                  "vertices": [
+                    {
+                      "x": -0.3,
+                      "y": -0.3
+                    },
+                    {
+                      "x": 24.3,
+                      "y": -0.3
+                    },
+                    {
+                      "x": 24.3,
+                      "y": 14.3
+                    },
+                    {
+                      "x": -0.3,
+                      "y": 14.3
+                    }
+                  ]
+                },
+                "holes": []
+              },
+              "depth": 0.15,
+              "direction": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+              },
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 3.6
+              },
+              "rotationDeg": 0
+            }
+          },
+          "material": {
+            "name": "built_up_roofing",
+            "densityKgPerM3": 1200
+          },
+          "slopePercent": 2,
+          "note": "Flat roof with slight slope for drainage. Typical 1960s–90s LA commercial diner construction. HVAC units and exhaust fans on top."
+        }
+      ],
+      "note": "Flat commercial roof — Spires/Denny's style. Parapet walls concealed in exterior wall height."
+    }
+  ],
+  "verticalCirculation": [],
+  "mepRuns": [
+    {
+      "id": "120a893b-eb8d-43d6-b537-55a2c546d508",
+      "layer": "plumbing",
+      "domain": "plumbing_supply",
+      "name": "Cold water main — kitchen",
+      "segments": [
+        {
+          "id": "ea66797b-3b3d-47a7-92ac-658f88208772",
+          "startPoint": {
+            "x": 12,
+            "y": 13.8,
+            "z": -0.3
+          },
+          "endPoint": {
+            "x": 12,
+            "y": 12.0,
+            "z": -0.3
+          },
+          "crossSection": "circular",
+          "diameter": 0.05,
+          "material": {
+            "name": "copper"
+          }
+        },
+        {
+          "id": "a2a89345-d1e5-4bbb-94a4-b2fd7fe990a0",
+          "startPoint": {
+            "x": 12,
+            "y": 12.0,
+            "z": -0.3
+          },
+          "endPoint": {
+            "x": 12,
+            "y": 12.0,
+            "z": 0.9
+          },
+          "crossSection": "circular",
+          "diameter": 0.05,
+          "material": {
+            "name": "copper"
+          }
+        }
+      ],
+      "insulationThickness": 0,
+      "flowDirection": "start_to_end",
+      "floorIds": [
+        "f1000000-0000-4000-8000-000000000001"
+      ],
+      "note": "Cold water supply to kitchen sinks and dishwasher."
+    },
+    {
+      "id": "99243408-3600-4836-9a41-e95eec678664",
+      "layer": "hvac",
+      "domain": "hvac_duct",
+      "name": "Kitchen exhaust duct",
+      "segments": [
+        {
+          "id": "102e5d2e-d602-4525-914f-f5b342bfebfa",
+          "startPoint": {
+            "x": 14,
+            "y": 12.5,
+            "z": 2.8
+          },
+          "endPoint": {
+            "x": 14,
+            "y": 12.5,
+            "z": 3.5
+          },
+          "crossSection": "rectangular",
+          "width": 0.6,
+          "height": 0.4,
+          "material": {
+            "name": "galvanized_steel"
+          }
+        },
+        {
+          "id": "3facd07b-7877-4e8f-99c8-1062d5833a90",
+          "startPoint": {
+            "x": 14,
+            "y": 12.5,
+            "z": 3.5
+          },
+          "endPoint": {
+            "x": 14,
+            "y": 14.2,
+            "z": 3.8
+          },
+          "crossSection": "rectangular",
+          "width": 0.6,
+          "height": 0.4,
+          "material": {
+            "name": "galvanized_steel"
+          }
+        }
+      ],
+      "insulationThickness": 0.025,
+      "flowDirection": "start_to_end",
+      "floorIds": [
+        "f1000000-0000-4000-8000-000000000001"
+      ],
+      "note": "Grease exhaust from kitchen hood over flat-top grill, up through roof."
+    }
+  ],
+  "layerVisibility": {
+    "structural": true,
+    "architectural": true,
+    "electrical": true,
+    "plumbing": true,
+    "hvac": true,
+    "furniture": true,
+    "annotation": true,
+    "fire_safety": true,
+    "exterior_envelope": true,
+    "site": true
+  },
+  "metadata": {
+    "createdAt": "2026-03-28T09:00:00Z",
+    "updatedAt": "2026-03-28T09:00:00Z",
+    "createdBy": "Claude Opus 4.6 (1M context)",
+    "updatedBy": "Claude Opus 4.6 (1M context)",
+    "note": "3D building model of the coffee shop from the opening scene of Pulp Fiction (1994), written and directed by Quentin Tarantino. Modeled as a Denny's/Spires-type diner in Los Angeles, circa 1994. The scene features Pumpkin (Tim Roth) and Honey Bunny (Amanda Plummer) in a booth, planning and then executing a robbery. The Waitress serves coffee. Patrons eat Denver omelets. 'Everybody be cool this is a robbery!' The building is a single-story, flat-roof commercial restaurant — 24m × 14m — with booths along the window walls, a long counter with swivel stools, a visible kitchen, and restrooms in the back corner."
+  },
+  "extensions": {
+    "com.pulpfiction.scene": {
+      "film": "Pulp Fiction",
+      "year": 1994,
+      "writer_director": "Quentin Tarantino",
+      "scene": "Opening — INT. COFFEE SHOP",
+      "time_of_day": "about 9:00 in the morning",
+      "atmosphere": "While the place isn't jammed, there's a healthy number of people drinking coffee, munching on bacon and eating eggs.",
+      "characters": [
+        {
+          "name": "Pumpkin (Young Man)",
+          "actor": "Tim Roth",
+          "description": "Slight working-class English accent. Smokes cigarettes like they're going out of style.",
+          "position": "Booth 1 — south window wall",
+          "props": [
+            ".32-caliber pistol",
+            "cigarettes",
+            "coffee cup"
+          ]
+        },
+        {
+          "name": "Honey Bunny (Young Woman)",
+          "actor": "Amanda Plummer",
+          "description": "Impossible to tell where she is from or how old she is; everything she does contradicts something she did.",
+          "position": "Booth 1 — south window wall, across from Pumpkin",
+          "props": [
+            ".32-caliber pistol",
+            "coffee with a ton of cream and sugar"
+          ]
+        },
+        {
+          "name": "Waitress",
+          "actor": null,
+          "description": "Tired. Comes by with a pot of coffee. Snotty when correcting 'Garçon means boy.'",
+          "position": "Roaming dining floor / service station",
+          "props": [
+            "coffee pot"
+          ]
+        },
+        {
+          "name": "Manager",
+          "actor": null,
+          "description": "Complaining to the Cook about something.",
+          "position": "Near kitchen pass window"
+        },
+        {
+          "name": "Cook",
+          "actor": null,
+          "description": "Working the grill.",
+          "position": "Kitchen — flat-top grill"
+        },
+        {
+          "name": "Busboys",
+          "actor": null,
+          "description": "Going through the motions, collecting dishes.",
+          "position": "Roaming dining floor"
+        },
+        {
+          "name": "Patrons",
+          "actor": null,
+          "description": "A healthy number — eating, lost in conversations. One minute having a Denver omelet, next minute somebody's stickin' a gun in their face.",
+          "position": "Booths and freestanding tables throughout dining area"
+        }
+      ],
+      "dialogue_style": "Rapid pace 'His Girl Friday' fashion",
+      "key_action": "Pumpkin and Honey Bunny rob the restaurant — he handles employees, she handles crowd control. They stand up from Booth 1 with .32-caliber pistols.",
+      "closing_lines": {
+        "pumpkin": "Everybody be cool this is a robbery!",
+        "honey_bunny": "Any of you fuckin' pricks move and I'll execute every one of you motherfuckers! Got that?"
+      },
+      "transition": "CUT TO: CREDIT SEQUENCE — 'PULP FICTION'"
+    },
+    "com.humans.figures": [
+      {
+        "id": "h0000001-0000-4000-8000-000000000001",
+        "name": "Pumpkin",
+        "position": {
+          "x": 5.0,
+          "y": 1.0,
+          "z": 0.0
+        },
+        "rotationDeg": 0,
+        "heightM": 1.77,
+        "clothingColor": {
+          "r": 180,
+          "g": 140,
+          "b": 80
+        },
+        "skinColor": {
+          "r": 220,
+          "g": 185,
+          "b": 155
+        },
+        "hairColor": {
+          "r": 160,
+          "g": 120,
+          "b": 70
+        },
+        "pose": "seated",
+        "note": "Tim Roth — 'I love you, Pumpkin.' Seated in Booth 1, south window wall. Smoking, planning the robbery."
+      },
+      {
+        "id": "h0000002-0000-4000-8000-000000000002",
+        "name": "Honey Bunny",
+        "position": {
+          "x": 5.0,
+          "y": 1.6,
+          "z": 0.0
+        },
+        "rotationDeg": 180,
+        "heightM": 1.63,
+        "clothingColor": {
+          "r": 200,
+          "g": 80,
+          "b": 80
+        },
+        "skinColor": {
+          "r": 225,
+          "g": 195,
+          "b": 170
+        },
+        "hairColor": {
+          "r": 100,
+          "g": 60,
+          "b": 30
+        },
+        "pose": "seated",
+        "note": "Amanda Plummer — 'I love you, Honey Bunny.' Seated across from Pumpkin. Coffee with cream and sugar."
+      },
+      {
+        "id": "h0000003-0000-4000-8000-000000000003",
+        "name": "Waitress",
+        "position": {
+          "x": 8.0,
+          "y": 5.0,
+          "z": 0.0
+        },
+        "rotationDeg": 270,
+        "heightM": 1.65,
+        "clothingColor": {
+          "r": 220,
+          "g": 200,
+          "b": 180
+        },
+        "skinColor": {
+          "r": 210,
+          "g": 175,
+          "b": 140
+        },
+        "pose": "standing",
+        "note": "'Garçon means boy.' Walking the floor with a coffee pot. Approaches tables to refill."
+      },
+      {
+        "id": "h0000004-0000-4000-8000-000000000004",
+        "name": "Cook",
+        "position": {
+          "x": 14.0,
+          "y": 12.0,
+          "z": 0.0
+        },
+        "rotationDeg": 180,
+        "heightM": 1.8,
+        "clothingColor": {
+          "r": 240,
+          "g": 240,
+          "b": 240
+        },
+        "skinColor": {
+          "r": 180,
+          "g": 130,
+          "b": 90
+        },
+        "pose": "standing",
+        "note": "Working the flat-top grill under the exhaust hood. White cook's uniform."
+      },
+      {
+        "id": "h0000005-0000-4000-8000-000000000005",
+        "name": "Manager",
+        "position": {
+          "x": 11.0,
+          "y": 9.2,
+          "z": 0.0
+        },
+        "rotationDeg": 90,
+        "heightM": 1.75,
+        "clothingColor": {
+          "r": 60,
+          "g": 60,
+          "b": 100
+        },
+        "skinColor": {
+          "r": 200,
+          "g": 160,
+          "b": 120
+        },
+        "pose": "standing",
+        "note": "Near the pass window, complaining to the Cook about something."
+      },
+      {
+        "id": "h0000006-0000-4000-8000-000000000006",
+        "name": "Patron A",
+        "position": {
+          "x": 13.0,
+          "y": 3.5,
+          "z": 0.0
+        },
+        "rotationDeg": 0,
+        "heightM": 1.72,
+        "clothingColor": {
+          "r": 100,
+          "g": 120,
+          "b": 150
+        },
+        "skinColor": {
+          "r": 215,
+          "g": 180,
+          "b": 145
+        },
+        "pose": "seated",
+        "note": "Patron eating eggs and bacon at freestanding table."
+      },
+      {
+        "id": "h0000007-0000-4000-8000-000000000007",
+        "name": "Patron B",
+        "position": {
+          "x": 15.5,
+          "y": 6.0,
+          "z": 0.0
+        },
+        "rotationDeg": 45,
+        "heightM": 1.68,
+        "clothingColor": {
+          "r": 130,
+          "g": 90,
+          "b": 90
+        },
+        "skinColor": {
+          "r": 195,
+          "g": 155,
+          "b": 115
+        },
+        "pose": "seated",
+        "note": "Patron — food in their mouth, lost in conversation."
+      },
+      {
+        "id": "h0000008-0000-4000-8000-000000000008",
+        "name": "Counter Patron",
+        "position": {
+          "x": 10.0,
+          "y": 8.5,
+          "z": 0.0
+        },
+        "rotationDeg": 0,
+        "heightM": 1.82,
+        "clothingColor": {
+          "r": 80,
+          "g": 100,
+          "b": 80
+        },
+        "skinColor": {
+          "r": 205,
+          "g": 165,
+          "b": 125
+        },
+        "pose": "seated",
+        "note": "Patron on counter swivel stool, drinking coffee, reading newspaper."
+      }
+    ]
+  }
+}

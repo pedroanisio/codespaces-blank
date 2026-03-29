@@ -171,8 +171,10 @@ def _evaluate_spatial_rule(
     rule_type = rule.get("ruleType", "")
     severity = rule.get("severity", "warning")
     notes = rule.get("notes", "")
-    subject_ref = (rule.get("subjectRef") or {}).get("id", "")
-    target_ref = (rule.get("targetRef") or {}).get("id", "")
+    _subj = rule.get("subjectRef") or ""
+    subject_ref = _subj if isinstance(_subj, str) else (_subj.get("id") or "")
+    _targ = rule.get("targetRef") or ""
+    target_ref = _targ if isinstance(_targ, str) else (_targ.get("id") or "")
 
     subject = shots_by_id.get(subject_ref)
     target = shots_by_id.get(target_ref)
@@ -474,7 +476,7 @@ def _resolve_clip_refs(
     """
     ordered: list[Path] = []
     for ref in clip_refs:
-        ref_id = ref.get("id") or ref.get("logicalId") or ""
+        ref_id = ref if isinstance(ref, str) else (ref.get("id") or ref.get("logicalId") or "")
         if not ref_id:
             continue
         clip = shot_clips.get(ref_id)
@@ -512,7 +514,7 @@ def _resolve_clip_refs_with_durations(
     ordered: list[Path] = []
     durations: list[float] = []
     for ref in clip_refs:
-        ref_id = ref.get("id") or ref.get("logicalId") or ""
+        ref_id = ref if isinstance(ref, str) else (ref.get("id") or ref.get("logicalId") or "")
         if not ref_id:
             continue
         clip = shot_clips.get(ref_id)
@@ -839,7 +841,8 @@ def _build_audio_mix_cmd(
 
     clip_timing: dict[str, dict] = {}
     for ac in tl_audio_clips:
-        ref_id = (ac.get("sourceRef") or {}).get("id", "")
+        _sref = ac.get("sourceRef") or ""
+        ref_id = _sref if isinstance(_sref, str) else (_sref.get("id") or "")
         clip_timing[ref_id] = {
             "startSec": float(ac.get("timelineStartSec", 0)),
             "durationSec": float(ac.get("durationSec", 30)),
@@ -852,7 +855,8 @@ def _build_audio_mix_cmd(
     for op in rp.get("operations") or []:
         if op.get("opType") == "audioMix":
             for track in op.get("tracks") or []:
-                ref_id = (track.get("audioRef") or {}).get("id", "")
+                _aref = track.get("audioRef") or ""
+                ref_id = _aref if isinstance(_aref, str) else (_aref.get("id") or "")
                 if ref_id:
                     info: dict[str, Any] = {}
                     if "gainDb" in track:
@@ -1441,8 +1445,10 @@ def execute_operation_dag(
             spec = op.get("spec") or {}
             t_type = spec.get("type", "dissolve")
             t_dur = float(spec.get("durationSec", 0.5))
-            from_ref = (op.get("fromRef") or {}).get("id", "")
-            to_ref = (op.get("toRef") or {}).get("id", "")
+            _fref = op.get("fromRef") or ""
+            from_ref = _fref if isinstance(_fref, str) else (_fref.get("id") or "")
+            _tref = op.get("toRef") or ""
+            to_ref = _tref if isinstance(_tref, str) else (_tref.get("id") or "")
 
             xfade_map = {
                 "dissolve": "fade", "fade": "fade", "wipe": "wipeleft",

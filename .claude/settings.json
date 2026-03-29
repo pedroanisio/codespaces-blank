@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip list:*)",
+      "Bash(python render_coffee_shop.py)",
+      "Bash(ls /home/admin/codebases/codespaces-blank/session-3/*.json)",
+      "Bash(curl -s http://localhost:5173/models/pulp-fiction-coffee-shop.json)"
+    ]
+  }
+}
