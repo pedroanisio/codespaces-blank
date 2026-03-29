@@ -17,7 +17,9 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import * as THREE from "three";
 import { fileURLToPath } from "url";
+import { csgPrimitiveToGeometry, csgTreeToGeometry, type CSGNode } from "./renderer-csg";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -208,6 +210,42 @@ assert(!hasSMAANoArgs, "SMAAPass() with no args creates 0-pixel render target �
 // ── Test 10: Composer uses correct render order ──
 const hasRenderPass = /new RenderPass\(/.test(rendererSrc);
 assert(hasRenderPass, "EffectComposer needs a RenderPass as first pass");
+
+// ── Test 11: CSG subtraction changes rendered geometry ──
+const outerSphere: CSGNode = {
+  nodeType: "primitive",
+  primitive: { primitiveType: "sphere", radius: 1, position: { x: 0, y: 0, z: 0 } },
+};
+const subtractedSphere: CSGNode = {
+  nodeType: "operation",
+  operation: "subtract",
+  children: [
+    outerSphere,
+    {
+      nodeType: "primitive",
+      primitive: { primitiveType: "sphere", radius: 0.55, position: { x: 0.45, y: 0, z: 0 } },
+    },
+  ],
+};
+const outerGeo = csgPrimitiveToGeometry(outerSphere.primitive);
+const subtractGeo = csgTreeToGeometry(subtractedSphere);
+const outerPos = outerGeo.getAttribute("position") as THREE.BufferAttribute;
+const subtractPos = subtractGeo.getAttribute("position") as THREE.BufferAttribute;
+assert(subtractPos.count !== outerPos.count, "CSG subtract should not render as the original minuend mesh");
+let subtractHasInnerSurface = false;
+for (let i = 0; i < subtractPos.count; i++) {
+  const x = subtractPos.getX(i);
+  const y = subtractPos.getY(i);
+  const z = subtractPos.getZ(i);
+  const distToSubtractorCenter = Math.sqrt(((x - 0.45) ** 2) + (y * y) + (z * z));
+  if (distToSubtractorCenter < 0.58) {
+    subtractHasInnerSurface = true;
+    break;
+  }
+}
+assert(subtractHasInnerSurface, "CSG subtract should add cavity-facing surface vertices");
+outerGeo.dispose();
+subtractGeo.dispose();
 
 // ── Report ──
 console.log("\n════════════════════════════════════════");

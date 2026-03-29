@@ -20,6 +20,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { csgTreeToGeometry, type CSGNode } from "./renderer-csg";
 
 // ═══════════════════════════════════════════════════════════════════════
 // 1. TYPE INTERFACES — mirrors HumanBody JSON schema
@@ -190,20 +191,6 @@ export interface RenderingLayerData {
   vesselOverrides?: EntityRenderOverrideData[];
   globalOpacity?: number;
 }
-
-// ── CSG Geometry Types (from geometry.ts schema) ──
-
-export type CSGPrimitive =
-  | { primitiveType: "cylinder"; radiusTop: number; radiusBottom: number; height: number; position: Vec3; orientation?: { w: number; x: number; y: number; z: number } }
-  | { primitiveType: "sphere"; radius: number; position: Vec3 }
-  | { primitiveType: "ellipsoid"; radii: Vec3; position: Vec3; orientation?: { w: number; x: number; y: number; z: number } }
-  | { primitiveType: "box"; halfExtents: Vec3; position: Vec3; orientation?: { w: number; x: number; y: number; z: number } }
-  | { primitiveType: "capsule"; radius: number; height: number; position: Vec3; orientation?: { w: number; x: number; y: number; z: number } }
-  | { primitiveType: "torus"; majorRadius: number; minorRadius: number; position: Vec3; orientation?: { w: number; x: number; y: number; z: number } };
-
-export type CSGNode =
-  | { nodeType: "primitive"; primitive: CSGPrimitive }
-  | { nodeType: "operation"; operation: "union" | "subtract" | "intersect"; children: CSGNode[] };
 
 export interface IndexedMeshLODData {
   level: number;
@@ -655,134 +642,6 @@ function boneGeometry(bone: BoneData): THREE.BufferGeometry {
     default:
       return new THREE.SphereGeometry(l / 2, 8, 6);
   }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// CSG → Three.js GEOMETRY BUILDER
-//
-// Converts parametric CSG trees from boneGeometries into Three.js meshes.
-// Union is approximated by merging BufferGeometries (no true boolean CSG
-// in Three.js without a CSG library). This gives correct visual shapes
-// at the cost of non-watertight intersections — acceptable for rendering.
-// ═══════════════════════════════════════════════════════════════════════
-
-function csgPrimitiveToGeometry(prim: CSGPrimitive): THREE.BufferGeometry {
-  let geo: THREE.BufferGeometry;
-
-  // Higher tessellation for smoother anatomical shapes
-  switch (prim.primitiveType) {
-    case "capsule":
-      geo = new THREE.CapsuleGeometry(
-        prim.radius,
-        Math.max(0.01, prim.height - 2 * prim.radius),
-        Math.max(4, Math.ceil(prim.radius * 6)),
-        Math.max(8, Math.ceil(prim.radius * 10)),
-      );
-      break;
-    case "sphere":
-      geo = new THREE.SphereGeometry(prim.radius, 20, 14);
-      break;
-    case "ellipsoid": {
-      const sp = new THREE.SphereGeometry(1, 20, 14);
-      sp.scale(prim.radii.x, prim.radii.y, prim.radii.z);
-      geo = sp;
-      break;
-    }
-    case "box":
-      geo = new THREE.BoxGeometry(
-        prim.halfExtents.x * 2,
-        prim.halfExtents.y * 2,
-        prim.halfExtents.z * 2,
-        2, 2, 2,
-      );
-      break;
-    case "cylinder":
-      geo = new THREE.CylinderGeometry(
-        prim.radiusTop, prim.radiusBottom, prim.height,
-        Math.max(12, Math.ceil(Math.max(prim.radiusTop, prim.radiusBottom) * 8)),
-        1,
-      );
-      break;
-    case "torus":
-      geo = new THREE.TorusGeometry(prim.majorRadius, prim.minorRadius, 14, 24);
-      break;
-    default:
-      geo = new THREE.SphereGeometry(0.5, 10, 8);
-  }
-
-  // Apply local position
-  geo.translate(prim.position.x, prim.position.y, prim.position.z);
-
-  // Apply orientation quaternion if present
-  if ("orientation" in prim && prim.orientation) {
-    const q = new THREE.Quaternion(
-      prim.orientation.x, prim.orientation.y, prim.orientation.z, prim.orientation.w,
-    );
-    geo.applyQuaternion(q);
-  }
-
-  return geo;
-}
-
-function csgTreeToGeometry(node: CSGNode): THREE.BufferGeometry {
-  if (node.nodeType === "primitive") {
-    return csgPrimitiveToGeometry(node.primitive);
-  }
-
-  // Operation node: build all children then merge
-  const childGeos = node.children.map(csgTreeToGeometry);
-
-  if (node.operation === "union" || node.operation === "intersect") {
-    // Merge all child geometries (visual approximation of union)
-    const merged = mergeBufferGeometries(childGeos);
-    childGeos.forEach((g) => g.dispose());
-    return merged;
-  }
-
-  // Subtract: keep first child, discard rest (visual approximation —
-  // true CSG subtraction requires a CSG library like three-bvh-csg)
-  for (let i = 1; i < childGeos.length; i++) {
-    childGeos[i]!.dispose();
-  }
-  return childGeos[0]!;
-}
-
-function mergeBufferGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  if (geos.length === 0) return new THREE.BufferGeometry();
-  if (geos.length === 1) return geos[0]!;
-
-  // Collect all positions and normals into a single non-indexed geometry
-  let totalVerts = 0;
-  const nonIndexed: THREE.BufferGeometry[] = [];
-
-  const disposeList: THREE.BufferGeometry[] = [];
-  for (const g of geos) {
-    const ni = g.index ? g.toNonIndexed() : g;
-    if (ni !== g) disposeList.push(ni); // track intermediate geos for cleanup
-    nonIndexed.push(ni);
-    totalVerts += ni.attributes.position!.count;
-  }
-
-  const positions = new Float32Array(totalVerts * 3);
-  const normals = new Float32Array(totalVerts * 3);
-  let offset = 0;
-
-  for (const ni of nonIndexed) {
-    const pos = ni.attributes.position as THREE.BufferAttribute;
-    const norm = ni.attributes.normal as THREE.BufferAttribute | undefined;
-    positions.set(pos.array as Float32Array, offset * 3);
-    if (norm) normals.set(norm.array as Float32Array, offset * 3);
-    offset += pos.count;
-  }
-
-  // Dispose intermediate non-indexed geometries
-  for (const d of disposeList) d.dispose();
-
-  const merged = new THREE.BufferGeometry();
-  merged.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  merged.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
-  if (normals.every((v) => v === 0)) merged.computeVertexNormals();
-  return merged;
 }
 
 function indexedMeshToGeometry(mesh: IndexedMeshGeometryData): THREE.BufferGeometry {
