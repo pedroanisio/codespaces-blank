@@ -66,8 +66,9 @@ def small_tilt_quat(pitch_deg: float = 0, yaw_deg: float = 0, roll_deg: float = 
 def rigid_pose(px: float = 0, py: float = 0, pz: float = 0, q: dict | None = None) -> dict:
     return {"position": vec3(px, py, pz), "orientation": q or identity_quat()}
 
-def tf(px: float = 0, py: float = 0, pz: float = 0) -> dict:
-    return {"position": vec3(px, py, pz), "rotation": vec3(0, 0, 0), "scale": vec3(1, 1, 1)}
+def tf(px: float = 0, py: float = 0, pz: float = 0,
+       rx: float = 0, ry: float = 0, rz: float = 0) -> dict:
+    return {"position": vec3(px, py, pz), "rotation": vec3(rx, ry, rz), "scale": vec3(1, 1, 1)}
 
 def color(r: int = 200, g: int = 180, b: int = 160, a: float = 1.0) -> dict:
     return {"r": r, "g": g, "b": b, "a": a}
@@ -521,6 +522,33 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
     ms = weight / REF_W
     ds = height / REF_H
 
+    # Anatomical rotations (Euler XYZ degrees) for non-long bones.
+    # CSG shapes are authored with Y-up as the bone's long axis.
+    # These rotations orient them correctly in world space.
+    # Convention: (rx, ry, rz) in degrees, applied as Euler XYZ intrinsic.
+    _ROT: dict[str, tuple[float, float, float]] = {}
+
+    # Ribs: rotate ~90° around Z so they point laterally (X direction)
+    # R ribs point in −X, L ribs point in +X. Also tilt forward slightly.
+    for ri in range(12):
+        # Ribs curve laterally and slightly forward+down
+        tilt_fwd = 10 + ri * 3  # lower ribs tilt more forward
+        _ROT[f"Rib {ri+1} (R)"] = (tilt_fwd, 0, 90)   # +Z rotation = point left (−X for R side)
+        _ROT[f"Rib {ri+1} (L)"] = (tilt_fwd, 0, -90)  # −Z rotation = point right (+X for L side)
+
+    # Scapulae: thin plates lying flat on the back (long axis vertical, thin axis posterior)
+    # Default CSG has Y=long axis which is correct, just needs slight forward tilt
+    _ROT["Scapula (R)"] = (15, -10, 0)
+    _ROT["Scapula (L)"] = (15, 10, 0)
+
+    # Cranial bones: thin curved plates. CSG ellipsoid Y=long axis.
+    # These are already roughly correct since they're at skull positions,
+    # but parietal bones should tilt outward slightly
+    _ROT["Parietal bone (R)"] = (0, 0, 15)
+    _ROT["Parietal bone (L)"] = (0, 0, -15)
+
+    # Sternum: vertical plate, thin in Z — already correct orientation
+
     for _ in BONE_DEFS:
         r.bone_ids.append(uid())
     bones = []
@@ -534,9 +562,10 @@ def gen_skeleton(r: Reg, weight: float, height: float) -> list[dict]:
         ixx = round(sm / 5 * (b * b + c * c), 2)
         iyy = round(sm / 5 * (a * a + c * c), 2)
         izz = round(sm / 5 * (a * a + b * b), 2)
+        rot = _ROT.get(name, (0, 0, 0))
         bone: dict[str, Any] = {
             "id": r.bone_ids[i], "name": name, "classification": cls, "region": region,
-            "transform": tf(*sp),
+            "transform": tf(*sp, *rot),
             "length": sl, "width": sw, "depth": sd, "mass": sm,
             "centerOfMass": vec3(0, 0, 0),
             "inertiaTensor": sym_tensor(ixx, iyy, izz),
@@ -2055,13 +2084,17 @@ def _csg_flat_bone(l: float, w: float, d: float, name: str) -> dict:
                   height=round(l * 0.08, 2), position=vec3(0, round(-l * 0.45, 1), 0)),
         ])
 
-    # Ribs: elongated curved box
+    # Ribs: elongated capsule along the bone's long axis (Y in local frame).
+    # The renderer orients this along the parent→child vector (vertebra→rib position).
+    # Rib head (vertebral end) is slightly wider than the sternal end.
     if "Rib" in name:
+        r_shaft = (w + d) / 4
+        shaft_h = max(0.5, l * 0.85)
         return _op("union", [
-            _prim("box", halfExtents=vec3(round(w / 2, 2), round(l * 0.08, 2), round(d / 2, 2)),
+            _prim("capsule", radius=round(r_shaft, 2), height=round(shaft_h, 2),
                   position=vec3(0, 0, 0)),
-            _prim("sphere", radius=round(max(w, d) * 0.12, 2),
-                  position=vec3(round(w * 0.45, 1), 0, 0)),
+            _prim("sphere", radius=round(r_shaft * 1.4, 2),
+                  position=vec3(0, round(l * 0.42, 1), 0)),
         ])
 
     # Nasal, lacrimal, palatine, vomer — thin plates

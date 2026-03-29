@@ -573,20 +573,21 @@ function boneGeometry(bone: BoneData): THREE.BufferGeometry {
 function csgPrimitiveToGeometry(prim: CSGPrimitive): THREE.BufferGeometry {
   let geo: THREE.BufferGeometry;
 
+  // Higher tessellation for smoother anatomical shapes
   switch (prim.primitiveType) {
     case "capsule":
       geo = new THREE.CapsuleGeometry(
         prim.radius,
         Math.max(0.01, prim.height - 2 * prim.radius),
-        Math.max(2, Math.ceil(prim.radius * 3)),
-        Math.max(4, Math.ceil(prim.radius * 5)),
+        Math.max(4, Math.ceil(prim.radius * 6)),
+        Math.max(8, Math.ceil(prim.radius * 10)),
       );
       break;
     case "sphere":
-      geo = new THREE.SphereGeometry(prim.radius, 12, 8);
+      geo = new THREE.SphereGeometry(prim.radius, 20, 14);
       break;
     case "ellipsoid": {
-      const sp = new THREE.SphereGeometry(1, 12, 8);
+      const sp = new THREE.SphereGeometry(1, 20, 14);
       sp.scale(prim.radii.x, prim.radii.y, prim.radii.z);
       geo = sp;
       break;
@@ -596,19 +597,21 @@ function csgPrimitiveToGeometry(prim: CSGPrimitive): THREE.BufferGeometry {
         prim.halfExtents.x * 2,
         prim.halfExtents.y * 2,
         prim.halfExtents.z * 2,
+        2, 2, 2,
       );
       break;
     case "cylinder":
       geo = new THREE.CylinderGeometry(
         prim.radiusTop, prim.radiusBottom, prim.height,
-        Math.max(6, Math.ceil(Math.max(prim.radiusTop, prim.radiusBottom) * 4)),
+        Math.max(12, Math.ceil(Math.max(prim.radiusTop, prim.radiusBottom) * 8)),
+        1,
       );
       break;
     case "torus":
-      geo = new THREE.TorusGeometry(prim.majorRadius, prim.minorRadius, 8, 16);
+      geo = new THREE.TorusGeometry(prim.majorRadius, prim.minorRadius, 14, 24);
       break;
     default:
-      geo = new THREE.SphereGeometry(0.5, 6, 4);
+      geo = new THREE.SphereGeometry(0.5, 10, 8);
   }
 
   // Apply local position
@@ -1413,10 +1416,19 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   for (const j of body.joints) jointDataById.set(j.id, j);
 
   // ════════════════════════════════════════════════════════════════════
-  // SKELETON — 206 bones (CSG geometry when available, fallback otherwise)
+  // SKELETON — 206 bones
+  //
+  // Placement rules:
+  //   - LONG bones: span from parent position to own position (midpoint
+  //     placement, Y axis aligned along parent→child vector). This is
+  //     correct because long bones physically bridge two joints.
+  //   - ALL OTHER bones (flat, irregular, short, sesamoid): placed at
+  //     their own anatomical position with NO rotation override. These
+  //     bones sit at fixed locations (skull plates, vertebral bodies,
+  //     carpals) and their CSG is already authored in the correct
+  //     local-frame orientation.
   // ════════════════════════════════════════════════════════════════════
 
-  // Build CSG lookup: boneId → CSGNode tree
   const csgByBoneId = new Map<string, CSGNode>();
   if (body.boneGeometries) {
     for (const bg of body.boneGeometries) {
@@ -1429,60 +1441,51 @@ export function buildScene(container: HTMLElement, body: HumanBodyData): SceneHa
   for (const bone of body.skeleton) {
     const mat = boneMaterial(bone.region);
     const csgTree = csgByBoneId.get(bone.id);
+    const parent = bone.parentBoneId ? boneDataById.get(bone.parentBoneId) : undefined;
+    const bonePos = toV3(bone.transform.position);
+
     let mesh: THREE.Mesh;
 
-    if (csgTree) {
-      // Use CSG geometry from schema — anatomically accurate shapes
-      const geo = csgTreeToGeometry(csgTree);
-      mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(
-        bone.transform.position.x,
-        bone.transform.position.y,
-        bone.transform.position.z,
-      );
+    if (bone.classification === "long" && parent) {
+      // LONG BONES: span parent→child, oriented along the connecting vector
+      const parentPos = toV3(parent.transform.position);
+      const dir = bonePos.clone().sub(parentPos);
+      const dist = dir.length();
+      const midpoint = parentPos.clone().add(bonePos).multiplyScalar(0.5);
 
-      // Orient long bones along parent→child vector
-      if (bone.parentBoneId && bone.classification === "long") {
-        const parent = boneDataById.get(bone.parentBoneId);
-        if (parent) {
-          const from = toV3(parent.transform.position);
-          const to = toV3(bone.transform.position);
-          const midpoint = from.clone().add(to).multiplyScalar(0.5);
-          const dir = to.clone().sub(from).normalize();
-          const up = new THREE.Vector3(0, 1, 0);
-          mesh.position.copy(midpoint);
-          if (Math.abs(dir.dot(up)) < 0.999) {
-            mesh.quaternion.setFromUnitVectors(up, dir);
-          }
-        }
-      }
-    } else if (bone.parentBoneId && bone.classification === "long") {
-      // Fallback: long bones span parent→child
-      const parent = boneDataById.get(bone.parentBoneId);
-      if (parent) {
-        const from = toV3(parent.transform.position);
-        const to = toV3(bone.transform.position);
-        const distance = from.distanceTo(to);
-        const midpoint = from.clone().add(to).multiplyScalar(0.5);
-        const spanLen = Math.max(distance, 1);
+      if (csgTree) {
+        const geo = csgTreeToGeometry(csgTree);
+        mesh = new THREE.Mesh(geo, mat);
+      } else {
+        const spanLen = Math.max(dist, 1);
         const geo = longBoneGeometry(spanLen, bone.width, bone.depth);
         mesh = new THREE.Mesh(geo, mat);
-        mesh.position.copy(midpoint);
-        const dir = to.clone().sub(from).normalize();
+      }
+
+      mesh.position.copy(midpoint);
+      if (dist > 0.1) {
         const up = new THREE.Vector3(0, 1, 0);
-        if (Math.abs(dir.dot(up)) < 0.999) {
-          mesh.quaternion.setFromUnitVectors(up, dir);
+        const d = dir.normalize();
+        if (Math.abs(d.dot(up)) < 0.9999) {
+          mesh.quaternion.setFromUnitVectors(up, d);
         }
+      }
+    } else {
+      // NON-LONG BONES: placed at own position, rotation from transform data
+      if (csgTree) {
+        const geo = csgTreeToGeometry(csgTree);
+        mesh = new THREE.Mesh(geo, mat);
       } else {
         const geo = boneGeometry(bone);
         mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(bone.transform.position.x, bone.transform.position.y, bone.transform.position.z);
       }
-    } else {
-      // Fallback: non-long bones at their own position
-      const geo = boneGeometry(bone);
-      mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(bone.transform.position.x, bone.transform.position.y, bone.transform.position.z);
+      mesh.position.copy(bonePos);
+      // Apply anatomical rotation if specified (Euler XYZ degrees)
+      const rot = bone.transform.rotation;
+      if (rot.x !== 0 || rot.y !== 0 || rot.z !== 0) {
+        const DEG = Math.PI / 180;
+        mesh.rotation.set(rot.x * DEG, rot.y * DEG, rot.z * DEG, "XYZ");
+      }
     }
 
     mesh.castShadow = true;
