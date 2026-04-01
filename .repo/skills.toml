@@ -1,0 +1,25 @@
+# .repo/skills.toml — Required agent skills
+# Run `repo skills` to check, `repo skills install` to install missing.
+
+# [[skills]]
+# name = "cli-developer"
+# source = "anthropics/skills"
+# skill = "cli-developer"           # specific skill in a multi-skill repo
+# agents = ["claude-code", "codex"]  # empty = all detected agents
+# scope = "project"                  # "project" or "global"
+# description = "CLI tool development patterns"
+
+# [[skills]]
+# name = "executing-plans"
+# source = "https://github.com/obra/superpowers"
+# skill = "executing-plans"
+# agents = []
+# scope = "project"
+
+# [[skills]]
+# name = "skill-creator"
+# source = "https://github.com/anthropics/skills"
+# skill = "skill-creator"
+# agents = []
+# scope = "project"
+# description = "Create new agent skills"

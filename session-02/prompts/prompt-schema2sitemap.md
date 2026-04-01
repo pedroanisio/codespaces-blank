@@ -1,1 +1,0 @@
-based on this JSON schema, could you output the sitemap of the AI Movie Studios APP ?
