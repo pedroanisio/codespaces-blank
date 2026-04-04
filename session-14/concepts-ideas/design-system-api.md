@@ -58,8 +58,9 @@ The design system API has two LLM-adjacent attack surfaces:
    unverified output into trusted infrastructure.
 
 PALS's Law requires that both surfaces have declared, auditable
-verification boundaries. The following sections describe how this is
-implemented.
+verification boundaries. The following sections specify the proposed
+contract and intended behavior of that verification layer. They are
+design commitments, not claims about an already-deployed system.
 
 ---
 
@@ -129,7 +130,8 @@ Mutation arrives
 │                  Apply policy                             │
 │  • enforce: reject if !boundary.passed (HTTP 422)         │
 │  • warn:    proceed, include boundary in response         │
-│  • audit:   proceed, boundary only in audit log           │
+│  • audit:   proceed, include boundary in response,        │
+│             and persist full detail in audit log          │
 └────────────────────────┬─────────────────────────────────┘
                          │
                          ▼
@@ -172,14 +174,17 @@ After verification runs, the boundary maps error classes to coverage:
 | ERR_SEMANTIC | 3 semantic checks | Semantic |
 | ERR_REASONING | 4 semantic checks | Semantic |
 | ERR_OMISSION | 3 semantic checks + completeness | Semantic + Custom |
-| ERR_INSTRUCTION | Not applicable (no prompt contract) | Skipped |
-| ERR_SYCOPHANCY | Not applicable (API has no preference signal) | Skipped |
-| ERR_CALIBRATION | Not applicable (API has no confidence signal) | Skipped |
+| ERR_INSTRUCTION | No direct server-side signal; upstream prompt/tool issue | Skipped |
+| ERR_SYCOPHANCY | No preference-bearing signal at the API boundary | Not applicable |
+| ERR_CALIBRATION | No confidence metadata available to assess server-side | Skipped |
 
-7 of 9 classes are actively checked. 2 are structurally not applicable
-to API input (they concern the model's internal behavior, not the data
-it produces). The boundary explicitly marks these as `not_applicable`
-rather than silently omitting them — Corollary 3 compliance.
+6 of 9 classes are actively checked by server-side validation logic.
+1 class (`ERR_SYCOPHANCY`) is structurally not applicable at the API
+boundary. 2 classes (`ERR_INSTRUCTION`, `ERR_CALIBRATION`) are tracked
+in the taxonomy but skipped because the API cannot directly observe the
+required evidence without upstream prompt or confidence metadata. The
+boundary records these distinctions explicitly rather than silently
+omitting them — Corollary 3 compliance.
 
 ---
 
@@ -200,9 +205,9 @@ New prefix additions for verification entities:
 
 ### 3.2 Consistent Object Envelope
 
-*(Same as v1, plus verification metadata on mutation responses.)*
+*(Same as v1, plus proposed verification metadata on mutation responses.)*
 
-Every mutation response now includes:
+In the proposed contract, every mutation response includes:
 
 ```jsonc
 {
@@ -434,6 +439,21 @@ enum VerificationCheckStatus {
   NOT_APPLICABLE
 }
 
+enum RecoveryAction {
+  REVISE_AND_RETRY
+  REFRESH_STATE_THEN_RETRY
+  BACKOFF_AND_RETRY
+  DO_NOT_RETRY
+  REQUIRE_HUMAN_REVIEW
+}
+
+enum MutationOutcomeState {
+  NOT_APPLIED
+  APPLIED
+  PARTIALLY_APPLIED
+  UNKNOWN
+}
+
 enum MutationSourceType {
   HUMAN
   LLM
@@ -489,6 +509,7 @@ type VerificationBoundary {
   checks: [VerificationCheckResult!]!
   passed: Boolean!
   summary: VerificationSummary!
+  recoveryGuidance: RecoveryGuidance!
 }
 
 type VerificationCheckResult {
@@ -496,6 +517,7 @@ type VerificationCheckResult {
   status: VerificationCheckStatus!
   skipRationale: String
   findings: [VerificationFinding!]!
+  recommendedAction: RecoveryAction!
 }
 
 type VerificationFinding {
@@ -514,6 +536,14 @@ type VerificationSummary {
   classesFailed: Int!
   classesSkipped: Int!
   totalFindings: Int!
+}
+
+type RecoveryGuidance {
+  retryable: Boolean!
+  requiresStateRefresh: Boolean!
+  requiresHumanReview: Boolean!
+  recommendedAction: RecoveryAction!
+  mutationOutcome: MutationOutcomeState!
 }
 
 # ── Verification report (from verifyDesignSystem query) ──
@@ -665,7 +695,8 @@ type TokenBatchPayload {
   tokens: [Token!]!
   """
   PALS's Law verification boundary for this mutation.
-  Always present. Inspect this to know what was checked.
+  Always present. Inspect this to know what was checked and
+  how the caller should recover if verification failed.
   """
   verification: VerificationBoundary!
 }
@@ -716,8 +747,9 @@ DELETE /v1/design-systems/:id/completeness-assertions/:assertionId
 
 ### 6.2 Source Metadata on All Mutations
 
-Every `POST`, `PATCH`, and `DELETE` against entity endpoints must
-include the `DS-Source-Type` header. Example:
+When `requireSourceMetadata = true`, every `POST`, `PATCH`, and
+`DELETE` against entity endpoints must include the `DS-Source-Type`
+header. Example:
 
 ```http
 POST /v1/design-systems/ds_2bXk9mQz4nRp/tokens
@@ -760,11 +792,19 @@ Response always includes `_verification`:
       "classes_skipped": 0,
       "total_findings": 1
     },
+    "recovery_guidance": {
+      "retryable": true,
+      "requires_state_refresh": false,
+      "requires_human_review": false,
+      "recommended_action": "revise_and_retry",
+      "mutation_outcome": "applied"
+    },
     "checks": [
       // ... 9 entries ...
       {
         "error_class": "ERR_SEMANTIC",
         "status": "failed",
+        "recommended_action": "revise_and_retry",
         "findings": [
           {
             "severity": "warning",
@@ -790,6 +830,9 @@ When `mutationPolicy = "enforce"` and verification fails:
   "status": 422,
   "detail": "1 of 7 applicable error classes failed verification. Policy is 'enforce'; mutation rejected.",
   "request_id": "req_7xYz9aBc1dEf",
+  "retryable": true,
+  "recommended_action": "revise_and_retry",
+  "mutation_outcome": "not_applied",
   "_verification": {
     // ... full boundary, same structure as above ...
   }
@@ -850,6 +893,12 @@ A snapshot creation request missing `verification_declaration` returns
 | 422 | `pals_verification_failed` | Verification check failed and policy is `enforce` |
 | 422 | `pals_snapshot_declaration_missing` | Snapshot creation without verification declaration |
 | 422 | `pals_snapshot_declaration_invalid` | Declaration claims `fully_verified` but boundary has failures |
+
+All PALS-specific error responses should also expose machine-readable
+recovery hints: `retryable`, `recommended_action`, and
+`mutation_outcome`. This aligns the API contract with the companion
+research document's requirement that AI-agent consumers must not infer
+recovery strategy from prose alone.
 
 ---
 
@@ -1110,6 +1159,6 @@ Final compliance assessment against each corollary:
 |---|---|---|
 | **C1** — Appearance ≠ correctness | **COMPLIANT** | 13 semantic checks go beyond schema validation; `hsl_range_sanity`, `contrast_ratio_minimum`, `dangling_reference` detect semantically-valid-but-wrong data |
 | **C2** — Trust accumulation prohibited | **COMPLIANT** | `VerificationAuditEntry` is append-only; `MutationSource` tracks provenance per-call; no mechanism to relax checks based on history |
-| **C3** — Scope must match taxonomy | **COMPLIANT** | `VerificationBoundary.checks` has exactly 9 entries; every class is `passed` / `failed` / `skipped` / `not_applicable`; skipped classes require `skipRationale` |
-| **C4** — Silent acceptance is a defect | **COMPLIANT** | Every mutation response includes `_verification`; snapshots require `SnapshotVerificationDeclaration`; `VerificationPolicy.enforce` rejects unverified mutations |
+| **C3** — Scope must match taxonomy | **COMPLIANT** | `VerificationBoundary.checks` has exactly 9 entries; every class is `passed` / `failed` / `skipped` / `not_applicable`; skipped classes require `skipRationale`; non-applicable vs skipped is distinguished explicitly |
+| **C4** — Silent acceptance is a defect | **COMPLIANT** | Every mutation response includes `_verification`; snapshots require `SnapshotVerificationDeclaration`; `VerificationPolicy.enforce` rejects unverified mutations; `warn` and `audit` still surface verification metadata to callers |
 | **C5** — Capability growth shifts verification | **COMPLIANT** | `DS-Model-Version` required for LLM sources; `elevatedLLMVerification` triggers full semantic suite for LLM input; audit trail records model version per-mutation |
