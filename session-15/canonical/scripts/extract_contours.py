@@ -238,8 +238,5 @@ if __name__ == "__main__":
     print(f"  Contour:  {meta['contour_points']} points")
     print(f"  Strokes:  {meta['detail_strokes']}")
 
-    with open(out_path, "w") as f:
-        json.dump(data, f)
-
-    print(f"  Saved:    {out_path}")
+    fio.save_figure(data, out_path)
     print(f"  Size:     {len(json.dumps(data)) / 1024:.0f} KB")
