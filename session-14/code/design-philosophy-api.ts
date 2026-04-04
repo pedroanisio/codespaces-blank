@@ -15,7 +15,8 @@
  *   and AI-populating Design Philosophy instances. The API serves two consumer
  *   classes simultaneously:
  *     1. Human developers via SDKs or direct HTTP
- *     2. LLM-driven agents via tool-calling interfaces (MCP, function calling)
+ *     2. LLM-driven agents via tool-calling and orchestration interfaces
+ *        (MCP, function calling, and A2A-style delegation surfaces)
  *
  *   The second class demands verification-first design per PALS's Law §8.4:
  *   "Silent acceptance is an architectural defect." Every mutation surface
@@ -23,7 +24,7 @@
  *   and audited.
  *
  * SOURCE DOCUMENTS:
- *   - api-design-research.md v1.1 (§1.3, §2.4, §6.2, §9.1)
+ *   - api-design-research.md v1.2 (§1.3, §2.4, §6.2, §8, §9.1)
  *   - PALS_LAW-v1.5.4.pdf (§5 error taxonomy, §8 corollaries, §9 contracts)
  *   - design-philosophy-schema.ts v1.0.0 (the data model this API exposes)
  *
@@ -223,7 +224,8 @@ export interface ApiError {
   requestId: string;
 
   /**
-   * Recovery semantics — the critical extension for AI-heavy consumers.
+   * Recovery semantics — the critical extension for AI-heavy systems,
+   * agentic AI workflows, and AI-agent consumers.
    * api-design-research.md §6.2: "explicit recovery semantics"
    */
   recovery: RecoverySemantic;
@@ -760,7 +762,8 @@ export interface ReviewOperationRequest {
 /**
  * §A.1 — Why REST over GraphQL for v1
  *
- * The api-design-research.md §3.5 decision table identifies these criteria:
+ * The api-design-research.md decision framework (§3.5, §8, §9.1)
+ * identifies these criteria:
  *
  * 1. Client diversity: initially low (SDK + direct HTTP). GraphQL's
  *    client-driven field selection adds complexity without proportional
@@ -775,10 +778,11 @@ export interface ReviewOperationRequest {
  *    change infrequently and benefit from ETag-based conditional requests.
  *    GraphQL's POST-based model would require custom caching.
  *
- * 4. AI-heavy consumers: REST with explicit schemas, stable identifiers,
+ * 4. Verification boundary: REST with explicit schemas, stable identifiers,
  *    machine-readable error classes, and observable write state satisfies
- *    the §9.1 PALS-aligned checklist. GraphQL introspection is powerful
- *    but mutation side effects are harder to reason about for agents.
+ *    the §9.1 PALS-aligned checklist more directly. GraphQL introspection
+ *    is powerful, but mutation side effects and recovery semantics are
+ *    harder to reason about for agent callers in this domain.
  *
  * 5. Simplicity of the domain: 3 top-level resource types, 2 sub-resources,
  *    no deep relationship graphs. GraphQL federation is unnecessary.
@@ -786,6 +790,16 @@ export interface ReviewOperationRequest {
  * Decision: REST for v1. Revisit if client diversity increases or if
  * comparison queries become complex enough to warrant flexible field
  * selection.
+ *
+ * Scope note from api-design-research.md v1.2:
+ *   - MCP and A2A are complementary integration surfaces, but neither
+ *     changes the underlying API contract requirements.
+ *   - Event-driven patterns matter, but this v1 contract chooses
+ *     polling + subscriptions over outbound webhooks for long-running
+ *     generation because the primary consumers are SDKs, CI, and
+ *     review tooling that already maintain authenticated sessions.
+ *     Webhook delivery can be added later if cross-system automation
+ *     becomes a first-class integration path.
  *
  *
  * §A.2 — Why dimension-level provenance, not field-level
@@ -817,13 +831,23 @@ export interface ReviewOperationRequest {
  *   - Untrusted → requires a review gate before commit (PALS §8.4)
  *   - Partially observable → needs progress reporting
  *
- * The Operation resource pattern (§6.5 long-running operations in cloud
- * API guidelines) addresses all four constraints:
+ * The Operation resource pattern (§6.5 plus the v1.2 long-running
+ * operations guidance in api-design-research.md §8) addresses all four
+ * constraints:
  *   1. POST returns 202 Accepted with the Operation resource
  *   2. Client polls GET /v1/operations/{id} for status
  *   3. When status is "awaiting_review", client calls POST .../review
  *   4. Accept commits the data; reject discards it
  *   5. Idempotency-Key prevents duplicate generation on retry
+ *
+ * Why polling/subscriptions first, not webhooks:
+ *   - Webhooks are valuable for event-driven automation, but they add
+ *     signing, replay protection, delivery retry, and subscription
+ *     lifecycle concerns.
+ *   - For v1, polling plus authenticated subscriptions is the simpler
+ *     contract because operation state is already a first-class
+ *     resource. This keeps observable write state explicit without
+ *     introducing webhook delivery semantics prematurely.
  *
  *
  * §A.4 — PALS-Aligned Checklist (api-design-research.md §9.1)
