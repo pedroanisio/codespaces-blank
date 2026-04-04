@@ -11,10 +11,10 @@ disclaimer: >
   existed at the time of writing and may have since changed. This document
   represents a synthesis of publicly available information and the author's
   analytical framing — neither of which constitutes authoritative guidance.
-version: 1.1
+version: 1.2
 status: draft
 last_reviewed: 2026-04-04
-change_note: Expanded guidance for AI-heavy and agentic API consumers with verification-first framing.
+change_note: Expanded guidance for AI-heavy, AI-agent, and agentic API consumers with verification-first framing; fixed audit issues and added event-driven coverage.
 ---
 
 # API Design: REST, GraphQL, SDKs, and Public Interfaces
@@ -34,7 +34,7 @@ Two approaches exist:
 
 **Code-first:** Implementation is written first, and the API description is derived from annotations, code generation, or introspection. This is faster for prototypes, but it often leaks storage shape and framework defaults into the external contract.
 
-For AI-heavy systems, neither framing is sufficient on its own. A third concern matters: **verification-first design**. If an API will be consumed by LLM-driven agents, tool-using assistants, or multi-step automated pipelines, the contract must be shaped so downstream systems can mechanically validate requests, responses, errors, and side effects. That means explicit schemas, stable identifiers, machine-readable failure classes, replay-safe mutations, and observable commit boundaries.
+For AI-heavy systems, agentic AI workflows, and AI-agent consumers, neither framing is sufficient on its own. A third concern matters: **verification-first design**. If an API will be consumed by LLM-driven agents, tool-using assistants, or multi-step automated pipelines, the contract must be shaped so downstream systems can mechanically validate requests, responses, errors, and side effects. That means explicit schemas, stable identifiers, machine-readable failure classes, replay-safe mutations, and observable commit boundaries.
 
 In that sense, design-first is useful not merely because humans can review the contract earlier, but because machine consumers can be constrained earlier. The more an interface depends on prose interpretation, hidden side effects, or inconsistent response shapes, the less safe it is to pipe into an AI-heavy system.
 
@@ -144,7 +144,7 @@ Idempotency — the property that performing an operation multiple times produce
 
 For APIs used by humans, idempotency is already important. For APIs used by agentic systems, it becomes a hard architectural requirement on any mutation that may be retried, replayed, or parallelized. LLM-driven clients can repeat calls because of uncertainty, tool retry logic, planner branching, or partial failure recovery. An API that treats duplicate writes as an edge case is unsafe for AI-heavy orchestration.
 
-Stripe popularized the client-generated idempotency key pattern: the client generates a UUID and sends it as a header (`Idempotency-Key`). The server records the key and the result of the first execution. If the same key arrives again, the server returns the stored result instead of re-executing. Stripe stores keys for a bounded retention window and validates that replay requests carry the same parameters.
+Stripe popularized the client-generated idempotency key pattern: the client generates a UUID and sends it as a header (`Idempotency-Key`). The server records the key and the result of the first execution. If the same key arrives again, the server returns the stored result instead of re-executing. Stripe stores keys for at least 24 hours and validates that replay requests carry the same parameters.
 
 GET and DELETE are idempotent by HTTP semantics (RFC 9110 Section 9.2.2). POST is inherently non-idempotent and is therefore the primary target for idempotency keys. PUT is idempotent by design when treated as full replacement. DELETE idempotency concerns server state, not necessarily identical response codes: the first deletion may return `200 OK` and a replay may return `404 Not Found`, yet the resource is absent in both cases.
 
@@ -419,15 +419,20 @@ For AI-heavy systems, a specification format is only the first layer. Safe toola
 
 **Ref:** GraphQL Foundation, "GraphQL Best Practices"; Microsoft Azure Architecture Center, "Web API Design Best Practices"; Microsoft TypeSpec documentation.
 ## 8. Emerging Patterns (2025–2026)
+
 **Hybrid REST + GraphQL architectures:** REST remains common for public distribution, while GraphQL often acts as an internal aggregation layer on top of existing services. This can work well for AI-heavy systems when the GraphQL layer normalizes resource shape, but it can also hide the true side-effect and authorization boundaries if the federation layer exposes convenience without provenance.
 
 **API-first for AI agents:** As AI systems become active consumers of APIs rather than mere text users, the quality bar shifts from readable to verifiable. The safest APIs for agentic use expose explicit schemas, narrow action scopes, deterministic pagination, stable identifiers, machine-readable error classes, and observable commit state for writes.
 
+**Webhooks and event-driven patterns:** Production API design increasingly depends on outbound events as much as inbound requests. For AI-agent and automation contexts, webhook contracts need the same rigor as synchronous APIs: signed payloads, delivery identifiers, replay protection, retry policy disclosure, event versioning, ordering assumptions, and explicit idempotency expectations on the consumer side. AsyncAPI helps with payload structure, but not all delivery semantics are implied by the schema alone.
+
+**Long-running operations:** Many important actions cannot complete within a single request-response cycle. Standard patterns include request-acknowledge-poll workflows, operation status resources, webhook callbacks, and explicit terminal states such as `succeeded`, `failed`, or `canceled`. This matters for AI-heavy systems because observable write state is only credible if the caller can inspect the lifecycle of a long-running mutation instead of inferring completion from an initial `202 Accepted`.
+
 **Safe toolability:** An endpoint is not automatically safe just because it is documented. For AI-heavy use, a toolable endpoint should answer at least these questions mechanically: what inputs are valid, what outputs are possible, whether the action is idempotent, whether it has side effects, whether confirmation is required, how failure classes are partitioned, and how the caller can determine whether the action actually committed.
 
-**Model Context Protocol (MCP) and adjacent tool protocols:** Standardized tool interfaces increase reuse, but they do not remove the need for strong underlying API contracts. An MCP wrapper around an ambiguous or side-effect-opaque API simply makes unsafe automation easier. The API beneath the wrapper still needs verification-friendly semantics.
+**Model Context Protocol (MCP) and Agent2Agent (A2A):** MCP standardizes model-to-tool interaction, while A2A addresses agent-to-agent communication and delegation. They are complementary rather than interchangeable. An MCP or A2A wrapper around an ambiguous or side-effect-opaque API does not remove risk; it only changes where the ambiguity surfaces. The underlying API still needs verification-friendly semantics.
 
-**Ref:** GraphQL Foundation, "GraphQL federation"; Apollo GraphQL, "Apollo Connectors"; vendor commentary on AI-agent API usage should be treated as directional rather than authoritative unless backed by primary technical specs.
+**Ref:** GraphQL Foundation, "GraphQL federation"; Apollo GraphQL, "Apollo Connectors"; AsyncAPI Initiative; Google A2A materials should be treated as current ecosystem inputs rather than settled standards unless backed by stable specifications.
 ## 9. Decision Framework
 When choosing an API style, the relevant question is not "which is better" but "which contract can be verified under the actual failure modes of the system that will consume it."
 

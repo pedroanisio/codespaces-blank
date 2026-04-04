@@ -5,6 +5,10 @@ Can you define a design philosophy schema that can represent the properties and 
 It should be able to clearly define each design concept, and it should allow users to understand the distinctions by comparing them side by side.
 ```
 
+```txt
+Based on this document, what would be the ideal API interface for creating and manipulating Design Philosophy through an API?
+```
+
 ---
 
 ```xml
