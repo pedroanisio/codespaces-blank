@@ -1,5 +1,4 @@
-"""
-Cross-dataset comparison: contour geometry, stroke statistics, width profiles.
+"""Cross-dataset comparison: contour geometry, stroke statistics, width profiles.
 
 Usage:
     python scripts/analyze.py <file1.json> <file2.json> [<file3.json> ...]
@@ -14,53 +13,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from lib import geometry, io as fio, profile as prof
-
-
-def compute_profile(name: str, data: dict) -> dict:
-    c = np.array(data["contour"])
-    strokes = [np.array(s) for s in data["strokes"]]
-
-    _, total_len = geometry.arc_lengths(c)
-    diffs = np.diff(c, axis=0)
-    steps = np.sqrt(diffs[:, 0] ** 2 + diffs[:, 1] ** 2)
-    gap = np.linalg.norm(c[0] - c[-1])
-
-    lengths = [len(s) for s in strokes]
-
-    # Count palindromes
-    pals = sum(
-        1 for s in strokes
-        if len(geometry.dedup_palindrome(s)) < len(s)
-    )
-
-    # Count consecutive dups
-    dups = sum(
-        len(s) - len(geometry.remove_consecutive_dups(s))
-        for s in strokes
-    )
-
-    widths = prof.width_at_y(c)
-    h = c[:, 1].max() - c[:, 1].min()
-    w = c[:, 0].max()
-
-    return {
-        "name": name,
-        "n_contour": len(c),
-        "n_strokes": len(strokes),
-        "total_stroke_pts": sum(lengths),
-        "step_mean": steps.mean(),
-        "step_cv": steps.std() / steps.mean() * 100,
-        "gap": gap,
-        "height": h,
-        "max_dx": w,
-        "ratio": h / (2 * w) if w > 0 else 0,
-        "palindromes": pals,
-        "dup_pts": dups,
-        "widths": widths,
-        "median_stroke_len": float(np.median(lengths)) if lengths else 0,
-        "max_stroke_len": max(lengths) if lengths else 0,
-    }
+from lib import io as fio, profile as prof
 
 
 def print_comparison(profiles: list[dict]) -> None:
@@ -120,11 +73,8 @@ if __name__ == "__main__":
             print(f"No JSON files found in {data_dir}")
             sys.exit(1)
 
-    datasets = []
-    for p in paths:
-        datasets.append((p.stem, fio.load_figure(p)))
-
-    profiles = [compute_profile(name, data) for name, data in datasets]
+    datasets = [(p.stem, fio.load_figure(p)) for p in paths]
+    profiles = [prof.compute_profile(name, data) for name, data in datasets]
     print_comparison(profiles)
 
     for name, data in datasets:

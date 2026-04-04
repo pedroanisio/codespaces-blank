@@ -5,6 +5,7 @@ All functions are pure: np.ndarray in, np.ndarray out, no I/O.
 
 import numpy as np
 from scipy.ndimage import uniform_filter1d
+from scipy.signal import savgol_filter
 
 
 def arc_lengths(contour: np.ndarray) -> tuple[np.ndarray, float]:
@@ -102,3 +103,55 @@ def subsample(points: np.ndarray, max_pts: int = 60) -> np.ndarray:
         return points
     idx = np.linspace(0, len(points) - 1, max_pts, dtype=int)
     return points[idx]
+
+
+def smooth_stroke(
+    stroke: np.ndarray,
+    kernel: int = 3,
+    mode: str = "nearest",
+) -> np.ndarray:
+    """Uniform-filter smoothing for a single stroke (no clamping)."""
+    return np.column_stack([
+        uniform_filter1d(stroke[:, 0], kernel, mode=mode),
+        uniform_filter1d(stroke[:, 1], kernel, mode=mode),
+    ])
+
+
+def savgol_smooth(
+    contour: np.ndarray,
+    window: int = 35,
+    poly: int = 3,
+    mode: str = "wrap",
+) -> np.ndarray:
+    """Savitzky-Golay smoothing on both axes.
+
+    *window* is clamped to an odd value <= len(contour).
+    """
+    n = len(contour)
+    w = min(window, n - (1 if n % 2 == 0 else 0))
+    if w < 5:
+        return contour.copy()
+    out = contour.copy()
+    out[:, 0] = savgol_filter(out[:, 0], w, poly, mode=mode)
+    out[:, 1] = savgol_filter(out[:, 1], w, poly, mode=mode)
+    return out
+
+
+def resample_normalized(contour: np.ndarray, n: int = 800) -> np.ndarray:
+    """Resample to *n* points at normalized arc-length [0, 1]."""
+    cum, total = arc_lengths(contour)
+    t_norm = cum / total
+    t_uniform = np.linspace(0, 1, n)
+    return np.column_stack([
+        np.interp(t_uniform, t_norm, contour[:, 0]),
+        np.interp(t_uniform, t_norm, contour[:, 1]),
+    ])
+
+
+def weighted_average(
+    contours: dict[str, np.ndarray],
+    weights: dict[str, float],
+) -> np.ndarray:
+    """Weighted average of same-length contours, then smooth + clamp."""
+    result = sum(weights[name] * contours[name] for name in weights)
+    return smooth(result)
