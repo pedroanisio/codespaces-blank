@@ -1,0 +1,21 @@
+# LaTeX build artifacts
+latex/*.aux
+latex/*.log
+latex/*.toc
+latex/*.out
+latex/*.synctex.gz
+latex/*.fls
+latex/*.fdb_latexmk
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+
+# Node (zenodo-sdk if co-located)
+node_modules/
+dist/

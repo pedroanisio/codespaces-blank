@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use PALS's Law in your work, please cite it as below."
+title: "PALS's Law: A Formal Specification of LLM Output Unreliability as an Architectural Invariant"
+type: report
+authors:
+  - family-names: "de Luna e Silva"
+    given-names: "Pedro Anisio"
+    alias: "PALS"
+version: "1.5.4"
+date-released: "2026-04-03"
+license: "CC-BY-4.0"
+keywords:
+  - "LLM"
+  - "large language models"
+  - "hallucination"
+  - "verification"
+  - "software engineering"
+  - "architectural invariant"
+  - "error taxonomy"
+abstract: >-
+  PALS's Law is an engineering principle asserting that LLM output error is
+  not an exceptional condition but a statistical invariant of the model class,
+  and that any system failing to treat it as such contains an architectural
+  defect. The specification provides a formal operative claim, a 9-class error
+  taxonomy, a pipeline compounding corollary, 5 architectural corollaries,
+  and copy-paste practitioner artifacts.

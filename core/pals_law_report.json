@@ -1,0 +1,492 @@
+{
+  "document_version": "1.5.4",
+  "content_hash": "d53ccc7f3a35a359",
+  "references": [
+    {
+      "ref_id": "ji_2023",
+      "authors": "Ji, Z., et al",
+      "year": 2023,
+      "title": "Survey of Hallucination in Natural Language Generation.",
+      "venue": "ACM Computing Surveys",
+      "doi": "10.1145/3571730",
+      "arxiv_id": null,
+      "relevance": "Establishes hallucination as a documented, persistent, cross-model phenomenon \u2014 not an artifact of any specific architecture.",
+      "error_classes_supported": [
+        "ERR_HALLUCINATION"
+      ],
+      "confidence_note": "High confidence.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "peer-reviewed",
+      "verification_status": "partial",
+      "fetched_title": null,
+      "fetched_url": "https://doi.org/10.1145/3571730",
+      "fetch_error": "HTTP 403: Forbidden"
+    },
+    {
+      "ref_id": "maynez_2020",
+      "authors": "Maynez, J., et al",
+      "year": 2020,
+      "title": "On Faithfulness and Factuality in Abstractive Summarization.",
+      "venue": "ACL 2020",
+      "doi": "10.18653/v1/2020.acl-main.173",
+      "arxiv_id": null,
+      "relevance": "Distinguishes intrinsic from extrinsic hallucination; demonstrates measurable rates in generation tasks. Notes that pretraining reduces rates \u2014 but does not eliminate them.",
+      "error_classes_supported": [
+        "ERR_HALLUCINATION"
+      ],
+      "confidence_note": "High confidence.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "peer-reviewed",
+      "verification_status": "verified",
+      "fetched_title": "On Faithfulness and Factuality in Abstractive Summarization - ACL Anthology",
+      "fetched_url": "https://aclanthology.org/2020.acl-main.173/",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "lin_2022",
+      "authors": "Lin, S., et al",
+      "year": 2022,
+      "title": "TruthfulQA: Measuring How Models Mimic Human Falsehoods.",
+      "venue": "ACL 2022",
+      "doi": null,
+      "arxiv_id": "2109.07958",
+      "relevance": "Benchmark quantifying factual error rates across models; no model scores 100%. Note: TruthfulQA has known saturation issues for frontier models (a decision tree achieves 79.6% without reading the question); it is cited here as historical evidence of non-zero error rates, not as a current evaluation recommendation.",
+      "error_classes_supported": [
+        "ERR_HALLUCINATION"
+      ],
+      "confidence_note": "High confidence.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2109.07958] TruthfulQA: Measuring How Models Mimic Human Falsehoods",
+      "fetched_url": "https://arxiv.org/abs/2109.07958",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "kadavath_2022",
+      "authors": "Kadavath, S., et al",
+      "year": 2022,
+      "title": "Language Models (Mostly) Know What They Know.",
+      "venue": "arXiv:2207.05221",
+      "doi": null,
+      "arxiv_id": "2207.05221",
+      "relevance": "Addresses the gap between internal belief and expressed confidence (`ERR_CALIBRATION`). Note: the paper's overall finding is optimistic \u2014 the gap narrows with scale. This *strengthens* the law's framing: even a narrowing gap is a non-zero gap, and better calibration makes residual miscalibration harder to detect (see Corollary 5).",
+      "error_classes_supported": [
+        "ERR_CALIBRATION"
+      ],
+      "confidence_note": "High confidence.",
+      "section_cited_in": [
+        "\u00a74",
+        "\u00a76.3"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2207.05221] Language Models (Mostly) Know What They Know",
+      "fetched_url": "https://arxiv.org/abs/2207.05221",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "perez_2022",
+      "authors": "Perez, E., et al",
+      "year": 2022,
+      "title": "Discovering Language Model Behaviors with Model-Written Evaluations.",
+      "venue": "arXiv:2212.09251",
+      "doi": null,
+      "arxiv_id": "2212.09251",
+      "relevance": "Documents sycophancy as a measurable, reproducible behavior \u2014 not an anecdotal observation.",
+      "error_classes_supported": [
+        "ERR_SYCOPHANCY"
+      ],
+      "confidence_note": "High confidence.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2212.09251] Discovering Language Model Behaviors with Model-Written Evaluations",
+      "fetched_url": "https://arxiv.org/abs/2212.09251",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "sharma_2023",
+      "authors": "Sharma, M., et al",
+      "year": 2023,
+      "title": "Towards Understanding Sycophancy in Language Models.",
+      "venue": "arXiv:2310.13548",
+      "doi": null,
+      "arxiv_id": "2310.13548",
+      "relevance": "Provides direct mechanistic analysis of sycophancy: models systematically favor responses that align with perceived user preferences over accurate ones. Confirms `ERR_SYCOPHANCY` as a distinct, reproducible failure class requiring dedicated detection.",
+      "error_classes_supported": [
+        "ERR_SYCOPHANCY"
+      ],
+      "confidence_note": "High confidence \u2014 confirmed by reviewer with Semantic Scholar and arXiv pointers.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2310.13548] Towards Understanding Sycophancy in Language Models",
+      "fetched_url": "https://arxiv.org/abs/2310.13548",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "berglund_2023",
+      "authors": "Berglund, L., et al",
+      "year": 2023,
+      "title": "The Reversal Curse: LLMs trained on 'A is B' fail to learn 'B is A'.",
+      "venue": "arXiv:2309.12288",
+      "doi": null,
+      "arxiv_id": "2309.12288",
+      "relevance": "Demonstrates a specific, reproducible instance of `ERR_REASONING`: models trained on directional factual associations (A\u2192B) fail to generalize to the reverse (B\u2192A), even when both facts are individually encoded. The failure is compositional \u2014 the model has the correct facts but cannot reverse the inference chain. Confirms reasoning failure as a distinct class from hallucination (the facts are not fabricated; their relational composition is broken).",
+      "error_classes_supported": [
+        "ERR_REASONING"
+      ],
+      "confidence_note": "High confidence \u2014 verified via arXiv; v4 dated May 2024.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2309.12288] The Reversal Curse: LLMs trained on A is B fail to learn B is A ",
+      "fetched_url": "https://arxiv.org/abs/2309.12288",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "zhou_2023",
+      "authors": "Zhou, J., et al",
+      "year": 2023,
+      "title": "Instruction-Following Evaluation for Large Language Models.",
+      "venue": "arXiv:2311.07911",
+      "doi": null,
+      "arxiv_id": "2311.07911",
+      "relevance": "IFEval: benchmark measuring instruction-following accuracy across 25 verifiable constraint types (format, length, keyword inclusion/exclusion, language). No model achieves 100% compliance. Directly grounds `ERR_INSTRUCTION` \u2014 explicit constraint violations are measurable and non-negligible even for frontier models.",
+      "error_classes_supported": [
+        "ERR_INSTRUCTION"
+      ],
+      "confidence_note": "High confidence \u2014 adopted by LMSYS, Open LLM Leaderboard v2; results independently reproducible.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2311.07911] Instruction-Following Evaluation for Large Language Models",
+      "fetched_url": "https://arxiv.org/abs/2311.07911",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "kalai_2024",
+      "authors": "Kalai, A. T. & Vempala, S. S",
+      "year": 2024,
+      "title": "Calibrated Language Models Must Hallucinate.",
+      "venue": "STOC 2024",
+      "doi": "10.1145/3618260.3649777",
+      "arxiv_id": null,
+      "relevance": "Proves a statistical lower bound on hallucination rate for calibrated LMs, tied to the monofact rate (fraction of facts appearing once in training data). The strongest published formalization of hallucination inevitability.",
+      "error_classes_supported": [
+        "ERR_HALLUCINATION"
+      ],
+      "confidence_note": "High confidence \u2014 published at STOC, verified via ACM DL.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "peer-reviewed",
+      "verification_status": "partial",
+      "fetched_title": null,
+      "fetched_url": "https://doi.org/10.1145/3618260.3649777",
+      "fetch_error": "HTTP 403: Forbidden"
+    },
+    {
+      "ref_id": "xu_2024",
+      "authors": "Xu, Z., Jain, S., & Kankanhalli, M",
+      "year": 2024,
+      "title": "Hallucination is Inevitable: An Innate Limitation of Large Language Models.",
+      "venue": "arXiv:2401.11817",
+      "doi": null,
+      "arxiv_id": "2401.11817",
+      "relevance": "Uses diagonalization to prove that for any computably enumerable set of LLMs, there exists a computable ground truth on which every model must hallucinate. A cleaner, stronger version of the pigeonhole argument in \u00a76.2.",
+      "error_classes_supported": [
+        "ERR_HALLUCINATION"
+      ],
+      "confidence_note": "High confidence \u2014 verified via arXiv and Semantic Scholar.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2401.11817] Hallucination is Inevitable: An Innate Limitation of Large Language Models",
+      "fetched_url": "https://arxiv.org/abs/2401.11817",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "karpowicz_2025",
+      "authors": "Karpowicz, M. P",
+      "year": 2025,
+      "title": "On the Fundamental Impossibility of Hallucination Control in Large Language Models.",
+      "venue": "arXiv:2506.06382",
+      "doi": null,
+      "arxiv_id": "2506.06382",
+      "relevance": "Proves impossibility via mechanism design theory and proper scoring rules: no LLM inference mechanism can simultaneously achieve truthfulness, information conservation, knowledge revelation, and knowledge-constrained optimality.",
+      "error_classes_supported": [
+        "ERR_HALLUCINATION"
+      ],
+      "confidence_note": "High confidence \u2014 verified via arXiv.",
+      "section_cited_in": [
+        "\u00a74"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2506.06382] On the Fundamental Impossibility of Hallucination Control in Large Language Models",
+      "fetched_url": "https://arxiv.org/abs/2506.06382",
+      "fetch_error": null
+    },
+    {
+      "ref_id": "suzuki_2025",
+      "authors": "Suzuki, A., et al",
+      "year": 2025,
+      "title": "Hallucinations are inevitable but can be made statistically negligible.",
+      "venue": "arXiv:2502.12187",
+      "doi": null,
+      "arxiv_id": "2502.12187",
+      "relevance": "Proves the complementary positive result: while hallucination-triggering inputs are infinite, their probability mass under a realistic distribution can be made arbitrarily small with sufficient training data quality and quantity. This is the principal counterpoint to the operative form \u2014 see \u00a77.6 for discussion.",
+      "error_classes_supported": [
+        "ERR_HALLUCINATION"
+      ],
+      "confidence_note": "High confidence \u2014 verified via arXiv.",
+      "section_cited_in": [
+        "\u00a74",
+        "\u00a77.6"
+      ],
+      "publication_type": "preprint",
+      "verification_status": "verified",
+      "fetched_title": "[2502.12187] Hallucinations are inevitable but can be made statistically negligible. The innate inevitability of hallucinations cannot explain practical LLM issues",
+      "fetched_url": "https://arxiv.org/abs/2502.12187",
+      "fetch_error": null
+    }
+  ],
+  "math_blocks": [
+    {
+      "block_id": "math_3.2_1",
+      "section": "3.2",
+      "latex": "\\forall M \\in \\mathcal{M},\\ \\forall \\text{ realistic } \\mathcal{D} \\text{ over } \\mathcal{X}:\n\\quad \\mathbb{E}_{x \\sim \\mathcal{D}}\\!\\bigl[\\varepsilon(M(x), x)\\bigr] \\geq \\delta > 0",
+      "claim_status": "operative",
+      "description": "Operative form \u2014 expected error lower bound"
+    },
+    {
+      "block_id": "math_3.3_1",
+      "section": "3.3",
+      "latex": "\\forall M \\in \\mathcal{M}:\\ \\exists\\, x \\in \\mathcal{X}\n\\text{ such that } P_\\theta\\!\\bigl(\\varepsilon(M(x), x) = 1\\bigr) > 0",
+      "claim_status": "existential",
+      "description": "Existential form \u2014 existence of error-positive input"
+    },
+    {
+      "block_id": "math_3.4_1",
+      "section": "3.4",
+      "latex": "P(\\text{pipeline is error-free}) = \\prod_{i=1}^{n}(1 - p_i)",
+      "claim_status": "corollary",
+      "description": "Pipeline compounding \u2014 product formula for error-free probability"
+    },
+    {
+      "block_id": "math_3.4_2",
+      "section": "3.4",
+      "latex": "P(\\text{at least one error in pipeline}) = 1 - \\prod_{i=1}^{n}(1 - p_i)\n\\;\\xrightarrow{n \\to \\infty}\\; 1",
+      "claim_status": "corollary",
+      "description": "Pipeline compounding \u2014 product formula for error-free probability"
+    },
+    {
+      "block_id": "math_6.1_1",
+      "section": "6.1",
+      "latex": "P_\\theta(y \\mid x) = \\prod_{t=1}^{|y|} P_\\theta(y_t \\mid y_{<t},\\, x)",
+      "claim_status": "informal_arg",
+      "description": "Autoregressive factorization of output probability"
+    },
+    {
+      "block_id": "math_8_1",
+      "section": "8",
+      "latex": "\\frac{\\partial D_c}{\\partial C} \\leq 0\n\\quad \\text{for } c \\in \\bigl\\{\\texttt{ERR\\_OMISSION},\\ \\texttt{ERR\\_SCHEMA},\\ \\texttt{ERR\\_TRUNCATION},\\ \\texttt{ERR\\_INSTRUCTION}\\bigr\\}",
+      "claim_status": "hypothesis",
+      "description": "Corollary 5 \u2014 capability-detection partial derivatives"
+    },
+    {
+      "block_id": "math_8_2",
+      "section": "8",
+      "latex": "\\frac{\\partial D_c}{\\partial C} > 0\n\\quad \\text{for } c \\in \\bigl\\{\\texttt{ERR\\_HALLUCINATION},\\ \\texttt{ERR\\_SEMANTIC},\\ \\texttt{ERR\\_SYCOPHANCY},\\ \\texttt{ERR\\_CALIBRATION},\\ \\texttt{ERR\\_REASONING}\\bigr\\}",
+      "claim_status": "hypothesis",
+      "description": "Corollary 5 \u2014 capability-detection partial derivatives"
+    }
+  ],
+  "math_checks": [
+    {
+      "check_id": "CHK_OPERATIVE_STRUCTURE",
+      "target_blocks": [
+        "math_3.2_1"
+      ],
+      "description": "Operative form has required components: \u2200M, E_D[\u03b5], \u2265 \u03b4 > 0",
+      "status": "pass",
+      "detail": "{\"has_universal_M\": true, \"has_expectation\": true, \"has_delta_bound\": true, \"has_distribution_D\": true}"
+    },
+    {
+      "check_id": "CHK_EXISTENTIAL_WEAKER",
+      "target_blocks": [
+        "math_3.2_1",
+        "math_3.3_1"
+      ],
+      "description": "Existential form (\u00a73.3) is strictly weaker than operative (\u00a73.2)",
+      "status": "pass",
+      "detail": "Operative quantifies over all realistic D; Existential only claims \u2203x with P(\u03b5=1)>0. Existential has \u2203x: True, lacks \u2200D: True"
+    },
+    {
+      "check_id": "CHK_PIPELINE_ALGEBRA",
+      "target_blocks": [
+        "math_3.4_1",
+        "math_3.4_2"
+      ],
+      "description": "Pipeline formula: P(error-free) = \u220f(1-p_i), P(\u22651 error) = 1 - \u220f(1-p_i)",
+      "status": "pass",
+      "detail": "{\"has_product_formula\": true, \"has_complement_formula\": true, \"has_limit_statement\": true}"
+    },
+    {
+      "check_id": "CHK_PIPELINE_LIMIT",
+      "target_blocks": [
+        "math_3.4_2"
+      ],
+      "description": "Limit: \u220f(1-p_i) \u2192 0 as n \u2192 \u221e when all p_i > 0 (hence 1 - \u220f \u2192 1)",
+      "status": "pass",
+      "detail": "For p_i \u2208 (0,1) \u2200i: ln(\u220f(1-p_i)) = \u03a3ln(1-p_i). Since ln(1-p_i) < 0 for p_i > 0, the partial sums diverge to -\u221e iff \u03a3p_i = \u221e (which holds when p_i \u2265 \u03b4 > 0 for all i). Therefore \u220f(1-p_i) \u2192 0, so P(at least one error) \u2192 1. NOTE: requires independence assumption (flagged in \u00a73.4 caveat and \u00a77.3)."
+    },
+    {
+      "check_id": "CHK_CONVERGENCE_CONDITION",
+      "target_blocks": [
+        "math_3.4_2"
+      ],
+      "description": "Pipeline limit requires \u03a3p_i = \u221e (e.g. uniform lower bound p_i \u2265 \u03b4 > 0); p_i > 0 alone is insufficient (counterexample: p_i = 2^{-i})",
+      "status": "pass",
+      "detail": "Uniform bound stated in formula: True. Divergence condition noted in text: False. The operative form guarantees p_i \u2265 \u03b4 > 0 for each step, which implies \u03a3p_i = \u221e and validates the limit. If this condition is not explicit in the spec, it should be."
+    },
+    {
+      "check_id": "CHK_AUTOREGRESSIVE_FACTORIZATION",
+      "target_blocks": [
+        "math_6.1_1"
+      ],
+      "description": "Autoregressive factorization P(y|x) = \u220fP(y_t|y_{<t},x) is the chain rule of probability",
+      "status": "pass",
+      "detail": "Standard chain rule application to sequential token generation. Textbook identity."
+    },
+    {
+      "check_id": "CHK_COR5_SIGNS",
+      "target_blocks": [
+        "math_8_1",
+        "math_8_2"
+      ],
+      "description": "Corollary 5: \u2202D_c/\u2202C \u2264 0 for structural classes, > 0 for semantic classes",
+      "status": "pass",
+      "detail": "{\n  \"structural_sign_correct\": true,\n  \"semantic_sign_correct\": true,\n  \"structural_classes_found\": [\n    \"ERR_INSTRUCTION\",\n    \"ERR_OMISSION\",\n    \"ERR_SCHEMA\",\n    \"ERR_TRUNCATION\"\n  ],\n  \"semantic_classes_found\": [\n    \"ERR_CALIBRATION\",\n    \"ERR_HALLUCINATION\",\n    \"ERR_REASONING\",\n    \"ERR_SEMANTIC\",\n    \"ERR_SYCOPHANCY\"\n  ],\n  \"expected_structural\": [\n    \"ERR_INSTRUCTION\",\n    \"ERR_OMISSION\",\n    \"ERR_SCHEMA\",\n    \"ERR_TRUNCATION\"\n  ],\n  \"expected_semantic\": [\n    \"ERR_CALIBRATION\",\n    \"ERR_HALLUCINATION\",\n    \"ERR_REASONING\",\n    \"ERR_SEMANTIC\",\n    \"ERR_SYCOPHANCY\"\n  ],\n  \"coverage_complete\": true\n}"
+    },
+    {
+      "check_id": "CHK_CROSS_REFERENCES",
+      "target_blocks": [
+        "document"
+      ],
+      "description": "All \u00a7N.M cross-references resolve to existing section headings",
+      "status": "pass",
+      "detail": "{\n  \"existing_sections\": [\n    \"1\",\n    \"2\",\n    \"3\",\n    \"3.1\",\n    \"3.2\",\n    \"3.3\",\n    \"3.4\",\n    \"4\",\n    \"4.1\",\n    \"5\",\n    \"6\",\n    \"6.1\",\n    \"6.2\",\n    \"6.3\",\n    \"7\",\n    \"7.1\",\n    \"7.2\",\n    \"7.3\",\n    \"7.4\",\n    \"7.5\",\n    \"7.6\",\n    \"8\",\n    \"9\",\n    \"9.1\",\n    \"9.2\",\n    \"9.3\",\n    \"9.4\"\n  ],\n  \"referenced_sections\": [\n    \"3.1\",\n    \"3.2\",\n    \"3.3\",\n    \"3.4\",\n    \"4\",\n    \"4.1\",\n    \"5\",\n    \"6.2\",\n    \"7.2\",\n    \"7.3\",\n    \"7.6\",\n    \"8\",\n    \"9\",\n    \"9.1\",\n    \"9.4\"\n  ],\n  \"broken_references\": []\n}"
+    },
+    {
+      "check_id": "CHK_EPSILON_DOMAIN",
+      "target_blocks": [
+        "math_3.1_*"
+      ],
+      "description": "\u03b5(y,x) \u2208 {0,1} \u2014 Boolean predicate over Y \u00d7 X",
+      "status": "pass",
+      "detail": "\u03b5: Y \u00d7 X \u2192 {0,1} is well-defined given \u03a3: X \u2192 Y (partial). \u03b5(y,x) = 1 iff y deviates from \u03a3(x). \u00a77.5 acknowledges this is a deliberate simplification; graded extension \u03b5 \u2208 [0,1] noted as known gap."
+    },
+    {
+      "check_id": "CHK_INDEPENDENCE_PROPAGATION",
+      "target_blocks": [
+        "math_3.4_*"
+      ],
+      "description": "Independence caveat present at point of use (\u00a73.4) and full treatment (\u00a77.3)",
+      "status": "pass",
+      "detail": "[\n  {\n    \"section\": \"3.4\",\n    \"has_independence_caveat\": true,\n    \"section_found\": true\n  },\n  {\n    \"section\": \"7.3\",\n    \"has_independence_caveat\": true,\n    \"section_found\": true\n  }\n]"
+    }
+  ],
+  "schema_summary": {
+    "total_symbols": 15,
+    "total_claims": 12,
+    "claims_by_status": {
+      "definition": 1,
+      "operative": 1,
+      "existential": 1,
+      "corollary": 5,
+      "informal_arg": 3,
+      "hypothesis": 1
+    },
+    "falsifiable_claims": 6,
+    "total_error_classes": 9,
+    "total_artifacts": 4,
+    "structural_classes": [
+      "ERR_OMISSION",
+      "ERR_SCHEMA",
+      "ERR_TRUNCATION",
+      "ERR_INSTRUCTION"
+    ],
+    "semantic_classes": [
+      "ERR_HALLUCINATION",
+      "ERR_SYCOPHANCY",
+      "ERR_CALIBRATION",
+      "ERR_REASONING",
+      "ERR_SEMANTIC"
+    ]
+  },
+  "error_class_coverage": {
+    "ERR_HALLUCINATION": [
+      "ji_2023",
+      "maynez_2020",
+      "lin_2022",
+      "kalai_2024",
+      "xu_2024",
+      "karpowicz_2025",
+      "suzuki_2025"
+    ],
+    "ERR_OMISSION": [],
+    "ERR_SCHEMA": [],
+    "ERR_TRUNCATION": [],
+    "ERR_SYCOPHANCY": [
+      "perez_2022",
+      "sharma_2023"
+    ],
+    "ERR_INSTRUCTION": [
+      "zhou_2023"
+    ],
+    "ERR_CALIBRATION": [
+      "kadavath_2022"
+    ],
+    "ERR_REASONING": [
+      "berglund_2023"
+    ],
+    "ERR_SEMANTIC": []
+  },
+  "warnings": [
+    "Error classes with no direct empirical reference: ERR_OMISSION, ERR_SCHEMA, ERR_TRUNCATION, ERR_SEMANTIC"
+  ],
+  "total_references": 12,
+  "total_math_blocks": 7,
+  "checks_passed": 10,
+  "checks_warned": 0,
+  "checks_failed": 0,
+  "_signature": {
+    "signature_version": "1",
+    "algorithm": "sha256",
+    "tool_id": "pals-check",
+    "tool_version": "1.0.0",
+    "signed_at": "2026-04-03T10:24:12Z",
+    "source_document_hash": "d53ccc7f3a35a359",
+    "payload_digest": "7579161423dd0a7ce6d64b650f69a87b3152a7ed8da5a8ed8266c886f64c7bee",
+    "seal": "5e3e27eae72a58a188ba10672a9097a4c60060b7619adb6ff54741fe7f48b14e"
+  }
+}

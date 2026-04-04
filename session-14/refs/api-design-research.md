@@ -41,7 +41,7 @@ The industry consensus as of 2025 leans heavily toward design-first for any API 
 
 ### 2.1 Origin and Actual Definition
 
-REST (Representational State Transfer) was defined by Roy Fielding in his 2000 doctoral dissertation at UC Irvine, titled *"Architectural Styles and the Design of Network-based Software Architectures."* Fielding was a co-author of the HTTP/1.0 and primary author of the HTTP/1.1 specifications. REST was not designed as a recipe for building web APIs — it was a post-hoc distillation of the architectural constraints that guided the design of HTTP itself.
+REST (Representational State Transfer) was defined by Roy Fielding in his 2000 doctoral dissertation at UC Irvine, titled *"Architectural Styles and the Design of Network-based Software Architectures."* Fielding was a co-author of HTTP/1.0 (RFC 1945) and lead author of the HTTP/1.1 specifications (RFC 2068, RFC 2616). REST was not designed as a recipe for building web APIs — it was a post-hoc distillation of the architectural constraints that guided the design of HTTP itself.
 
 Fielding's dissertation derives REST incrementally from the Null style by adding constraints. The derivation chain is:
 
@@ -105,7 +105,7 @@ Idempotency — the property that performing an operation multiple times produce
 
 Stripe pioneered the widely-adopted pattern of client-generated idempotency keys: the client generates a UUID and sends it as a header (`Idempotency-Key`). The server records the key and the result of the first execution. If the same key arrives again, the server returns the stored result instead of re-executing. Stripe stores keys for 24 hours (v1) or 30 days (v2) and validates that replay requests carry the same parameters.
 
-GET and DELETE are idempotent by definition in HTTP semantics. POST is inherently non-idempotent and is the primary target for idempotency key mechanisms. PUT is idempotent by design (full replacement).
+GET and DELETE are idempotent by definition in HTTP semantics (RFC 9110 Section 9.2.2). POST is inherently non-idempotent and is the primary target for idempotency key mechanisms. PUT is idempotent by design (full replacement). Note that DELETE idempotency concerns server state, not response codes — a first `DELETE /resource/123` may return `200 OK` while a repeated request returns `404 Not Found`, yet the server state is identical (resource absent), satisfying the specification's definition.
 
 **Ref:** Stripe Engineering Blog, "Designing robust and predictable APIs with idempotency" (2017); Stripe API Reference, "Idempotent requests"; Stripe Documentation, "API v2 overview."
 
@@ -119,7 +119,7 @@ Versioning addresses the inevitability that APIs change. Strategies include:
 
 **Query parameter versioning** (`?version=2`): Flexible but complicates caching.
 
-**Stripe's model (rolling versioning):** Stripe pins each API key to the version active when the key was first used. Breaking changes are encapsulated in version change modules that transform request/response objects. Developers can test new versions per-request via a `Stripe-Version` header. Stripe has maintained backward compatibility with every version since 2011 by running all version transformations as a pipeline.
+**Stripe's model (rolling versioning):** Stripe pins each account to the most recent API version available at the time of the account's first API request. Breaking changes are encapsulated in version change modules that transform request/response objects. Developers can test new versions per-request via a `Stripe-Version` header. Stripe has maintained backward compatibility with every version since 2011 by running all version transformations as a pipeline.
 
 **GraphQL's approach:** GraphQL avoids explicit versioning by design. New fields are added, old fields are marked `@deprecated` with a reason string. This works only if the team exercises discipline — removing deprecated fields without a transition period is still a breaking change.
 
@@ -150,7 +150,7 @@ Key schema design principles from production experience:
 
 **Design for the consumer, not the storage layer.** Do not auto-generate schemas from database tables. How data is stored is often shaped very differently from what clients need. Apollo's documentation explicitly warns against auto-generating schemas because it brings unused fields onto the graph in the wrong shape.
 
-**Use the Relay Pagination Specification** (or equivalent) for list fields. This standardizes cursor-based pagination with `edges`, `nodes`, `pageInfo`, and `cursor` fields. Beyond usability, pagination limits the potential for denial-of-service by bounding response sizes.
+**Use the GraphQL Cursor Connections Specification** (commonly called the Relay pagination spec, or equivalent) for list fields. This standardizes cursor-based pagination with `edges`, `nodes`, `pageInfo`, and `cursor` fields. Beyond usability, pagination limits the potential for denial-of-service by bounding response sizes.
 
 **Prefer nullable fields with defaults for new additions.** When evolving a schema, make new fields nullable or provide default values to avoid breaking existing clients.
 
@@ -172,7 +172,7 @@ Federation aligns with Domain-Driven Design: each team owns its subgraph, contro
 
 Entity resolution across subgraphs works via the `@key` directive, which identifies the fields that uniquely identify a type. When a query spans multiple subgraphs, the gateway generates a query plan that fetches the key from one subgraph and uses it to resolve extended fields from another.
 
-The GraphQL Foundation's Composite Schema Working Group is now working toward standardization of federation patterns across the ecosystem (not just Apollo's implementation).
+The GraphQL Foundation's Composite Schemas Working Group is now working toward standardization of federation patterns across the ecosystem (not just Apollo's implementation).
 
 **Ref:** GraphQL Foundation, "GraphQL federation" (2026); Apollo GraphQL, "Introduction to Apollo Federation"; Contentful, "Understanding federated GraphQL" (2024).
 
@@ -233,7 +233,7 @@ The Pragmatic Engineer newsletter observes that a single engineer historically m
 
 ### 5.2 Core Design Principles
 
-The following principles are synthesized from multiple sources (IBM Watson SDK guidelines, Auth0 SDK principles, Stripe's practices, Eyal Lantzman's SDK taxonomy):
+The following principles are synthesized from multiple sources (Microsoft Azure SDK Design Guidelines, Stripe's practices, Eyal Lantzman's SDK taxonomy):
 
 **Idiomatic:** The SDK must feel natural in its target language. A Python SDK should use snake_case, context managers, and async/await. A Java SDK should use builders and typed exceptions. A common failure mode is when SDK authors who primarily write in one language transplant that language's idioms into another (e.g., Java-style verbose camelCase method names in a Python library).
 
@@ -245,7 +245,7 @@ The following principles are synthesized from multiple sources (IBM Watson SDK g
 
 **Dependable:** Minimize breaking changes. Follow Semantic Versioning (SemVer) rigorously. Be explicit about what is public API and what is internal.
 
-**Ref:** Auth0, "Guiding Principles for Building SDKs"; Lantzman, E. "SDKs: Principles and Best Practices" (2025); IBM Watson, "SDK Guidelines" (GitHub); Shake, "SDK design best practices" (2025).
+**Ref:** Microsoft Azure SDK Design Guidelines, https://azure.github.io/azure-sdk/general_introduction.html; Lantzman, E. "SDKs: Principles and Best Practices" (2025); Shake, "SDK design best practices" (2025).
 
 ### 5.3 Thin vs. Thick SDKs
 
@@ -271,7 +271,7 @@ Manual authoring produces higher-quality developer experiences but scales poorly
 
 ### 6.1 APIs as Products
 
-Stripe's internal philosophy — reportedly codified in a 20-page internal API design document — treats APIs as products and developers as customers. This framing has consequences: every endpoint undergoes cross-functional design review, documentation quality is a factor in engineering career advancement, and backward compatibility is maintained indefinitely (since 2011).
+Stripe's internal philosophy — where it is reportedly not unusual to circulate 20-page design documents proposing individual API changes — treats APIs as products and developers as customers. This framing has consequences: every endpoint undergoes cross-functional design review, documentation quality is a factor in engineering career advancement, and backward compatibility is maintained indefinitely (since 2011).
 
 Practical patterns from Stripe that generalize:
 
@@ -293,9 +293,11 @@ Error responses are part of the public interface and deserve as much design atte
 - Include a `doc_url` linking to documentation for the specific error.
 - Include a `request_id` for support and debugging correlation.
 
-Anti-patterns: returning `200 OK` with an error payload, using generic messages like "Unknown error" or "Something went wrong," and returning different error structures from different endpoints.
+RFC 9457 (July 2023, successor to RFC 7807) defines the `application/problem+json` media type as the industry standard for structured error responses. It provides a consistent format with `type`, `title`, `status`, `detail`, and `instance` fields. Major frameworks (ASP.NET, Spring Boot, Quarkus) now have built-in support.
 
-**Ref:** Apidog, "Why Stripe's API is the Gold Standard" (2026); Shake, "SDK design best practices" (2025).
+Anti-patterns: returning `200 OK` with an error payload, using generic messages like "Unknown error" or "Something went wrong," returning different error structures from different endpoints, and ignoring RFC 9457 when designing new APIs.
+
+**Ref:** Apidog, "Why Stripe's API is the Gold Standard" (2026); Shake, "SDK design best practices" (2025); IETF, RFC 9457, "Problem Details for HTTP APIs" (2023).
 
 ### 6.3 Rate Limiting
 
@@ -318,9 +320,11 @@ Standard patterns:
 
 Security fundamentals: enforce HTTPS everywhere, validate and sanitize all input, implement authentication and authorization on every request, use short-lived tokens with refresh mechanisms, and log all access for audit.
 
+RFC 9700 (January 2025) codified OAuth 2.0 security best practices as mandatory, deprecating the Implicit Grant and Resource Owner Password Credentials (ROPC) flows. The OWASP API Security Top 10 remains the definitive threat model for API-specific vulnerabilities — covering broken object-level authorization, broken authentication, excessive data exposure, and injection attacks among others.
+
 For GraphQL specifically: field-level authorization is critical because a single query can traverse multiple resource types with different access requirements.
 
-**Ref:** TechGenyz, "API Design Best Practices" (2026); Auth0, "Guiding Principles for Building SDKs."
+**Ref:** TechGenyz, "API Design Best Practices" (2026); IETF, RFC 9700, "OAuth 2.0 Security Best Current Practice" (2025); OWASP, "API Security Top 10" (2023).
 
 ### 6.5 Documentation and Developer Experience
 
@@ -344,7 +348,7 @@ GraphQL adds introspection as a documentation mechanism — tools can auto-gener
 | Format       | Domain              | Status (2025)                        |
 |-------------|---------------------|--------------------------------------|
 | OpenAPI 3.2 | REST APIs           | Dominant standard; evolved from Swagger |
-| AsyncAPI 3.0 | Event-driven APIs  | Standard for WebSocket, message-driven architectures |
+| AsyncAPI 3.0/3.1 | Event-driven APIs  | Standard for WebSocket, message-driven architectures; 3.1.0 adds ROS 2 binding |
 | GraphQL SDL | GraphQL APIs        | Standard schema definition language   |
 | Protobuf    | gRPC                | Binary IDL, code generation focused   |
 | TypeSpec     | Multi-target (Microsoft) | Newer; generates OpenAPI, protobuf, etc. from a single source |
@@ -396,8 +400,7 @@ There is no universal answer. Fielding's own dissertation was explicitly about *
 - The Guild / Hive. "Proven Schema Designs and Best Practices – Part 1" (2025). https://the-guild.dev/graphql/hive/blog/schema-design-best-practices-part-1
 - Orosz, G. & Pradet, Q. "Building great SDKs." The Pragmatic Engineer (2025). https://newsletter.pragmaticengineer.com/p/building-great-sdks
 - Lantzman, E. "SDKs: Principles and Best Practices" (2025). https://eyallantzman.substack.com/p/sdks-principles-and-best-practices
-- Auth0. "Guiding Principles for Building SDKs." https://auth0.com/blog/guiding-principles-for-building-sdks/
-- IBM Watson Developer Cloud. "SDK Guidelines." https://github.com/watson-developer-cloud/api-guidelines/blob/master/sdk-guidelines.md
+- Microsoft Azure. "Azure SDK Design Guidelines." https://azure.github.io/azure-sdk/general_introduction.html
 - Microsoft Azure Architecture Center. "Web API Design Best Practices." https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design
 - AWS. "GraphQL vs REST API." https://aws.amazon.com/compare/the-difference-between-graphql-and-rest/
 - Postman Blog. "GraphQL vs REST" (2025). https://blog.postman.com/graphql-vs-rest/
@@ -415,3 +418,7 @@ There is no universal answer. Fielding's own dissertation was explicitly about *
 - Adidas API Guidelines. "Changes and Versioning." https://adidas.gitbook.io/api-guidelines/rest-api-guidelines/evolution/versioning
 - Shake. "SDK design best practices" (2025). https://www.shakebugs.com/blog/sdk-design-best-practices/
 - OpenAPI Specification. "Best Practices for API Design." https://openapispec.com/docs/best-practices-for-api-design/
+- IETF. RFC 9457, "Problem Details for HTTP APIs" (2023). https://www.rfc-editor.org/rfc/rfc9457
+- IETF. RFC 9700, "OAuth 2.0 Security Best Current Practice" (2025). https://www.rfc-editor.org/rfc/rfc9700
+- OWASP. "API Security Top 10" (2023). https://owasp.org/API-Security/
+- Microsoft Azure. "Azure SDK Design Guidelines." https://azure.github.io/azure-sdk/general_introduction.html

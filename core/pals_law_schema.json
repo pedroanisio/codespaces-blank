@@ -1,0 +1,500 @@
+{
+  "version": "1.5.4",
+  "content_hash": "d53ccc7f3a35a359",
+  "symbols": [
+    {
+      "name": "M_class",
+      "latex": "\\mathcal{M}",
+      "type_signature": "Set",
+      "definition": "Class of autoregressive transformer language models",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "M",
+      "latex": "M",
+      "type_signature": "M \u2208 M_class",
+      "definition": "Any concrete model with parameter set \u03b8",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "theta",
+      "latex": "\\theta",
+      "type_signature": "\u211d^d",
+      "definition": "Parameter set of model M",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "X",
+      "latex": "\\mathcal{X}",
+      "type_signature": "Set",
+      "definition": "Space of all valid input prompts",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "Y",
+      "latex": "\\mathcal{Y}",
+      "type_signature": "Set",
+      "definition": "Space of all possible output sequences",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "x",
+      "latex": "x",
+      "type_signature": "x \u2208 X",
+      "definition": "Any specific prompt",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "y",
+      "latex": "y",
+      "type_signature": "y \u2208 Y",
+      "definition": "One sampled output: y ~ P_\u03b8(\u00b7|x)",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "Sigma",
+      "latex": "\\Sigma",
+      "type_signature": "X \u21c0 Y (partial function)",
+      "definition": "Ground-truth semantic specification",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "epsilon",
+      "latex": "\\varepsilon",
+      "type_signature": "Y \u00d7 X \u2192 {0, 1}",
+      "definition": "Boolean error predicate: \u03b5(y,x) = 1 iff y deviates from \u03a3(x)",
+      "section_defined": "3.1"
+    },
+    {
+      "name": "D",
+      "latex": "\\mathcal{D}",
+      "type_signature": "Distribution over X",
+      "definition": "Realistic task distribution (see working definition \u00a73.2)",
+      "section_defined": "3.2"
+    },
+    {
+      "name": "delta",
+      "latex": "\\delta",
+      "type_signature": "\u211d, \u03b4 > 0",
+      "definition": "Non-negligible lower bound on expected error rate",
+      "section_defined": "3.2"
+    },
+    {
+      "name": "P_pipeline",
+      "latex": "\\mathcal{P}",
+      "type_signature": "(M_1, ..., M_n)",
+      "definition": "Pipeline of n sequential LLM calls",
+      "section_defined": "3.4"
+    },
+    {
+      "name": "p_i",
+      "latex": "p_i",
+      "type_signature": "p_i \u2208 [\u03b4, 1)",
+      "definition": "Per-step error probability: P(\u03b5(M_i(x_i), x_i) = 1) \u2265 \u03b4 > 0 (uniform lower bound from \u00a73.2)",
+      "section_defined": "3.4"
+    },
+    {
+      "name": "D_c",
+      "latex": "D_c(M)",
+      "type_signature": "\u211d\u207a",
+      "definition": "Detection difficulty of error class c for model M",
+      "section_defined": "8"
+    },
+    {
+      "name": "C_M",
+      "latex": "C(M)",
+      "type_signature": "\u211d\u207a",
+      "definition": "Model capability (requires operational definition)",
+      "section_defined": "8"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "DEF_EPSILON",
+      "name": "Error predicate definition",
+      "section": "3.1",
+      "status": "definition",
+      "latex": "\\varepsilon(y, x) \\in \\{0, 1\\},\\ \\varepsilon = 1 \\iff y \\text{ deviates from } \\Sigma(x)",
+      "natural_language": "\u03b5 is 1 when model output deviates from ground truth in any dimension of \u00a75. NOTE: \u03a3 is a partial function \u2014 \u03b5(y,x) is undefined when \u03a3(x) is undefined (creative/subjective prompts). The operative form's expectation is implicitly restricted to dom(\u03a3).",
+      "depends_on": [],
+      "supported_by": [],
+      "caveats": [
+        "7.1",
+        "7.5"
+      ],
+      "is_falsifiable": false,
+      "falsification_method": null
+    },
+    {
+      "claim_id": "OPERATIVE",
+      "name": "Operative form (The Law)",
+      "section": "3.2",
+      "status": "operative",
+      "latex": "\\forall M \\in \\mathcal{M},\\ \\forall \\text{ realistic } \\mathcal{D}: \\mathbb{E}_{x \\sim \\mathcal{D}}[\\varepsilon(M(x), x)] \\geq \\delta > 0",
+      "natural_language": "For any model and any realistic distribution, expected error rate is non-negligibly above zero",
+      "depends_on": [
+        "DEF_EPSILON"
+      ],
+      "supported_by": [
+        "ji_2023",
+        "maynez_2020",
+        "lin_2022",
+        "kadavath_2022",
+        "perez_2022",
+        "sharma_2023",
+        "kalai_2024"
+      ],
+      "caveats": [
+        "7.1",
+        "7.2",
+        "7.5",
+        "7.6"
+      ],
+      "is_falsifiable": true,
+      "falsification_method": "Produce a model M and a realistic distribution D (per \u00a73.2 working definition) where E[\u03b5(M(x),x)] is zero or negligible (below measurement threshold). Requires operationalizing 'realistic' and 'negligible' for the test domain."
+    },
+    {
+      "claim_id": "EXISTENTIAL",
+      "name": "Existential form",
+      "section": "3.3",
+      "status": "existential",
+      "latex": "\\forall M \\in \\mathcal{M}: \\exists x \\in \\mathcal{X} \\text{ s.t. } P_\\theta(\\varepsilon(M(x),x)=1) > 0",
+      "natural_language": "For every model, there exists at least one input on which incorrect output has positive probability",
+      "depends_on": [
+        "DEF_EPSILON"
+      ],
+      "supported_by": [
+        "ARG_6.2"
+      ],
+      "caveats": [
+        "7.1"
+      ],
+      "is_falsifiable": true,
+      "falsification_method": "Prove that a specific model M has P(\u03b5=1) = 0 for ALL x \u2208 X. This would require proving the model solves arbitrary NLU \u2014 equivalent to proving a finite-parameter system represents all computable functions."
+    },
+    {
+      "claim_id": "PIPELINE",
+      "name": "Pipeline corollary",
+      "section": "3.4",
+      "status": "corollary",
+      "latex": "P(\\text{error-free pipeline}) = \\prod_{i=1}^{n}(1-p_i) \\to 0 \\text{ as } n \\to \\infty",
+      "natural_language": "Unverified pipeline failure probability approaches 1 as pipeline length grows. Requires \u03a3p_i = \u221e (e.g. p_i \u2265 \u03b4 > 0 uniform lower bound); if p_i decreases fast enough (e.g. p_i = 2^{-i}), the product converges and pipeline error stays bounded below 1.",
+      "depends_on": [
+        "OPERATIVE"
+      ],
+      "supported_by": [],
+      "caveats": [
+        "7.3"
+      ],
+      "is_falsifiable": true,
+      "falsification_method": "Show that pipeline errors are so correlated (non-independent) that the product formula fundamentally mischaracterizes the risk direction, or that per-step error probabilities decrease fast enough (p_i = o(1/i)) for \u03a3p_i < \u221e, making the product converge to a positive value. \u00a77.3 already acknowledges the independence assumption is approximate."
+    },
+    {
+      "claim_id": "ARG_6.1",
+      "name": "Probabilistic generation \u2260 deterministic truth",
+      "section": "6.1",
+      "status": "informal_arg",
+      "latex": "P_\\theta(y \\mid x) = \\prod_{t=1}^{|y|} P_\\theta(y_t \\mid y_{<t}, x)",
+      "natural_language": "No learned distribution over a discrete vocabulary exactly matches \u03a3 on all inputs",
+      "depends_on": [
+        "DEF_EPSILON"
+      ],
+      "supported_by": [
+        "ji_2023",
+        "maynez_2020",
+        "lin_2022"
+      ],
+      "caveats": [],
+      "is_falsifiable": false,
+      "falsification_method": null
+    },
+    {
+      "claim_id": "ARG_6.2",
+      "name": "Finite parameters cannot encode unbounded world knowledge",
+      "section": "6.2",
+      "status": "informal_arg",
+      "latex": "",
+      "natural_language": "Pigeonhole: |\u03b8| finite, true propositions unbounded \u2192 some must be unrepresented",
+      "depends_on": [],
+      "supported_by": [],
+      "caveats": [],
+      "is_falsifiable": false,
+      "falsification_method": null
+    },
+    {
+      "claim_id": "ARG_6.3",
+      "name": "Evaluation is not generation",
+      "section": "6.3",
+      "status": "informal_arg",
+      "latex": "",
+      "natural_language": "Correct internal belief may not surface faithfully in sampled output",
+      "depends_on": [],
+      "supported_by": [
+        "kadavath_2022"
+      ],
+      "caveats": [],
+      "is_falsifiable": true,
+      "falsification_method": "Show that sampling always faithfully surfaces encoded beliefs."
+    },
+    {
+      "claim_id": "COR1",
+      "name": "Appearance of correctness \u2260 correctness",
+      "section": "8",
+      "status": "corollary",
+      "latex": "",
+      "natural_language": "Finite test-set validation does not demonstrate error-freedom on unverified inputs",
+      "depends_on": [
+        "OPERATIVE"
+      ],
+      "supported_by": [],
+      "caveats": [],
+      "is_falsifiable": false,
+      "falsification_method": null
+    },
+    {
+      "claim_id": "COR2",
+      "name": "Trust accumulation prohibited",
+      "section": "8",
+      "status": "corollary",
+      "latex": "",
+      "natural_language": "Observing correct outputs on x_1..x_k provides no guarantee about P(\u03b5=1) on a new input x_{k+1} not in {x_1..x_k}. The operative form's bound is unconditional \u2014 no finite sample inductively lowers it.",
+      "depends_on": [
+        "OPERATIVE"
+      ],
+      "supported_by": [],
+      "caveats": [],
+      "is_falsifiable": true,
+      "falsification_method": "Show that observing correct outputs on a finite set of inputs provides a provable bound on P(\u03b5=1) for unseen inputs."
+    },
+    {
+      "claim_id": "COR3",
+      "name": "Verification scope must match error taxonomy",
+      "section": "8",
+      "status": "corollary",
+      "latex": "",
+      "natural_language": "Partial verification (e.g. schema-only) does not cover other error classes",
+      "depends_on": [
+        "OPERATIVE",
+        "DEF_EPSILON"
+      ],
+      "supported_by": [],
+      "caveats": [
+        "7.4"
+      ],
+      "is_falsifiable": false,
+      "falsification_method": null
+    },
+    {
+      "claim_id": "COR4",
+      "name": "Silent acceptance is an architectural defect",
+      "section": "8",
+      "status": "corollary",
+      "latex": "",
+      "natural_language": "Passing LLM output without a declared verification boundary is an architectural omission",
+      "depends_on": [
+        "OPERATIVE"
+      ],
+      "supported_by": [],
+      "caveats": [],
+      "is_falsifiable": false,
+      "falsification_method": null
+    },
+    {
+      "claim_id": "COR5",
+      "name": "Capability-Detection Asymmetry (Hypothesis)",
+      "section": "8",
+      "status": "hypothesis",
+      "latex": "\\frac{\\partial D_c}{\\partial C} \\leq 0 \\text{ (structural)}, > 0 \\text{ (semantic/epistemic)}",
+      "natural_language": "As model capability grows, structural errors get easier to detect while semantic errors get harder",
+      "depends_on": [
+        "OPERATIVE"
+      ],
+      "supported_by": [
+        "lin_2022"
+      ],
+      "caveats": [],
+      "is_falsifiable": true,
+      "falsification_method": "Operationalize C(M) and D_c(M), then show \u2202D_c/\u2202C \u2264 0 for a semantic class (e.g. hallucination detection gets easier with more capable models)."
+    }
+  ],
+  "error_classes": [
+    {
+      "identifier": "ERR_HALLUCINATION",
+      "name": "Hallucination",
+      "definition": "Asserting a false factual claim with apparent confidence",
+      "detection_strategy_type": "semantic",
+      "corollary5_sign": "gt_0",
+      "example": "Fabricated citation with real author name, plausible DOI"
+    },
+    {
+      "identifier": "ERR_OMISSION",
+      "name": "Omission",
+      "definition": "Silently dropping required content",
+      "detection_strategy_type": "structural",
+      "corollary5_sign": "leq_0",
+      "example": "Instructions followed partially, constraints missed"
+    },
+    {
+      "identifier": "ERR_SCHEMA",
+      "name": "Schema violation",
+      "definition": "Output structurally non-conformant with declared format",
+      "detection_strategy_type": "structural",
+      "corollary5_sign": "leq_0",
+      "example": "JSON parse failure, missing keys"
+    },
+    {
+      "identifier": "ERR_TRUNCATION",
+      "name": "Partial completion",
+      "definition": "Output cut short due to token budget or stopping heuristics",
+      "detection_strategy_type": "structural",
+      "corollary5_sign": "leq_0",
+      "example": "Response ends mid-sentence"
+    },
+    {
+      "identifier": "ERR_SYCOPHANCY",
+      "name": "Sycophantic drift",
+      "definition": "Output shaped by perceived user preference rather than truth",
+      "detection_strategy_type": "semantic",
+      "corollary5_sign": "gt_0",
+      "example": "Model agrees with user's incorrect premise"
+    },
+    {
+      "identifier": "ERR_INSTRUCTION",
+      "name": "Instruction failure",
+      "definition": "Violation of explicit constraints stated in the prompt",
+      "detection_strategy_type": "structural",
+      "corollary5_sign": "leq_0",
+      "example": "Wrong language, exceeded length limit"
+    },
+    {
+      "identifier": "ERR_CALIBRATION",
+      "name": "Calibration failure",
+      "definition": "Expressed confidence misaligned with actual reliability",
+      "detection_strategy_type": "semantic",
+      "corollary5_sign": "gt_0",
+      "example": "High confidence on incorrect claim"
+    },
+    {
+      "identifier": "ERR_REASONING",
+      "name": "Reasoning failure",
+      "definition": "Correct facts, invalid composition \u2014 multi-step inference breakdowns",
+      "detection_strategy_type": "semantic",
+      "corollary5_sign": "gt_0",
+      "example": "A\u2192B known, B\u2192A fails; logical contradiction across steps"
+    },
+    {
+      "identifier": "ERR_SEMANTIC",
+      "name": "Semantic drift",
+      "definition": "Correct surface form, wrong meaning",
+      "detection_strategy_type": "semantic",
+      "corollary5_sign": "gt_0",
+      "example": "Paraphrase that inverts the intended claim"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "contract_block",
+      "name": "Full Contract Block",
+      "section": "9.1",
+      "scope": "function",
+      "contains_operative_form": true,
+      "contains_existential_form": true,
+      "contains_pipeline_corollary": true,
+      "contains_independence_caveat": true,
+      "contains_error_checklist": true,
+      "contains_spec_version_field": true
+    },
+    {
+      "artifact_id": "short_form",
+      "name": "Short-Form",
+      "section": "9.2",
+      "scope": "project",
+      "contains_operative_form": true,
+      "contains_existential_form": false,
+      "contains_pipeline_corollary": false,
+      "contains_independence_caveat": false,
+      "contains_error_checklist": false,
+      "contains_spec_version_field": false
+    },
+    {
+      "artifact_id": "inline_banner",
+      "name": "Inline Banner",
+      "section": "9.3",
+      "scope": "inline",
+      "contains_operative_form": false,
+      "contains_existential_form": false,
+      "contains_pipeline_corollary": false,
+      "contains_independence_caveat": false,
+      "contains_error_checklist": false,
+      "contains_spec_version_field": false
+    },
+    {
+      "artifact_id": "claudemd_block",
+      "name": "CLAUDE.md Integration Block",
+      "section": "9.4",
+      "scope": "repository",
+      "contains_operative_form": true,
+      "contains_existential_form": false,
+      "contains_pipeline_corollary": true,
+      "contains_independence_caveat": true,
+      "contains_error_checklist": false,
+      "contains_spec_version_field": true
+    }
+  ],
+  "dependency_graph": {
+    "DEF_EPSILON": [],
+    "OPERATIVE": [
+      "DEF_EPSILON"
+    ],
+    "EXISTENTIAL": [
+      "DEF_EPSILON"
+    ],
+    "PIPELINE": [
+      "OPERATIVE"
+    ],
+    "ARG_6.1": [
+      "DEF_EPSILON"
+    ],
+    "ARG_6.2": [],
+    "ARG_6.3": [],
+    "COR1": [
+      "OPERATIVE"
+    ],
+    "COR2": [
+      "OPERATIVE"
+    ],
+    "COR3": [
+      "OPERATIVE",
+      "DEF_EPSILON"
+    ],
+    "COR4": [
+      "OPERATIVE"
+    ],
+    "COR5": [
+      "OPERATIVE"
+    ]
+  },
+  "structural_error_classes": [
+    "ERR_OMISSION",
+    "ERR_SCHEMA",
+    "ERR_TRUNCATION",
+    "ERR_INSTRUCTION"
+  ],
+  "semantic_error_classes": [
+    "ERR_HALLUCINATION",
+    "ERR_SYCOPHANCY",
+    "ERR_CALIBRATION",
+    "ERR_REASONING",
+    "ERR_SEMANTIC"
+  ],
+  "_signature": {
+    "signature_version": "1",
+    "algorithm": "sha256",
+    "tool_id": "pals-check",
+    "tool_version": "1.0.0",
+    "signed_at": "2026-04-03T10:24:12Z",
+    "source_document_hash": "d53ccc7f3a35a359",
+    "payload_digest": "5f8b68ec6fcf17a9232fddc0b712382c1fe63b96cbad71574c626d81789aad4d",
+    "seal": "9e91f1120b1ce098263d8224c115ba741c76ea7157722b7efa77dc437a9c759c"
+  }
+}
