@@ -3,6 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from lib import extract, geometry, io as figure_io, render, strokes
+from lib.model import FigureData, ParametricFit
+from lib.profile import find_anatomical_landmarks
+from lib.geometry import fit_bspline_segments
 
 
 def process_image(image_path: str | Path, output_dir: str | Path, image_id: str) -> dict[str, str]:
@@ -13,13 +16,13 @@ def process_image(image_path: str | Path, output_dir: str | Path, image_id: str)
     json_dir.mkdir(parents=True, exist_ok=True)
     processed_dir.mkdir(parents=True, exist_ok=True)
 
-    data = _extract_figure(image_path)
+    figure = _extract_figure(image_path)
 
     json_path = json_dir / f"{image_id}.json"
     png_path = processed_dir / f"{image_id}.png"
-    figure_io.save_figure(data, json_path)
+    figure_io.save_figure(figure.to_dict(), json_path)
     render.draw(
-        data,
+        figure.to_dict(),
         str(png_path),
         title=f"Regenerated from {image_path.name}",
     )
@@ -31,7 +34,7 @@ def process_image(image_path: str | Path, output_dir: str | Path, image_id: str)
     }
 
 
-def _extract_figure(image_path: Path) -> dict:
+def _extract_figure(image_path: Path) -> FigureData:
     gray = extract.load_gray(str(image_path))
     height, width = gray.shape
 
@@ -54,18 +57,35 @@ def _extract_figure(image_path: Path) -> dict:
         contour_max_dx=contour_max * 1.15,
     )
 
-    return {
-        "contour": contour.round(4).tolist(),
-        "strokes": [stroke.tolist() for stroke in detail_strokes],
-        "meta": figure_io.build_meta(
-            contour_points=len(contour),
-            detail_strokes=len(detail_strokes),
-            source=image_path.name,
-            image_size=[width, height],
-            midline_px=float(bounds.midline_px),
-            y_top_px=bounds.y_top,
-            y_bot_px=bounds.y_bot,
-            fig_height_px=bounds.fig_height_px,
-            scale_px_to_hu=bounds.scale,
-        ),
-    }
+    # Anatomical landmarks + parametric fit
+    landmarks = find_anatomical_landmarks(contour)
+    parametric = None
+    if len(landmarks) >= 2:
+        segments, max_err, mean_err = fit_bspline_segments(contour, landmarks)
+        parametric = ParametricFit(
+            segments=segments,
+            max_error=max_err,
+            mean_error=mean_err,
+            n_original_points=len(contour),
+            n_parameters=sum(s.n_parameters for s in segments),
+        )
+
+    meta = figure_io.build_meta(
+        contour_points=len(contour),
+        detail_strokes=len(detail_strokes),
+        source=image_path.name,
+        image_size=[width, height],
+        midline_px=float(bounds.midline_px),
+        y_top_px=bounds.y_top,
+        y_bot_px=bounds.y_bot,
+        fig_height_px=bounds.fig_height_px,
+        scale_px_to_hu=bounds.scale,
+    )
+
+    return FigureData(
+        contour=contour,
+        strokes=detail_strokes,
+        meta=meta,
+        landmarks=landmarks,
+        parametric=parametric,
+    )

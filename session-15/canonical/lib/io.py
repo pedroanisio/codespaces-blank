@@ -9,8 +9,11 @@ from typing import Any
 REQUIRED_KEYS = {"contour", "strokes", "meta"}
 
 
-def load_figure(path: str | Path) -> dict[str, Any]:
-    """Load a figure JSON and validate required keys."""
+def load_figure(path: str | Path, *, as_model: bool = False) -> "dict[str, Any] | FigureData":
+    """Load a figure JSON and validate required keys.
+
+    If *as_model* is True, returns a FigureData instance instead of a raw dict.
+    """
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Figure JSON not found: {path}")
@@ -21,6 +24,10 @@ def load_figure(path: str | Path) -> dict[str, Any]:
     missing = REQUIRED_KEYS - set(data.keys())
     if missing:
         raise ValueError(f"{path.name}: missing required keys {missing}")
+
+    if as_model:
+        from .model import FigureData
+        return FigureData.from_dict(data)
 
     return data
 
