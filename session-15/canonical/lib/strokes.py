@@ -22,10 +22,9 @@ def _to_headunits(
 
 
 def from_contours(
-    gray: np.ndarray,
+    binary: np.ndarray,
     bounds: BoundingBox,
     *,
-    thresh: int = 200,
     area_max: int = 50000,
     min_pts: int = 5,
     max_pts: int = 60,
@@ -33,10 +32,10 @@ def from_contours(
 ) -> list[np.ndarray]:
     """Extract detail strokes from cv2 contours (right-half, head-unit coords).
 
+    *binary*: pre-cleaned binary mask (guide lines already removed).
     *dx_limit*: if set, reject strokes whose max dx exceeds this value.
     """
-    _, clean = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY_INV)
-    all_contours, _ = cv2.findContours(clean, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    all_contours, _ = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     strokes = []
     for cnt in all_contours:
@@ -168,12 +167,14 @@ def extract_all(
 ) -> list[np.ndarray]:
     """Full stroke extraction: contour-based + skeleton-based, merged.
 
-    *contour_max_dx*: if set, reject strokes exceeding this dx (e.g. 1.15 * silhouette max).
+    Uses *binary_for_strokes* (pre-cleaned, guide lines removed) for both
+    contour-based and skeleton-based extraction.
     """
-    contour_strokes = from_contours(gray, bounds, dx_limit=contour_max_dx)
+    contour_strokes = from_contours(binary_for_strokes, bounds, dx_limit=contour_max_dx)
 
-    _, clean = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
-    all_contours, _ = cv2.findContours(clean, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    all_contours, _ = cv2.findContours(
+        binary_for_strokes, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE,
+    )
 
     skeleton_strokes = from_skeleton(
         binary_for_strokes, bounds,

@@ -55,7 +55,7 @@ def threshold_lines(
 
 
 def remove_guides(binary: np.ndarray) -> np.ndarray:
-    """Remove horizontal and vertical guide lines via morphological opening."""
+    """Remove long solid horizontal and vertical guide lines via morphological opening."""
     h, w = binary.shape
 
     horiz_k = cv2.getStructuringElement(cv2.MORPH_RECT, (w // 4, 1))
@@ -76,20 +76,44 @@ def remove_guides(binary: np.ndarray) -> np.ndarray:
     return clean
 
 
+def remove_text_components(
+    binary: np.ndarray,
+    *,
+    min_area: int = 0,
+    area_ratio: float = 0.002,
+) -> np.ndarray:
+    """Remove small connected components (text labels, stray marks) from binary mask.
+
+    Keeps only components whose area >= max(min_area, total_image_area * area_ratio).
+    The figure body is always the largest component and is preserved.
+    """
+    n_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary)
+    h, w = binary.shape
+    threshold = max(min_area, int(h * w * area_ratio))
+
+    clean = np.zeros_like(binary)
+    for i in range(1, n_labels):  # skip background (0)
+        if stats[i, cv2.CC_STAT_AREA] >= threshold:
+            clean[labels == i] = 255
+    return clean
+
+
 def find_bounds(
     binary: np.ndarray,
     thresh_ratio: float = 0.01,
+    midline_px: float | None = None,
 ) -> BoundingBox:
     """Find figure bounding box and midline from a binary ink mask."""
-    col_sums = binary.sum(axis=0)
-    row_sums = binary.sum(axis=1)
+    coords = np.argwhere(binary > 0)
+    if len(coords) == 0:
+        raise ValueError("Cannot find bounds in an empty binary mask")
 
-    fig_cols = np.where(col_sums > col_sums.max() * thresh_ratio)[0]
-    fig_rows = np.where(row_sums > row_sums.max() * thresh_ratio)[0]
-
-    x_left, x_right = int(fig_cols[0]), int(fig_cols[-1])
-    y_top, y_bot = int(fig_rows[0]), int(fig_rows[-1])
-    midline_px = (x_left + x_right) / 2.0
+    y_top = int(coords[:, 0].min())
+    y_bot = int(coords[:, 0].max())
+    x_left = int(coords[:, 1].min())
+    x_right = int(coords[:, 1].max())
+    if midline_px is None:
+        midline_px = (x_left + x_right) / 2.0
     fig_height_px = y_bot - y_top
     scale = 8.0 / fig_height_px
 
@@ -102,6 +126,72 @@ def find_bounds(
     )
 
 
+def find_centered_square_crop(
+    binary: np.ndarray,
+    *,
+    close_kernel: int = 9,
+    margin_px: int = 8,
+) -> tuple[tuple[int, int, int, int], np.ndarray]:
+    """Find a square crop anchored to the image top-middle that keeps the main figure.
+
+    The crop is selected from a morphologically closed mask so open line art behaves
+    more like a filled figure. Candidate components are ranked by whether they cross
+    the image vertical midpoint, then by how early they appear from the top-middle
+    search axis, then by area. The final square contains the chosen component while
+    excluding edge notes when possible.
+
+    Returns ``((x_left, y_top, side, centerline_in_crop), crop_mask)``.
+    """
+    height, width = binary.shape
+    center_x = width // 2
+
+    kernel_size = max(3, close_kernel | 1)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+    closed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+    n_labels, labels, stats, _ = cv2.connectedComponentsWithStats(closed)
+    candidates: list[tuple[tuple[int, int, int, int], tuple[int, int, int, int]]] = []
+    for label in range(1, n_labels):
+        x = int(stats[label, cv2.CC_STAT_LEFT])
+        y = int(stats[label, cv2.CC_STAT_TOP])
+        w = int(stats[label, cv2.CC_STAT_WIDTH])
+        h = int(stats[label, cv2.CC_STAT_HEIGHT])
+        area = int(stats[label, cv2.CC_STAT_AREA])
+        touches_center = x <= center_x <= (x + w - 1)
+        center_distance = min(abs(center_x - x), abs(center_x - (x + w - 1)), abs(center_x - (x + w // 2)))
+        score = (1 if touches_center else 0, -y, area, -center_distance)
+        candidates.append((score, (x, y, w, h)))
+
+    if not candidates:
+        raise ValueError("Cannot find a closed figure candidate in the binary mask")
+
+    _, (comp_x, comp_y, comp_w, comp_h) = max(candidates, key=lambda item: item[0])
+
+    left_span = max(0, center_x - comp_x)
+    right_span = max(0, comp_x + comp_w - center_x)
+    side = max(comp_h, left_span + right_span, comp_w) + (margin_px * 2)
+    side = min(side, width, height)
+
+    x_left = center_x - side // 2
+    x_left = max(0, min(x_left, width - side))
+    if comp_x < x_left:
+        x_left = comp_x
+    if comp_x + comp_w > x_left + side:
+        x_left = comp_x + comp_w - side
+    x_left = max(0, min(x_left, width - side))
+
+    centerline_in_crop = center_x - x_left
+
+    y_top = comp_y - margin_px
+    y_top = max(0, min(y_top, height - side))
+    if comp_y + comp_h > y_top + side:
+        y_top = comp_y + comp_h - side
+    y_top = max(0, min(y_top, height - side))
+
+    crop = binary[y_top : y_top + side, x_left : x_left + side].copy()
+    return (x_left, y_top, side, centerline_in_crop), crop
+
+
 def scanline_silhouette(
     binary: np.ndarray,
     bounds: BoundingBox,
@@ -109,11 +199,13 @@ def scanline_silhouette(
     dilate_k: int = 3,
     gap_thresh: float = 0.05,
     max_dx_factor: float | None = None,
+    max_dx_hu: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Scan-line right-half silhouette extraction.
 
     Returns (right_outer, right_inner) as Nx2 arrays in head-unit coords.
-    *max_dx_factor*: if set, clamp outer dx to bounding-box width * factor.
+    *max_dx_factor*: clamp outer dx to bounding-box half-width * factor.
+    *max_dx_hu*: absolute max dx in head-units (overrides max_dx_factor).
     """
     thick = cv2.dilate(
         binary,
@@ -122,7 +214,9 @@ def scanline_silhouette(
     )
 
     max_plausible_dx = None
-    if max_dx_factor is not None:
+    if max_dx_hu is not None:
+        max_plausible_dx = max_dx_hu
+    elif max_dx_factor is not None:
         max_plausible_dx = (bounds.x_right - bounds.midline_px) * bounds.scale * max_dx_factor
 
     right_outer, right_inner = [], []
@@ -248,10 +342,17 @@ def symmetry_check(
 def right_half_contour(
     body: np.ndarray,
     bounds: BoundingBox,
+    *,
+    target_pts: int = 1200,
+    smooth_w1: int = 15,
+    smooth_w2: int = 7,
 ) -> np.ndarray:
     """Extract right-half silhouette contour via cv2.findContours on body mask.
 
     Returns Nx2 array (dx, dy) in head-unit coords, savgol-smoothed.
+
+    *target_pts*: output point count (higher = more detail).
+    *smooth_w1/w2*: savgol window for coarse/fine passes (lower = sharper corners).
     """
     kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     right_mask = body.copy()
@@ -267,14 +368,13 @@ def right_half_contour(
         (raw_pts[:, 1] - bounds.y_top) * bounds.scale,
     ])
 
-    # Two-pass savgol smoothing
     from .geometry import savgol_smooth
-    norm = savgol_smooth(norm, window=35, poly=3)
+    norm = savgol_smooth(norm, window=smooth_w1, poly=3)
 
-    step = max(1, len(norm) // 600)
+    step = max(1, len(norm) // target_pts)
     contour_sub = norm[::step]
 
-    contour_sub = savgol_smooth(contour_sub, window=15, poly=3)
+    contour_sub = savgol_smooth(contour_sub, window=smooth_w2, poly=3)
     return contour_sub
 
 
@@ -319,19 +419,25 @@ def flood_fill_strokes(
     bounds: BoundingBox,
     *,
     ink_thresh: int = 0,
+    min_pts: int = 5,
+    outer_mask_width: int = 5,
 ) -> list[list]:
     """Extract internal detail strokes using skeletonize on flood-fill body interior.
 
     Returns list of stroke point-lists (already in head-unit coords).
+
+    *ink_thresh*: 0 = auto-detect. Higher values capture finer lines.
+    *min_pts*: minimum points per stroke (lower = more small details).
+    *outer_mask_width*: px width to erase around outer contour (lower = less detail lost).
     """
     H, W = gray.shape
     if ink_thresh == 0:
-        ink_thresh = int(max(gray.mean() * 0.55, 130))
+        ink_thresh = int(max(gray.mean() * 0.70, 140))
 
     ink_mask = cv2.inRange(gray, 0, ink_thresh)
 
     outer_thick = np.zeros_like(ink_mask)
-    cv2.drawContours(outer_thick, body_contours[:1], -1, 255, 10)
+    cv2.drawContours(outer_thick, body_contours[:1], -1, 255, outer_mask_width)
     inner_ink = cv2.bitwise_and(ink_mask, cv2.bitwise_not(outer_thick))
     inner_ink[:, int(bounds.midline_px) + 5:] = 0
 
@@ -339,11 +445,9 @@ def flood_fill_strokes(
 
     int_contours, _ = cv2.findContours(skel, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    from .geometry import savgol_smooth
-
     strokes = []
     for c in int_contours:
-        if len(c) < 10:
+        if len(c) < min_pts:
             continue
         pts = c.reshape(-1, 2).astype(float)
         npts = np.column_stack([
@@ -358,16 +462,22 @@ def flood_fill_strokes(
             npts[:, 0] = savgol_filter(npts[:, 0], sw, 2)
             npts[:, 1] = savgol_filter(npts[:, 1], sw, 2)
 
-        strokes.append(npts[::2].tolist())
+        # Keep full resolution (no subsampling)
+        strokes.append(npts.tolist())
 
     return strokes
 
 
-def extract_flood_fill(image_path: str) -> dict:
+def extract_flood_fill(image_path: str) -> "FigureData":
     """Full flood-fill extraction pipeline (v1).
 
-    Returns a complete figure dict with contour, strokes, symmetry, measurements.
+    Returns a FigureData with contour, strokes, landmarks, parametric fit,
+    symmetry, and measurements.
     """
+    from .model import FigureData, ParametricFit
+    from .profile import find_anatomical_landmarks
+    from .geometry import fit_bspline_segments
+
     gray = load_gray(image_path)
     H, W = gray.shape
 
@@ -387,20 +497,37 @@ def extract_flood_fill(image_path: str) -> dict:
 
     strokes = flood_fill_strokes(gray, body_contours, bounds)
 
-    return {
-        "meta": {
-            "source": image_path,
-            "image_size": [W, H],
-            "midline_px": round(bounds.midline_px, 1),
-            "y_top_px": bounds.y_top,
-            "y_bot_px": bounds.y_bot,
-            "fig_height_px": bounds.fig_height_px,
-            "scale_px_to_hu": round(bounds.scale, 6),
-            "contour_points": len(contour),
-            "detail_strokes": len(strokes),
-        },
-        "symmetry": sym,
-        "contour": contour.round(4).tolist(),
-        "measurements": meas,
-        "strokes": strokes,
+    # Anatomical landmarks + parametric fit
+    landmarks = find_anatomical_landmarks(contour)
+    parametric = None
+    if len(landmarks) >= 2:
+        segments, max_err, mean_err = fit_bspline_segments(contour, landmarks)
+        parametric = ParametricFit(
+            segments=segments,
+            max_error=max_err,
+            mean_error=mean_err,
+            n_original_points=len(contour),
+            n_parameters=sum(s.n_parameters for s in segments),
+        )
+
+    meta = {
+        "source": image_path,
+        "image_size": [W, H],
+        "midline_px": round(bounds.midline_px, 1),
+        "y_top_px": bounds.y_top,
+        "y_bot_px": bounds.y_bot,
+        "fig_height_px": bounds.fig_height_px,
+        "scale_px_to_hu": round(bounds.scale, 6),
+        "contour_points": len(contour),
+        "detail_strokes": len(strokes),
     }
+
+    return FigureData(
+        contour=contour,
+        strokes=[np.array(s) if not isinstance(s, np.ndarray) else s for s in strokes],
+        meta=meta,
+        landmarks=landmarks,
+        parametric=parametric,
+        symmetry=sym,
+        measurements=meas,
+    )

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image Regenerator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f1e8;
+      --surface: rgba(255, 252, 246, 0.92);
+      --ink: #1f1a17;
+      --accent: #b24c2a;
+      --accent-soft: #e9c3b2;
+      --line: rgba(31, 26, 23, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(178, 76, 42, 0.18), transparent 28%),
+        linear-gradient(135deg, #efe5d6 0%, var(--bg) 45%, #e8ddd0 100%);
+      min-height: 100vh;
+    }
+
+    main {
+      width: min(1100px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2rem 0 3rem;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 1.5rem;
+      box-shadow: 0 20px 60px rgba(49, 34, 24, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    h1, h2, p { margin-top: 0; }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      line-height: 0.95;
+      margin-bottom: 0.75rem;
+    }
+
+    .lede {
+      max-width: 42rem;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    form {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input[type="file"] {
+      flex: 1 1 260px;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 0.9rem 1.4rem;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .flash {
+      margin-top: 1rem;
+      padding: 0.9rem 1rem;
+      border-radius: 14px;
+      background: #fff1ec;
+      border: 1px solid #efc5b6;
+    }
+
+    .results {
+      margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .card header {
+      padding: 1rem 1rem 0;
+    }
+
+    .frame {
+      aspect-ratio: 4 / 5;
+      background: linear-gradient(180deg, #fffaf1 0%, #f0e6d6 100%);
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+
+    .frame img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      box-shadow: 0 10px 30px rgba(31, 26, 23, 0.12);
+    }
+
+    .meta {
+      padding: 0 1rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.15em;
+    }
+
+    @media (max-width: 820px) {
+      .results {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <h1>Upload an image.<br>See the regenerated mirror beside it.</h1>
+      <p class="lede">Choose a figure image, run the existing extraction pipeline, and compare the original file with the regenerated mirrored output in one screen.</p>
+
+      <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+        <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp,.bmp" required>
+        <button type="submit">Process image</button>
+      </form>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% if result %}
+        <section class="results">
+          <article class="card">
+            <header>
+              <h2>Original image</h2>
+            </header>
+            <div class="frame">
+              <img src="{{ result.original_url }}" alt="Original uploaded image">
+            </div>
+            <div class="meta">
+              <span>{{ result.original_name }}</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <header>
+              <h2>Regenerated image</h2>
+            </header>
+            <div class="frame">
+              <img src="{{ result.processed_url }}" alt="Regenerated mirrored output">
+            </div>
+            <div class="meta">
+              <span>Generated from the extracted contour data</span>
+              <a href="{{ result.json_url }}">Download JSON</a>
+            </div>
+          </article>
+        </section>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

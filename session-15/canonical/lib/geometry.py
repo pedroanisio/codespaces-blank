@@ -1,9 +1,12 @@
-"""Contour geometry — resample, smooth, clamp, close gaps, palindrome dedup.
+"""Contour geometry — resample, smooth, clamp, close gaps, palindrome dedup, B-spline fit.
 
 All functions are pure: np.ndarray in, np.ndarray out, no I/O.
 """
 
+from __future__ import annotations
+
 import numpy as np
+from scipy.interpolate import splev, splprep
 from scipy.ndimage import uniform_filter1d
 from scipy.signal import savgol_filter
 
@@ -155,3 +158,162 @@ def weighted_average(
     """Weighted average of same-length contours, then smooth + clamp."""
     result = sum(weights[name] * contours[name] for name in weights)
     return smooth(result)
+
+
+# ═══════════════════════════════════════════════════════════════
+#  Parametric B-spline fitting
+# ═══════════════════════════════════════════════════════════════
+
+
+def _fit_segment(
+    points: np.ndarray,
+    smoothing: float | None = None,
+    degree: int = 3,
+) -> tuple[list[float], list[float], list[float], int] | None:
+    """Fit a single parametric cubic B-spline to an Nx2 point array.
+
+    Returns (knots, coeffs_dx, coeffs_dy, degree), or None if the segment
+    is too short to fit.
+    *smoothing*: scipy splprep `s` parameter. None = auto.
+    """
+    n = len(points)
+    k = min(degree, n - 1)
+    if n < 4 or k < 1:
+        return None
+
+    s = smoothing if smoothing is not None else float(n) * 0.1
+
+    try:
+        tck, _ = splprep([points[:, 0], points[:, 1]], s=s, k=k)
+    except (ValueError, TypeError):
+        return None
+
+    return tck[0].tolist(), tck[1][0].tolist(), tck[1][1].tolist(), k
+
+
+def _evaluate_segment(
+    knots: list[float],
+    coeffs_dx: list[float],
+    coeffs_dy: list[float],
+    degree: int,
+    n_points: int = 100,
+) -> np.ndarray:
+    """Evaluate a B-spline segment to n_points."""
+    tck = (np.array(knots), [np.array(coeffs_dx), np.array(coeffs_dy)], degree)
+    u = np.linspace(0, 1, n_points)
+    try:
+        dx, dy = splev(u, tck)
+    except Exception:
+        return np.empty((0, 2))
+    return np.column_stack([dx, dy])
+
+
+def fit_bspline_segments(
+    contour: np.ndarray,
+    landmarks: list,
+    *,
+    smoothing_factor: float = 0.1,
+    degree: int = 3,
+) -> tuple[list[dict], float, float]:
+    """Fit piecewise cubic B-splines to contour segments between landmarks.
+
+    Parameters
+    ----------
+    contour : Nx2 array in head-unit coords.
+    landmarks : list of Landmark objects (must have .index, .name attributes),
+        sorted by index. Only landmarks whose index falls within the outer
+        contour portion (top→bottom) are used.
+    smoothing_factor : multiplied by segment length to get the splprep `s` param.
+    degree : B-spline degree (default 3 = cubic).
+
+    Returns
+    -------
+    (segments, max_error, mean_error) where segments is a list of dicts
+    with keys: label, landmark_start, landmark_end, knots, coeffs_dx,
+    coeffs_dy, degree.
+    """
+    from .model import SplineSegment
+
+    if len(landmarks) < 2:
+        return [], 0.0, 0.0
+
+    # Sort landmarks by contour index (path order, not anatomical dy order)
+    sorted_lms = sorted(landmarks, key=lambda lm: lm.index)
+    indices = [lm.index for lm in sorted_lms]
+    names = [lm.name for lm in sorted_lms]
+
+    segments: list[SplineSegment] = []
+
+    for i in range(len(indices) - 1):
+        start_idx = indices[i]
+        end_idx = indices[i + 1]
+        if end_idx <= start_idx:
+            continue
+
+        seg_points = contour[start_idx : end_idx + 1]
+        if len(seg_points) < 2:
+            continue
+
+        s = float(len(seg_points)) * smoothing_factor
+        result = _fit_segment(seg_points, smoothing=s, degree=degree)
+        if result is None:
+            continue
+        knots, c_dx, c_dy, k = result
+
+        label = f"{names[i]}_to_{names[i + 1]}"
+        segments.append(SplineSegment(
+            label=label,
+            landmark_start=names[i],
+            landmark_end=names[i + 1],
+            knots=knots,
+            coeffs_dx=c_dx,
+            coeffs_dy=c_dy,
+            degree=k,
+        ))
+
+    # Compute reconstruction error
+    all_errors: list[float] = []
+    for seg in segments:
+        si = indices[names.index(seg.landmark_start)]
+        ei = indices[names.index(seg.landmark_end)]
+        original = contour[si : ei + 1]
+
+        reconstructed = _evaluate_segment(
+            seg.knots, seg.coeffs_dx, seg.coeffs_dy, seg.degree,
+            n_points=len(original),
+        )
+
+        if len(reconstructed) == len(original):
+            errors = np.sqrt(np.sum((original - reconstructed) ** 2, axis=1))
+            all_errors.extend(errors.tolist())
+
+    max_err = float(max(all_errors)) if all_errors else 0.0
+    mean_err = float(np.mean(all_errors)) if all_errors else 0.0
+
+    return segments, max_err, mean_err
+
+
+def reconstruct_from_segments(
+    segments: list,
+    points_per_segment: int = 100,
+) -> np.ndarray:
+    """Reconstruct a contour from a list of SplineSegment objects.
+
+    Adjacent segments share their boundary point (the landmark), so the
+    last point of segment N is dropped to avoid duplication.
+    """
+    parts = []
+    for i, seg in enumerate(segments):
+        pts = _evaluate_segment(
+            seg.knots, seg.coeffs_dx, seg.coeffs_dy, seg.degree,
+            n_points=points_per_segment,
+        )
+        # Drop last point except for the final segment (shared with next segment's start)
+        if i < len(segments) - 1:
+            pts = pts[:-1]
+        parts.append(pts)
+
+    if not parts:
+        return np.empty((0, 2))
+
+    return np.vstack(parts)

@@ -1,9 +1,13 @@
 """Contour and stroke profiling — width-at-y, region classification, landmarks, transplant."""
 
+from __future__ import annotations
+
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.ndimage import uniform_filter1d
 from scipy.signal import argrelextrema
+
+from .model import Landmark
 
 
 # Standard body regions: (name, y_lo, y_hi) in head-units
@@ -113,6 +117,117 @@ def find_landmarks(contour: np.ndarray) -> dict[str, int]:
     mid_valleys = [(i, t, d, y) for i, t, d, y in all_extrema if t == "valley" and 2.5 < y < 5.0]
     if mid_valleys:
         landmarks["inner_valley"] = min(mid_valleys, key=lambda x: x[2])[0]
+
+    return landmarks
+
+
+def _outer_portion(contour: np.ndarray) -> tuple[np.ndarray, int]:
+    """Return the outer silhouette (top→bottom) and its end index in the full contour."""
+    split = int(np.argmax(contour[:, 1]))
+    return contour[: split + 1], split
+
+
+def _find_extremum_in_band(
+    dx_smooth: np.ndarray,
+    dy: np.ndarray,
+    dy_lo: float,
+    dy_hi: float,
+    kind: str,
+    order: int = 8,
+) -> int | None:
+    """Find the most prominent local peak or valley within a dy band.
+
+    Prefers actual local extrema (via argrelextrema) when available, falls back
+    to global argmax/argmin within the band if no local extremum exists.
+
+    Returns the index into the input arrays, or None if nothing found.
+    """
+    band_mask = (dy >= dy_lo) & (dy <= dy_hi)
+    if not band_mask.any():
+        return None
+
+    band_indices = np.where(band_mask)[0]
+    band_dx = dx_smooth[band_indices]
+
+    # Try to find local extrema within the band
+    comparator = np.greater if kind == "peak" else np.less
+    local = argrelextrema(band_dx, comparator, order=min(order, max(1, len(band_dx) // 4)))[0]
+
+    if len(local) > 0:
+        # Pick the most prominent local extremum
+        if kind == "peak":
+            best = local[np.argmax(band_dx[local])]
+        else:
+            best = local[np.argmin(band_dx[local])]
+        return int(band_indices[best])
+
+    # Fallback: global extremum in band
+    if kind == "peak":
+        return int(band_indices[np.argmax(band_dx)])
+    return int(band_indices[np.argmin(band_dx)])
+
+
+def find_anatomical_landmarks(contour: np.ndarray) -> list[Landmark]:
+    """Detect anatomical landmarks on the contour using 8HU dy-band constraints.
+
+    Works on the outer silhouette portion (top→bottom). Returns Landmark
+    objects with indices into the *full* contour.
+
+    Detected landmarks (when present):
+        head_peak      — widest point of cranium (dy 0.0–1.2)
+        neck_valley    — narrowest neck point (dy 0.8–2.0)
+        shoulder_peak  — shoulder width (dy 1.2–2.5)
+        waist_valley   — narrowest torso point (dy 2.5–4.0)
+        hip_peak       — widest hip point (dy 3.0–4.5)
+        knee_valley    — narrowest point around knee (dy 5.0–6.5)
+        ankle_valley   — narrowest point near ankle (dy 7.0–8.0)
+    """
+    outer, _ = _outer_portion(contour)
+    n = len(outer)
+
+    # Adaptive smoothing: kernel relative to outer length
+    kernel = max(15, n // 40)
+    if kernel % 2 == 0:
+        kernel += 1
+    dx_smooth = uniform_filter1d(outer[:, 0], kernel, mode="nearest")
+    dy = outer[:, 1]
+
+    # Detection bands: (name, dy_lo, dy_hi, kind)
+    # Ordered top-to-bottom so earlier landmarks can constrain later ones.
+    # Bands reflect the classical 8-head-unit proportional system:
+    #   0.0 crown → 1.0 chin → 2.0 nipples → 3.0 navel → 4.0 crotch
+    #   → 5.0 mid-thigh → 6.0 below-knee → 7.0 mid-calf → 8.0 sole
+    BANDS = [
+        ("head_peak",     0.0, 1.0, "peak"),
+        ("neck_valley",   0.7, 1.5, "valley"),
+        ("shoulder_peak", 1.2, 2.3, "peak"),
+        ("waist_valley",  2.5, 3.5, "valley"),
+        ("hip_peak",      3.2, 4.5, "peak"),
+        ("knee_valley",   5.2, 6.5, "valley"),
+        ("ankle_valley",  7.0, 8.0, "valley"),
+    ]
+
+    landmarks: list[Landmark] = []
+    prev_dy = -1.0
+
+    for name, dy_lo, dy_hi, kind in BANDS:
+        # Constrain: each landmark must be below the previous one
+        effective_lo = max(dy_lo, prev_dy + 0.1)
+        if effective_lo >= dy_hi:
+            continue
+
+        idx = _find_extremum_in_band(dx_smooth, dy, effective_lo, dy_hi, kind)
+        if idx is None:
+            continue
+
+        lm = Landmark(
+            name=name,
+            index=int(idx),
+            dx=float(outer[idx, 0]),
+            dy=float(outer[idx, 1]),
+        )
+        landmarks.append(lm)
+        prev_dy = lm.dy
 
     return landmarks
 

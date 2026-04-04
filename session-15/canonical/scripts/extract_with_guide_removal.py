@@ -20,8 +20,12 @@ def run(image_path: str, output_path: str) -> dict:
     # v4 difference: global-only threshold + guide removal
     binary = extract.threshold_lines(gray, adaptive=False, global_val=215)
     binary = extract.remove_guides(binary)
+    binary = extract.remove_text_components(binary)
 
-    bounds = extract.find_bounds(binary, thresh_ratio=0.03)
+    crop_x, crop_y, crop_side, crop_centerline = extract.find_centered_square_crop(binary)[0]
+    binary = binary[crop_y : crop_y + crop_side, crop_x : crop_x + crop_side]
+    gray = gray[crop_y : crop_y + crop_side, crop_x : crop_x + crop_side]
+    bounds = extract.find_bounds(binary, thresh_ratio=0.03, midline_px=float(crop_centerline))
     max_plausible_dx = (bounds.x_right - bounds.midline_px) * bounds.scale * 1.05
 
     print(f"{Path(image_path).name}: bbox=[{bounds.x_left},{bounds.x_right}]x"
@@ -52,6 +56,7 @@ def run(image_path: str, output_path: str) -> dict:
             detail_strokes=len(all_strokes),
             source=source,
             image_size=[w, h],
+            crop_rect_px=[crop_x, crop_y, crop_side, crop_side],
             midline_px=float(bounds.midline_px),
             y_top_px=bounds.y_top,
             y_bot_px=bounds.y_bot,

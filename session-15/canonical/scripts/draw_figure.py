@@ -1,7 +1,7 @@
 """Render a figure JSON to a mirrored PNG.
 
 Usage:
-    python scripts/draw_figure.py <contours.json> [output.png]
+    python scripts/draw_figure.py <contours.json> [output.png] [--straight-fold]
 """
 
 import sys
@@ -12,20 +12,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from lib import io as fio, render
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python draw_figure.py <contours.json> [output.png]")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    flags = {a for a in sys.argv[1:] if a.startswith("--")}
+
+    if len(args) < 1:
+        print("Usage: python draw_figure.py <contours.json> [output.png] [--straight-fold]")
         sys.exit(1)
 
-    json_path = sys.argv[1]
-    out_path = (
-        sys.argv[2]
-        if len(sys.argv) > 2
-        else json_path.rsplit(".", 1)[0] + ".png"
-    )
+    json_path = args[0]
+    out_path = args[1] if len(args) > 1 else json_path.rsplit(".", 1)[0] + ".png"
+    straight = "--straight-fold" in flags
 
     data = fio.load_figure(json_path)
     meta = data["meta"]
-    print(f"Drawing: {meta['contour_points']} contour pts, "
+    mode = "straight-fold" if straight else "full-mirror"
+    print(f"Drawing ({mode}): {meta['contour_points']} contour pts, "
           f"{meta['detail_strokes']} detail strokes")
 
-    render.draw(data, out_path)
+    render.draw(data, out_path, straight_fold=straight)

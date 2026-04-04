@@ -1,5 +1,8 @@
+from app import create_app
+
+
 def main():
-    print("Hello from canonical!")
+    create_app().run(debug=True)
 
 
 if __name__ == "__main__":

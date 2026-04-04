@@ -26,3 +26,8 @@ node_modules/
 generated/
 *.cover
 *.glb
+session-15/canonical/instance/outputs/
+session-15/canonical/instance/
+session-15/canonical/data/
+session-15/canonical/renders/
+session-15/input/
