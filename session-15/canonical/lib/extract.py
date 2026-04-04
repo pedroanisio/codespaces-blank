@@ -265,6 +265,9 @@ def flood_fill_body_mask(
 ) -> np.ndarray:
     """Create a binary body mask using threshold + flood-fill.
 
+    Guide lines are removed before closing to prevent them from bridging
+    the crotch gap or widening the silhouette.
+
     *bg_thresh*: 0 = auto-detect from image mean.
     """
     H, W = gray.shape
@@ -272,6 +275,17 @@ def flood_fill_body_mask(
         bg_thresh = int(min(gray.mean() + 10, 220))
 
     _, bw = cv2.threshold(gray, bg_thresh, 255, cv2.THRESH_BINARY_INV)
+    bw = remove_guides(bw)
+
+    # Isolate the main figure ink BEFORE morphological closing.
+    # Closing is aggressive (bridges ~15px gaps) and would merge the
+    # figure with nearby rulers, construction marks, or text labels.
+    n_labels, labels, stats, _ = cv2.connectedComponentsWithStats(bw)
+    if n_labels > 2:
+        areas = stats[1:, cv2.CC_STAT_AREA]
+        largest = int(np.argmax(areas)) + 1
+        bw = ((labels == largest).astype(np.uint8)) * 255
+
     kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     closed = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, kern, iterations=5)
 
@@ -286,6 +300,26 @@ def flood_fill_body_mask(
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
         iterations=1,
     )
+
+    # Width clamp: no human figure exceeds ~2.0 HU from midline.
+    # Mask out pixels beyond that to exclude rulers, construction marks, etc.
+    coords = np.argwhere(body > 127)
+    if len(coords) > 0:
+        y_top = int(coords[:, 0].min())
+        y_bot = int(coords[:, 0].max())
+        fig_h = y_bot - y_top
+        # Find midline from head centroid (top 10%)
+        head_cx = []
+        for y in range(y_top, y_top + max(1, int(fig_h * 0.10))):
+            cols = np.where(body[y] > 127)[0]
+            if len(cols) > 3:
+                head_cx.append((cols.min() + cols.max()) / 2.0)
+        if head_cx:
+            mid = float(np.median(head_cx))
+            max_half_px = int(fig_h * (2.0 / 8.0))
+            body[:, : max(0, int(mid) - max_half_px)] = 0
+            body[:, min(W, int(mid) + max_half_px) :] = 0
+
     return body
 
 
@@ -346,6 +380,7 @@ def right_half_contour(
     target_pts: int = 1200,
     smooth_w1: int = 15,
     smooth_w2: int = 7,
+    max_dx_hu: float = 2.0,
 ) -> np.ndarray:
     """Extract right-half silhouette contour via cv2.findContours on body mask.
 
@@ -353,10 +388,21 @@ def right_half_contour(
 
     *target_pts*: output point count (higher = more detail).
     *smooth_w1/w2*: savgol window for coarse/fine passes (lower = sharper corners).
+    *max_dx_hu*: maximum silhouette half-width in head-units. Pixels beyond
+        this distance from the midline are masked out before contour extraction,
+        excluding outstretched arms and other lateral extensions.
     """
     kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     right_mask = body.copy()
     right_mask[:, int(bounds.midline_px) + 3:] = 0
+
+    # Clip to max width — excludes arms extending beyond torso width
+    if max_dx_hu is not None:
+        max_dx_px = int(max_dx_hu / bounds.scale)
+        left_limit = int(bounds.midline_px) - max_dx_px
+        if left_limit > 0:
+            right_mask[:, :left_limit] = 0
+
     right_mask = cv2.morphologyEx(right_mask, cv2.MORPH_CLOSE, kern, iterations=2)
 
     contours, _ = cv2.findContours(right_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -435,6 +481,7 @@ def flood_fill_strokes(
         ink_thresh = int(max(gray.mean() * 0.70, 140))
 
     ink_mask = cv2.inRange(gray, 0, ink_thresh)
+    ink_mask = remove_guides(ink_mask)
 
     outer_thick = np.zeros_like(ink_mask)
     cv2.drawContours(outer_thick, body_contours[:1], -1, 255, outer_mask_width)
@@ -471,8 +518,9 @@ def flood_fill_strokes(
 def extract_flood_fill(image_path: str) -> "FigureData":
     """Full flood-fill extraction pipeline (v1).
 
-    Returns a FigureData with contour, strokes, landmarks, parametric fit,
-    symmetry, and measurements.
+    Isolates the main figure via centered square crop (handles images with
+    multiple figures, text, or reference annotations), then extracts contour,
+    strokes, landmarks, and parametric fit.
     """
     from .model import FigureData, ParametricFit
     from .profile import find_anatomical_landmarks
@@ -481,21 +529,62 @@ def extract_flood_fill(image_path: str) -> "FigureData":
     gray = load_gray(image_path)
     H, W = gray.shape
 
-    body = flood_fill_body_mask(gray)
-    bounds = find_bounds_from_mask(body)
-    sym = symmetry_check(body, bounds)
-    contour = right_half_contour(body, bounds)
-    meas = row_measurements(body, bounds)
+    # Isolate the main figure via a rectangular crop centered on the
+    # largest ink component.  Unlike the older square crop this preserves
+    # the full figure height for portrait images.
+    pre_binary = threshold_lines(gray, adaptive=False, global_val=210)
+    pre_binary = remove_text_components(pre_binary)
+    n_lab, labels_pre, stats_pre, _ = cv2.connectedComponentsWithStats(pre_binary)
+    if n_lab > 1:
+        areas = stats_pre[1:, cv2.CC_STAT_AREA]
+        big = int(np.argmax(areas)) + 1
+        cx = int(stats_pre[big, cv2.CC_STAT_LEFT])
+        cy = int(stats_pre[big, cv2.CC_STAT_TOP])
+        cw = int(stats_pre[big, cv2.CC_STAT_WIDTH])
+        ch = int(stats_pre[big, cv2.CC_STAT_HEIGHT])
+        # Pad 5% around the component
+        pad = max(int(max(cw, ch) * 0.05), 8)
+        crop_x = max(0, cx - pad)
+        crop_y = max(0, cy - pad)
+        crop_w = min(W - crop_x, cw + 2 * pad)
+        crop_h = min(H - crop_y, ch + 2 * pad)
+    else:
+        crop_x, crop_y, crop_w, crop_h = 0, 0, W, H
+    gray = gray[crop_y : crop_y + crop_h, crop_x : crop_x + crop_w]
 
-    # Get body contours for stroke masking
-    right_mask = body.copy()
-    right_mask[:, int(bounds.midline_px) + 3:] = 0
-    kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    right_mask = cv2.morphologyEx(right_mask, cv2.MORPH_CLOSE, kern, iterations=2)
-    body_contours, _ = cv2.findContours(right_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    body_contours = sorted(body_contours, key=cv2.contourArea, reverse=True)
+    from . import strokes as strokes_mod
+    from .geometry import resample, smooth
 
-    strokes = flood_fill_strokes(gray, body_contours, bounds)
+    ch_px, cw_px = gray.shape
+
+    # Two-pass guide removal: standard (w//4) catches rulers,
+    # aggressive (w//8) catches shorter construction crosshairs.
+    binary = threshold_lines(gray, adaptive=False, global_val=215)
+    binary = remove_guides(binary)
+    horiz_k2 = cv2.getStructuringElement(cv2.MORPH_RECT, (cw_px // 8, 1))
+    vert_k2 = cv2.getStructuringElement(cv2.MORPH_RECT, (1, ch_px // 8))
+    h2 = cv2.dilate(cv2.morphologyEx(binary, cv2.MORPH_OPEN, horiz_k2),
+                     np.ones((5, 1), np.uint8), iterations=1)
+    v2 = cv2.dilate(cv2.morphologyEx(binary, cv2.MORPH_OPEN, vert_k2),
+                     np.ones((1, 5), np.uint8), iterations=1)
+    binary[h2 > 0] = 0
+    binary[v2 > 0] = 0
+    binary = remove_text_components(binary, area_ratio=0.001)
+
+    # Scan-line silhouette (robust to construction rectangles)
+    bounds = find_bounds(binary, thresh_ratio=0.03,
+                         midline_px=float(cw_px // 2))
+    outer, inner = scanline_silhouette(binary, bounds, max_dx_hu=1.8)
+    contour_raw = build_contour(outer, inner)
+    contour = smooth(resample(contour_raw, n=1200))
+
+    # Strokes
+    detail_strokes = strokes_mod.extract_all(
+        gray, binary, bounds, contour_max_dx=contour[:, 0].max() * 1.15,
+    )
+
+    sym = {}
+    meas = {}
 
     # Anatomical landmarks + parametric fit
     landmarks = find_anatomical_landmarks(contour)
@@ -513,18 +602,19 @@ def extract_flood_fill(image_path: str) -> "FigureData":
     meta = {
         "source": image_path,
         "image_size": [W, H],
+        "crop_rect_px": [crop_x, crop_y, crop_w, crop_h],
         "midline_px": round(bounds.midline_px, 1),
         "y_top_px": bounds.y_top,
         "y_bot_px": bounds.y_bot,
         "fig_height_px": bounds.fig_height_px,
         "scale_px_to_hu": round(bounds.scale, 6),
         "contour_points": len(contour),
-        "detail_strokes": len(strokes),
+        "detail_strokes": len(detail_strokes),
     }
 
     return FigureData(
         contour=contour,
-        strokes=[np.array(s) if not isinstance(s, np.ndarray) else s for s in strokes],
+        strokes=[np.array(s) if not isinstance(s, np.ndarray) else s for s in detail_strokes],
         meta=meta,
         landmarks=landmarks,
         parametric=parametric,
