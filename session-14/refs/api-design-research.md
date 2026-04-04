@@ -11,6 +11,10 @@ disclaimer: >
   existed at the time of writing and may have since changed. This document
   represents a synthesis of publicly available information and the author's
   analytical framing — neither of which constitutes authoritative guidance.
+version: 1.1
+status: draft
+last_reviewed: 2026-04-04
+change_note: Expanded guidance for AI-heavy and agentic API consumers with verification-first framing.
 ---
 
 # API Design: REST, GraphQL, SDKs, and Public Interfaces
@@ -24,19 +28,55 @@ API design is the process of defining the contract through which software system
 There is a recurring confusion in the industry between *protocol*, *architectural style*, and *API specification*. REST is an architectural style. HTTP is a protocol. OpenAPI is a specification format. GraphQL is a query language and runtime. These are not interchangeable categories, and conflating them leads to poor design decisions.
 
 ### 1.2 The Design-First vs. Code-First Dichotomy
-
 Two approaches exist:
 
-**Design-first (contract-first):** The API contract is authored before any implementation code. Stakeholders review the interface, mock servers can be generated for early testing, and frontend/backend teams can work in parallel against the agreed schema. Tools like Stoplight, SwaggerHub, and Postman support collaborative design workflows.
+**Design-first (contract-first):** The API contract is authored before implementation. Stakeholders can review it, mock servers can be generated, and multiple teams can work against a shared schema before the backend is complete. This remains the safer default for public APIs because it makes interface drift visible early.
 
-**Code-first:** Implementation is written first, and the API description is generated from annotations or introspection. This is faster for prototyping but frequently produces interfaces that leak internal data models and storage concerns into the public surface.
+**Code-first:** Implementation is written first, and the API description is derived from annotations, code generation, or introspection. This is faster for prototypes, but it often leaks storage shape and framework defaults into the external contract.
 
-The industry consensus as of 2025 leans heavily toward design-first for any API that will be consumed by third parties.
+For AI-heavy systems, neither framing is sufficient on its own. A third concern matters: **verification-first design**. If an API will be consumed by LLM-driven agents, tool-using assistants, or multi-step automated pipelines, the contract must be shaped so downstream systems can mechanically validate requests, responses, errors, and side effects. That means explicit schemas, stable identifiers, machine-readable failure classes, replay-safe mutations, and observable commit boundaries.
 
-**Ref:** MyAppAPI, "API Design Best Practices in 2025" (2025); Jitterbit, "7 Key Principles of API Design" (2025).
+In that sense, design-first is useful not merely because humans can review the contract earlier, but because machine consumers can be constrained earlier. The more an interface depends on prose interpretation, hidden side effects, or inconsistent response shapes, the less safe it is to pipe into an AI-heavy system.
 
----
+**Ref:** Microsoft Azure Architecture Center, "Web API Design Best Practices"; GraphQL Foundation, "GraphQL Best Practices"; Postman, *State of the API Report* (2025, as discussed in vendor summaries).
 
+### 1.3 API Design Under PALS's Law
+
+PALS's Law introduces a stronger architectural premise for AI-mediated API use:
+LLM output must be treated as untrusted by default. In the original formulation,
+the core claim is that model error is not an exceptional bug but a statistical
+property of the model class, which means any system that consumes LLM output
+without a verification boundary contains an architectural defect.
+
+Applied to APIs, the consequence is straightforward: if an API is likely to be
+used by tool-calling assistants, agent pipelines, or other LLM-mediated systems,
+the interface cannot assume a careful human operator is always interpreting
+ambiguous responses correctly. The contract must instead constrain and expose
+enough structure that a fallible model can be checked, bounded, and audited.
+
+The most important imported PALS definitions, adapted to API and tool contexts,
+are:
+
+- **Untrusted output:** any model-produced request, parameter selection, tool
+  call, or interpretation of API response must be assumed potentially wrong
+  until verified.
+- **Verification boundary:** the explicit layer at which the surrounding system
+  checks whether a proposed API interaction is valid, safe, and actually
+  committed. For APIs, this includes schema validation, auth checks,
+  idempotency, retry classification, and post-call state inspection.
+- **Architectural omission:** if a workflow lets an LLM trigger or interpret API
+  actions without a declared verification step, the defect is in the system
+  design, not merely in the model output.
+- **Error taxonomy:** failures should be partitioned into machine-meaningful
+  classes so that downstream automation does not have to guess whether a call
+  should be retried, revised, abandoned, or escalated.
+
+Under this framing, API quality for AI-heavy systems is not mainly about style
+preference between REST, GraphQL, or gRPC. It is about whether the chosen
+interface makes verification possible at the point where model error would
+otherwise become side effect.
+
+**Ref:** [core/PALS_LAW-v1.5.4.md](/home/admin/codebases/codespaces-blank/core/PALS_LAW-v1.5.4.md); Zenodo record: https://zenodo.org/records/19401530
 ## 2. REST
 
 ### 2.1 Origin and Actual Definition
@@ -100,15 +140,17 @@ The following are empirically well-supported principles for REST API design, sep
 **Ref:** Datanizant, "8 Essential API Design Best Practices" (2025); ARDURA Consulting, "API Design Best Practices: Implementation Checklist" (2026).
 
 ### 2.4 Idempotency
+Idempotency — the property that performing an operation multiple times produces the same result as performing it once — is essential for reliable distributed systems. Network failures, timeouts, duplicate submissions, and retries are normal operating conditions.
 
-Idempotency — the property that performing an operation multiple times produces the same result as performing it once — is essential for reliable distributed systems. Network failures, timeouts, and retries are not edge cases; they are normal operating conditions.
+For APIs used by humans, idempotency is already important. For APIs used by agentic systems, it becomes a hard architectural requirement on any mutation that may be retried, replayed, or parallelized. LLM-driven clients can repeat calls because of uncertainty, tool retry logic, planner branching, or partial failure recovery. An API that treats duplicate writes as an edge case is unsafe for AI-heavy orchestration.
 
-Stripe pioneered the widely-adopted pattern of client-generated idempotency keys: the client generates a UUID and sends it as a header (`Idempotency-Key`). The server records the key and the result of the first execution. If the same key arrives again, the server returns the stored result instead of re-executing. Stripe stores keys for 24 hours (v1) or 30 days (v2) and validates that replay requests carry the same parameters.
+Stripe popularized the client-generated idempotency key pattern: the client generates a UUID and sends it as a header (`Idempotency-Key`). The server records the key and the result of the first execution. If the same key arrives again, the server returns the stored result instead of re-executing. Stripe stores keys for a bounded retention window and validates that replay requests carry the same parameters.
 
-GET and DELETE are idempotent by definition in HTTP semantics (RFC 9110 Section 9.2.2). POST is inherently non-idempotent and is the primary target for idempotency key mechanisms. PUT is idempotent by design (full replacement). Note that DELETE idempotency concerns server state, not response codes — a first `DELETE /resource/123` may return `200 OK` while a repeated request returns `404 Not Found`, yet the server state is identical (resource absent), satisfying the specification's definition.
+GET and DELETE are idempotent by HTTP semantics (RFC 9110 Section 9.2.2). POST is inherently non-idempotent and is therefore the primary target for idempotency keys. PUT is idempotent by design when treated as full replacement. DELETE idempotency concerns server state, not necessarily identical response codes: the first deletion may return `200 OK` and a replay may return `404 Not Found`, yet the resource is absent in both cases.
 
-**Ref:** Stripe Engineering Blog, "Designing robust and predictable APIs with idempotency" (2017); Stripe API Reference, "Idempotent requests"; Stripe Documentation, "API v2 overview."
+For AI-heavy systems, idempotency should be paired with **observable write state**: a request identifier, a stable operation identifier, and a way to determine whether a write was proposed, accepted, committed, rejected, or only partially applied. Idempotency without post-call observability still leaves downstream agents guessing about the actual side effect boundary.
 
+**Ref:** Stripe Engineering Blog, "Designing robust and predictable APIs with idempotency" (2017); Stripe API Reference, "Idempotent requests"; Brandur, "Implementing Stripe-like Idempotency Keys in Postgres" (2017); IETF, RFC 9110.
 ### 2.5 Versioning Strategies
 
 Versioning addresses the inevitability that APIs change. Strategies include:
@@ -283,33 +325,44 @@ Practical patterns from Stripe that generalize:
 **Ref:** Apidog, "Why Stripe's API is the Gold Standard" (2026); Stripe API Documentation.
 
 ### 6.2 Error Design
+Error responses are part of the public interface and deserve as much design attention as success responses. For AI-heavy systems, they are also part of the verification boundary: a model or orchestration layer can only recover safely if failures are classified in a machine-readable way.
 
-Error responses are part of the public interface and deserve as much design attention as success responses. Principles:
+Baseline requirements:
 
 - Use the most specific HTTP status code.
-- Include a machine-readable error type/code (`card_declined`, `invalid_request_error`).
+- Include a machine-readable error type or code (`invalid_request_error`, `rate_limit_exceeded`, `conflict`, `not_authorized`).
 - Include a human-readable message explaining what happened.
-- Include a `param` field identifying which input parameter caused the error.
-- Include a `doc_url` linking to documentation for the specific error.
-- Include a `request_id` for support and debugging correlation.
+- Include a field identifying the offending parameter, path, or schema location when applicable.
+- Include a request or trace identifier for support and audit correlation.
+- Include a documentation pointer for stable error families.
 
-RFC 9457 (July 2023, successor to RFC 7807) defines the `application/problem+json` media type as the industry standard for structured error responses. It provides a consistent format with `type`, `title`, `status`, `detail`, and `instance` fields. Major frameworks (ASP.NET, Spring Boot, Quarkus) now have built-in support.
+RFC 9457 (successor to RFC 7807) defines `application/problem+json` as the standard structured envelope with `type`, `title`, `status`, `detail`, and `instance`. That is a strong baseline, but AI-heavy systems usually need one layer more: explicit recovery semantics. In practice, the error model should tell the caller whether the failure is retryable, whether the request was applied, whether user confirmation is required, and whether the state should be re-fetched before a follow-up action.
 
-Anti-patterns: returning `200 OK` with an error payload, using generic messages like "Unknown error" or "Something went wrong," returning different error structures from different endpoints, and ignoring RFC 9457 when designing new APIs.
+A useful operational taxonomy is:
 
-**Ref:** Apidog, "Why Stripe's API is the Gold Standard" (2026); Shake, "SDK design best practices" (2025); IETF, RFC 9457, "Problem Details for HTTP APIs" (2023).
+- **Validation failures:** the payload is structurally or semantically invalid; retry only after modification.
+- **Authentication/authorization failures:** credentials or scope are insufficient; retry only after credential or permission change.
+- **Conflict/state failures:** the request is valid but incompatible with current resource state; refresh state before retry.
+- **Rate-limit/transient failures:** back off and retry according to explicit server guidance.
+- **Internal failures:** the caller cannot assume whether a side effect occurred unless the API exposes a stable operation record or idempotent replay mechanism.
 
+Anti-patterns are worse in AI-heavy systems than in ordinary integrations: returning `200 OK` with an error payload, relying on prose-only failure messages, mixing incompatible error shapes across endpoints, or omitting retry semantics forces the downstream model to guess.
+
+**Ref:** IETF, RFC 9457, "Problem Details for HTTP APIs" (2023); Microsoft Azure Architecture Center, "Web API Design Best Practices"; OWASP, "API Security Top 10" (2023).
 ### 6.3 Rate Limiting
+Every public API needs rate limits, but AI-heavy systems need them to be legible as control signals rather than opaque refusals. Automated clients can burst, retry, and fan out much more aggressively than human-written point integrations.
 
-Every public API needs rate limits. Implementation considerations:
+Implementation considerations:
 
-- Tiered limits by plan (free vs. paid).
-- Per-user and per-IP limits.
-- Return `429 Too Many Requests` with a `Retry-After` header.
-- For GraphQL, limit by query complexity/cost rather than simple request count, since queries vary enormously in server-side cost.
+- Tiered limits by plan, credential, tenant, or workload class.
+- Distinct limits for reads, writes, and high-cost operations.
+- `429 Too Many Requests` with explicit `Retry-After` guidance.
+- Stable headers or fields exposing remaining budget and reset timing.
+- For GraphQL, limits based on query depth, complexity, or estimated backend cost rather than raw request count.
 
-**Ref:** ARDURA Consulting, "API Design Best Practices Checklist" (2026); TechGenyz, "API Design Best Practices" (2026).
+For agentic systems, hidden or inconsistent rate-limit behavior creates planner instability. If one endpoint returns clean retry metadata and another silently degrades or emits generic 500s, the automation layer cannot make a safe scheduling decision. The rate-limit contract should therefore be explicit enough for a machine to decide whether to wait, re-plan, reduce scope, or seek user confirmation.
 
+**Ref:** Microsoft Azure Architecture Center, "Web API Design Best Practices"; ARDURA Consulting, "API Design Best Practices Checklist" (2026).
 ### 6.4 Authentication and Security
 
 Standard patterns:
@@ -327,98 +380,114 @@ For GraphQL specifically: field-level authorization is critical because a single
 **Ref:** TechGenyz, "API Design Best Practices" (2026); IETF, RFC 9700, "OAuth 2.0 Security Best Current Practice" (2025); OWASP, "API Security Top 10" (2023).
 
 ### 6.5 Documentation and Developer Experience
+Documentation is the first touchpoint developers have with an API, but for AI-heavy systems the contract itself must also function as machine-readable documentation. Human-friendly prose alone is insufficient.
 
-Documentation is the first (and often only) touchpoint developers have with an API. Requirements:
+Human-oriented requirements remain important:
 
 - **Interactive API reference** generated from the spec (Swagger UI, Redoc, Postman).
-- **Quick-start guide** that gets a developer from zero to first successful call in under 30 minutes.
+- **Quick-start guide** that gets a developer from zero to first successful call quickly.
 - **Code examples in multiple languages** (at minimum: curl, Python, JavaScript/TypeScript).
-- **Changelog** with dates, categorized by additive/breaking/deprecation.
+- **Changelog** with dates, categorized by additive, breaking, and deprecation changes.
 - **Sandbox environment** for testing without production consequences.
-- **SDKs and client libraries** in popular languages, installable via standard package managers (npm, pip, Maven, etc.).
+- **SDKs and client libraries** in popular languages.
 
-GraphQL adds introspection as a documentation mechanism — tools can auto-generate docs and provide IDE autocompletion directly from the schema.
+For AI-heavy systems, additional requirements become first-class:
 
-**Ref:** OpenAPI Specification, "Best Practices for API Design"; ARDURA Consulting, "API Design Best Practices Checklist" (2026).
+- explicit request and response schemas with examples;
+- field-level semantics, units, nullability, and enum meanings;
+- machine-readable deprecation metadata;
+- explicit preconditions and postconditions for mutating calls;
+- deterministic pagination and sorting semantics;
+- stable error families and retry guidance;
+- clear indication of whether a call is side-effect-free, idempotent, asynchronous, or confirmation-gated.
 
----
+GraphQL introspection, OpenAPI, AsyncAPI, protobuf schemas, and similar specification formats help because they reduce ambiguity. But they only become safe tooling inputs when the documented semantics are concrete enough that a downstream system can validate them rather than infer them from prose.
 
+**Ref:** GraphQL Foundation, "GraphQL Best Practices"; OpenAPI-related best-practices guides; Microsoft Azure SDK Design Guidelines.
 ## 7. Specification Formats
+Specification formats matter not only for documentation and code generation, but also for whether an API can be safely consumed by AI-heavy systems. The key question is not merely whether a format is popular, but whether it exposes enough structure for downstream validation.
 
-| Format       | Domain              | Status (2025)                        |
-|-------------|---------------------|--------------------------------------|
-| OpenAPI 3.2 | REST APIs           | Dominant standard; evolved from Swagger |
-| AsyncAPI 3.0/3.1 | Event-driven APIs  | Standard for WebSocket, message-driven architectures; 3.1.0 adds ROS 2 binding |
-| GraphQL SDL | GraphQL APIs        | Standard schema definition language   |
-| Protobuf    | gRPC                | Binary IDL, code generation focused   |
-| TypeSpec     | Multi-target (Microsoft) | Newer; generates OpenAPI, protobuf, etc. from a single source |
+| Format | Domain | Strength for AI-heavy systems |
+|---|---|---|
+| OpenAPI 3.x | REST APIs | Strong for request/response schemas, examples, operation metadata, and code generation; weaker when teams leave semantics in prose or underspecify side effects. |
+| AsyncAPI 3.x | Event-driven APIs | Strong for message contracts, channels, and event payload structure; safety still depends on explicit delivery, retry, and ordering semantics. |
+| GraphQL SDL | GraphQL APIs | Strong type system and introspection; weaker if field semantics, authorization boundaries, cost models, and mutation side effects are implicit. |
+| Protobuf | gRPC | Strong typing and code generation for internal systems; weaker for external discoverability without additional descriptive metadata. |
+| TypeSpec | Multi-target | Strong when used as a single source of truth across generated interfaces, provided generated artifacts retain explicit behavior contracts. |
 
-**Ref:** MyAppAPI, "API Design Best Practices in 2025" (2025).
+For AI-heavy systems, a specification format is only the first layer. Safe toolability usually requires additional declared semantics: idempotency, retry class, side-effect boundary, confirmation requirements for destructive actions, error taxonomy, pagination invariants, and operation status resources for long-running writes.
 
----
-
+**Ref:** GraphQL Foundation, "GraphQL Best Practices"; Microsoft Azure Architecture Center, "Web API Design Best Practices"; Microsoft TypeSpec documentation.
 ## 8. Emerging Patterns (2025–2026)
+**Hybrid REST + GraphQL architectures:** REST remains common for public distribution, while GraphQL often acts as an internal aggregation layer on top of existing services. This can work well for AI-heavy systems when the GraphQL layer normalizes resource shape, but it can also hide the true side-effect and authorization boundaries if the federation layer exposes convenience without provenance.
 
-**Hybrid REST + GraphQL architectures:** REST for public distribution, GraphQL as an internal aggregation layer sitting on top of REST services. Apollo Connectors allow declaratively connecting REST APIs into a federated GraphQL graph.
+**API-first for AI agents:** As AI systems become active consumers of APIs rather than mere text users, the quality bar shifts from readable to verifiable. The safest APIs for agentic use expose explicit schemas, narrow action scopes, deterministic pagination, stable identifiers, machine-readable error classes, and observable commit state for writes.
 
-**API-first for AI agents:** The 2025 State of the API Report (Postman) identifies APIs as the execution layer for AI systems. This raises the bar for machine-readable descriptions, consistent error formats, and self-documenting schemas — essentially HATEOAS concerns reframed for LLM consumers rather than human developers.
+**Safe toolability:** An endpoint is not automatically safe just because it is documented. For AI-heavy use, a toolable endpoint should answer at least these questions mechanically: what inputs are valid, what outputs are possible, whether the action is idempotent, whether it has side effects, whether confirmation is required, how failure classes are partitioned, and how the caller can determine whether the action actually committed.
 
-**Model Context Protocol (MCP):** An emerging protocol allowing AI models to interact with external services through standardized tool interfaces. MCP servers are increasingly being integrated into API platforms (WunderGraph, Apollo).
+**Model Context Protocol (MCP) and adjacent tool protocols:** Standardized tool interfaces increase reuse, but they do not remove the need for strong underlying API contracts. An MCP wrapper around an ambiguous or side-effect-opaque API simply makes unsafe automation easier. The API beneath the wrapper still needs verification-friendly semantics.
 
-**Ref:** Postman Blog, "GraphQL vs REST" (2025); Apollo GraphQL, "Apollo Connectors"; WunderGraph.
-
----
-
+**Ref:** GraphQL Foundation, "GraphQL federation"; Apollo GraphQL, "Apollo Connectors"; vendor commentary on AI-agent API usage should be treated as directional rather than authoritative unless backed by primary technical specs.
 ## 9. Decision Framework
+When choosing an API style, the relevant question is not "which is better" but "which contract can be verified under the actual failure modes of the system that will consume it."
 
-When choosing an API style, the relevant variables are not "which is better" but "which constraints match your requirements":
+1. **Who are the consumers?** External third parties often favor REST because onboarding and tooling are broad. Internal frontend teams often benefit from GraphQL. Internal service meshes may favor gRPC. AI-heavy consumers add a separate axis: can the interface be validated mechanically, or does safe use depend on prose interpretation?
+2. **How diverse are client data needs?** Homogeneous needs can fit REST cleanly. Heterogeneous UI clients often benefit from GraphQL. But if query flexibility makes authorization, cost, or side effects harder to reason about, the flexibility may be too expensive for automated consumers.
+3. **What is the retry and replay model?** If writes may be retried, parallelized, or resumed by agents, idempotency and explicit operation-state observability become design requirements rather than refinements.
+4. **How is failure classified?** If the API cannot distinguish validation, auth, conflict, transient, and partial-commit states in machine-readable form, AI-heavy systems will guess, which is unsafe.
+5. **What is the verification boundary?** The more the contract depends on undocumented conventions, hidden side effects, or inconsistent schemas, the less suitable it is for agentic orchestration.
+6. **What is the evolution strategy?** Versioning and deprecation are not only compatibility concerns. Automated systems need to know when a field, enum, or behavior changed and whether the change is additive, breaking, or only documentary.
 
-1. **Who are the consumers?** External third parties → REST (lower barrier, broader tooling). Internal frontend teams → GraphQL (flexibility). Internal microservices → gRPC (performance).
-2. **How diverse are client data needs?** Homogeneous → REST is sufficient. Heterogeneous (mobile, web, TV, IoT) → GraphQL reduces per-client backend work.
-3. **What is the caching strategy?** HTTP caching is critical → REST. Application-level caching is acceptable → GraphQL.
-4. **What is the team's expertise?** REST has a shallower learning curve. GraphQL requires understanding resolvers, DataLoader, schema design, and (for federation) distributed schema composition.
-5. **What is the evolution strategy?** Rolling versioning à la Stripe requires significant internal infrastructure. GraphQL's deprecation model is lighter but requires discipline. Path-versioned REST is simplest but can accumulate legacy endpoints.
+There is no universal answer. But one conclusion is robust: if an API is likely to be piped into an AI-heavy system, the contract should be evaluated as an execution surface for a fallible model, not just as a convenience layer for human developers. In that environment, verification, replay safety, explicit semantics, and observable side effects are first-class architecture.
 
-There is no universal answer. Fielding's own dissertation was explicitly about *not* treating any single architectural style as a silver bullet — the irony that REST itself became one is well-documented.
+### 9.1 PALS-Aligned Checklist
 
----
+An API intended for LLM-mediated or agentic use should pass the following
+minimum checklist before being treated as safe tool surface:
 
+- Can every request and response be validated mechanically against an explicit
+  schema?
+- Can the caller distinguish validation, authorization, conflict, transient,
+  and internal failure classes without interpreting prose?
+- Are mutating operations replay-safe or otherwise protected by explicit
+  idempotency and operation identifiers?
+- Can the system determine whether a write actually committed, partially
+  applied, or failed before taking the next step?
+- Are destructive or high-impact actions bounded by confirmation, narrow scope,
+  or reversible workflow design?
+- Does the API expose stable identifiers, pagination semantics, and state
+  inspection endpoints sufficient for post-call verification?
+
+If the answer to these questions is no, the API may still be usable by humans,
+but it is not yet a well-bounded execution substrate for AI-heavy systems under
+PALS's Law.
+
+**Ref:** core/PALS_LAW-v1.5.4.md; Zenodo record: https://zenodo.org/records/19401530; Microsoft Azure Architecture Center, "Web API Design Best Practices"; GraphQL Foundation, "GraphQL Best Practices".
 ## References
-
 - Fielding, R. T. (2000). *Architectural Styles and the Design of Network-based Software Architectures.* Doctoral dissertation, UC Irvine. https://roy.gbiv.com/pubs/dissertation/top.htm
 - Fielding, R. T. (2008). "REST APIs must be hypertext-driven." Blog post.
 - Fowler, M. (2010). "Richardson Maturity Model." https://martinfowler.com/articles/richardsonMaturityModel.html
-- Wikipedia. "Richardson Maturity Model." https://en.wikipedia.org/wiki/Richardson_Maturity_Model
+- IETF. RFC 9110. *HTTP Semantics.* https://www.rfc-editor.org/rfc/rfc9110
+- IETF. RFC 9457. *Problem Details for HTTP APIs* (2023). https://www.rfc-editor.org/rfc/rfc9457
+- IETF. RFC 9700. *OAuth 2.0 Security Best Current Practice* (2025). https://www.rfc-editor.org/rfc/rfc9700
+- OWASP. *API Security Top 10* (2023). https://owasp.org/API-Security/
 - Stripe Engineering Blog. "APIs as infrastructure: future-proofing Stripe with versioning" (2017). https://stripe.com/blog/api-versioning
 - Stripe Engineering Blog. "Designing robust and predictable APIs with idempotency" (2017). https://stripe.com/blog/idempotency
 - Stripe API Documentation. "Idempotent requests." https://docs.stripe.com/api/idempotent_requests
 - Stripe Documentation. "API upgrades." https://docs.stripe.com/upgrades
+- Brandur. "Implementing Stripe-like Idempotency Keys in Postgres" (2017). https://brandur.org/idempotency-keys
 - GraphQL Foundation. "GraphQL Best Practices." https://graphql.org/learn/best-practices/
 - GraphQL Foundation. "GraphQL federation." https://graphql.org/learn/federation/
 - Apollo GraphQL. "Introduction to Apollo Federation." https://www.apollographql.com/docs/graphos/schema-design/federated-schemas/federation
 - Apollo GraphQL Blog. "Federated Schema Design" (2022). https://www.apollographql.com/blog/backend/federation/federated-schema-design/
-- The Guild / Hive. "Proven Schema Designs and Best Practices – Part 1" (2025). https://the-guild.dev/graphql/hive/blog/schema-design-best-practices-part-1
-- Orosz, G. & Pradet, Q. "Building great SDKs." The Pragmatic Engineer (2025). https://newsletter.pragmaticengineer.com/p/building-great-sdks
-- Lantzman, E. "SDKs: Principles and Best Practices" (2025). https://eyallantzman.substack.com/p/sdks-principles-and-best-practices
 - Microsoft Azure. "Azure SDK Design Guidelines." https://azure.github.io/azure-sdk/general_introduction.html
 - Microsoft Azure Architecture Center. "Web API Design Best Practices." https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design
-- AWS. "GraphQL vs REST API." https://aws.amazon.com/compare/the-difference-between-graphql-and-rest/
-- Postman Blog. "GraphQL vs REST" (2025). https://blog.postman.com/graphql-vs-rest/
-- MyAppAPI. "API Design Best Practices in 2025." https://myappapi.com/blog/api-design-best-practices-2025
-- Redocly. "API versioning best practices." https://redocly.com/blog/api-versioning-best-practices
-- ARDURA Consulting. "API Design Best Practices: Implementation Checklist" (2026). https://ardura.consulting/blog/api-design-best-practices-checklist/
-- Datanizant. "8 Essential API Design Best Practices" (2025). https://datanizant.com/api-design-best-practices/
-- Zuplo. "GraphQL API Design: Powerful Practices" (2025). https://zuplo.com/blog/2025/05/26/graphql-api-design
-- API7.ai. "GraphQL vs REST API Comparison 2025." https://api7.ai/blog/graphql-vs-rest-api-comparison-2025
-- TechGenyz. "API Design Best Practices" (2026). https://techgenyz.com/api-design-best-practices-rest-graphql-guide/
-- Vineeth.io. "Comprehensive Analysis of Design Patterns for REST API SDKs" (2024). https://vineeth.io/posts/sdk-development
-- Apidog. "Why Stripe's API is the Gold Standard" (2026). https://apidog.com/blog/why-stripes-api-is-the-gold-standard-design-patterns-that-every-api-builder-should-steal/
-- Two-Bit History. "Roy Fielding's Misappropriated REST Dissertation" (2020). https://twobithistory.org/2020/06/28/rest.html
-- Brandur. "Implementing Stripe-like Idempotency Keys in Postgres" (2017). https://brandur.org/idempotency-keys
+- Microsoft. TypeSpec documentation. https://typespec.io/
+- Orosz, G. & Pradet, Q. "Building great SDKs." *The Pragmatic Engineer* (2025). https://newsletter.pragmaticengineer.com/p/building-great-sdks
+- Lantzman, E. "SDKs: Principles and Best Practices" (2025). https://eyallantzman.substack.com/p/sdks-principles-and-best-practices
+- The Guild / Hive. "Proven Schema Designs and Best Practices – Part 1" (2025). https://the-guild.dev/graphql/hive/blog/schema-design-best-practices-part-1
 - Adidas API Guidelines. "Changes and Versioning." https://adidas.gitbook.io/api-guidelines/rest-api-guidelines/evolution/versioning
-- Shake. "SDK design best practices" (2025). https://www.shakebugs.com/blog/sdk-design-best-practices/
-- OpenAPI Specification. "Best Practices for API Design." https://openapispec.com/docs/best-practices-for-api-design/
-- IETF. RFC 9457, "Problem Details for HTTP APIs" (2023). https://www.rfc-editor.org/rfc/rfc9457
-- IETF. RFC 9700, "OAuth 2.0 Security Best Current Practice" (2025). https://www.rfc-editor.org/rfc/rfc9700
-- OWASP. "API Security Top 10" (2023). https://owasp.org/API-Security/
-- Microsoft Azure. "Azure SDK Design Guidelines." https://azure.github.io/azure-sdk/general_introduction.html
+- core/PALS_LAW-v1.5.4.md
+- Zenodo. "PALS's Law" record. https://zenodo.org/records/19401530
+
+**Reference note:** This bibliography mixes primary standards, primary vendor documentation, and secondary commentary. Standards and primary product documentation should be treated as authoritative for protocol and product behavior. Blog posts, consultancies, and summaries are useful for practice patterns and industry framing, but not for establishing formal consensus claims by themselves.
